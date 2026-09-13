@@ -1,0 +1,35 @@
+# dependencies
+node_modules
+
+# build output
+dist
+dist-ssr
+*.local
+
+# shadcn-vue components (auto-generated)
+src/components/ui/**
+
+# env files
+.env
+.env.*
+!.env.example
+
+# editor/system
+.vscode
+.idea
+.DS_Store
+
+# logs
+*.log
+
+# generated/minified
+*.min.js
+*.min.css
+
+# lockfiles
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# coverage
+coverage
