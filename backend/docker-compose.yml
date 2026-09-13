@@ -4,18 +4,37 @@ services:
     container_name: nibble-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: nibble
-      POSTGRES_USER: nibble
-      POSTGRES_PASSWORD: nibble_dev
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nibble -d nibble"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
+  api:
+    build: .
+    container_name: nibble-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DEBUG: "False"
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    ports:
+      - "8000:8000"
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  media_data:
+  static_data:
