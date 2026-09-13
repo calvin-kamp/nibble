@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { recipes } from '../recipes.mock-data'
+import type { Recipe } from '../recipes.types.ts'
 import RecipeCard from './RecipeCard.vue'
+
+const recipes: Recipe[] = []
 </script>
 
 <template>
