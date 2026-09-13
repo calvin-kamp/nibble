@@ -52,6 +52,9 @@ INSTALLED_APPS = [
     "accounts",
 ]
 
+if DEBUG:
+    INSTALLED_APPS += ["django_extensions"]
+
 
 # ------------------------------------------------------------------------------
 # Middleware
@@ -98,10 +101,7 @@ WSGI_APPLICATION = "core.wsgi.application"
 # ------------------------------------------------------------------------------
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": env.db("DATABASE_URL"),
 }
 
 
@@ -145,6 +145,7 @@ USE_TZ = True
 # ------------------------------------------------------------------------------
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
