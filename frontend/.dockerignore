@@ -1,0 +1,17 @@
+.git
+.gitignore
+.gitattributes
+.dockerignore
+node_modules
+dist
+dist-ssr
+.env
+.env.*
+*.local
+.vscode
+.idea
+coverage
+*.log
+*.tsbuildinfo
+.eslintcache
+README.md
