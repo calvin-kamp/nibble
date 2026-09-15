@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { UiButton, UiIcon } from '@components/ui'
 import { useColorTheme } from '@composables/color-theme'
-import { UiButton, UiIcon } from './ui'
 import { MoonIcon, SunIcon } from '@lucide/vue'
 
 const { theme, changeTheme } = useColorTheme()
