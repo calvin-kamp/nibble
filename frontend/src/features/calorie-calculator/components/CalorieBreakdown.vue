@@ -1,20 +1,21 @@
 <script setup lang="ts">
+import type { CalorieCalculatorValues, CalorieResult } from '../calorie-calculator.types'
+
 import { computed } from 'vue'
 import { exercises } from '../calorie-calculator.data'
-import type { CalorieCalculatorValues, CalorieResult } from '../calorie-calculator.types'
 
 interface Props {
   result: CalorieResult
   values: CalorieCalculatorValues
 }
 
-const props = defineProps<Props>()
-
 interface BreakdownRow {
   name: string
   kcal: number
   caption: string
 }
+
+const props = defineProps<Props>()
 
 const wholeNumber = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 })
 
@@ -85,30 +86,30 @@ function share(kcal: number): number {
 
 <template>
   <div>
-    <h3 class="mb-4 text-sm">Woraus sich das zusammensetzt</h3>
+    <h3 class="mb-4">Woraus sich das zusammensetzt</h3>
 
     <dl class="flex flex-col">
       <div
         v-for="row in rows"
         :key="row.name"
-        class="border-border flex flex-col gap-2 border-b py-4 first:pt-0 nth-last-2:border-b-0"
+        class="flex flex-col gap-2 py-4 border-border border-b first:pt-0 nth-last-2:border-b-0"
       >
         <div class="flex items-baseline justify-between gap-4">
-          <dt class="text-sm font-medium">
+          <dt class="font-medium">
             {{ row.name }}
           </dt>
 
-          <dd class="text-sm font-semibold whitespace-nowrap tabular-nums">
+          <dd class="font-semibold whitespace-nowrap tabular-nums">
             {{ wholeNumber.format(row.kcal) }} kcal
           </dd>
         </div>
 
         <div
-          class="bg-muted h-1.5 overflow-hidden rounded-full"
+          class="h-1.5 overflow-hidden bg-muted rounded-full"
           aria-hidden="true"
         >
           <span
-            class="bg-primary block h-full rounded-full"
+            class="block h-full bg-primary rounded-full"
             :style="{ width: `${share(row.kcal)}%` }"
           />
         </div>
@@ -118,8 +119,8 @@ function share(kcal: number): number {
         </p>
       </div>
 
-      <div class="border-foreground mt-1 flex items-baseline justify-between gap-4 border-t-2 pt-4">
-        <dt class="text-sm font-semibold">Erhaltungsbedarf</dt>
+      <div class="mt-1 flex items-baseline justify-between gap-4 pt-4 border-foreground border-t-2">
+        <dt class="font-semibold">Erhaltungsbedarf</dt>
 
         <dd class="font-semibold whitespace-nowrap tabular-nums">
           {{ wholeNumber.format(props.result.maintenanceCalories) }} kcal

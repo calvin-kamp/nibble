@@ -1,4 +1,4 @@
-import type { Option } from '@/types/form.types'
+import type { SelectOption } from '@components/form'
 
 export type Diet = 'Vegetarisch' | 'Vegan' | 'Pescetarisch'
 export type Intolerance = 'Glutenfrei' | 'Laktosefrei'
@@ -45,7 +45,7 @@ export interface RecipeFilterGroup {
   mode: RecipeFilterMode
   triggerLabel: string
   filterDescription?: string
-  options: Option[]
+  options: SelectOption[]
 }
 
 export type RecipeFilterState = Record<RecipeFilterKey, string[]>

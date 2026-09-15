@@ -16,7 +16,7 @@ export default defineConfigWithVueTs(
     files: ['**/*.{vue,ts,mts,tsx}'],
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**', '**/src/components/ui/**']),
+  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
 
   ...pluginVue.configs['flat/recommended'],
   vueTsConfigs.recommended,
@@ -50,6 +50,10 @@ export default defineConfigWithVueTs(
       'vue/require-typed-ref': 'error',
 
       'vue/no-required-prop-with-default': 'error',
+
+      'vue/prefer-true-attribute-shorthand': ['error', 'always'],
+
+      'vue/prefer-prop-type-boolean-first': 'error',
     },
   },
 

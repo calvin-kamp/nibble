@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { macroChart } from '../calorie-calculator.data'
-import MacroPieChart from './MacroPieChart.vue'
 import type { Macro } from '../calorie-calculator.types'
+
+import MacroPieChart from './MacroPieChart.vue'
+import { macroChart } from '../calorie-calculator.data'
 
 interface Props {
   macros: Macro[]
@@ -20,10 +21,10 @@ function macroColor(name: string): string | undefined {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="flex flex-col gap-1">
-      <h3 class="text-center text-base leading-snug font-bold">Deine Makro-Verteilung</h3>
+    <div class="flex flex-col gap-1 text-center">
+      <h3 class="text-center">Deine Makro-Verteilung</h3>
 
-      <p class="text-muted-foreground text-center text-sm">
+      <p class="text-muted-foreground text-sm">
         Ein Vorschlag, wie sich die {{ wholeNumber.format(props.targetCalories) }} kcal aufteilen
         lassen.
       </p>
@@ -31,13 +32,13 @@ function macroColor(name: string): string | undefined {
 
     <MacroPieChart :macros="props.macros" />
 
-    <dl class="divide-border grid grid-cols-3 divide-x">
+    <dl class="grid grid-cols-3 divide-border divide-x">
       <div
         v-for="macro in props.macros"
         :key="macro.name"
         class="flex flex-col-reverse items-center gap-1 px-2"
       >
-        <dt class="text-muted-foreground flex items-center gap-1.5 text-xs">
+        <dt class="flex items-center gap-1.5 text-muted-foreground text-sm">
           <span
             class="size-2 shrink-0 rounded-full"
             :style="{ backgroundColor: macroColor(macro.name) }"
@@ -47,7 +48,7 @@ function macroColor(name: string): string | undefined {
           {{ macro.name }}
         </dt>
 
-        <dd class="text-lg font-bold tabular-nums">{{ gramNumber.format(macro.amount) }} g</dd>
+        <dd class="font-semibold tabular-nums">{{ gramNumber.format(macro.amount) }} g</dd>
       </div>
     </dl>
   </div>

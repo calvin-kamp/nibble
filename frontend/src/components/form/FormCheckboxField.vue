@@ -1,90 +1,94 @@
 <script setup lang="ts">
-import { Field as VeeField } from 'vee-validate'
-import { computed, useId, useSlots } from 'vue'
-import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from '../ui/field'
-import { Checkbox } from '../ui/checkbox'
+import type { FormFieldProps } from './form.types'
 
-interface Props {
-  fieldName: string
-  label: string
-  description?: string
-  srOnlyDescription?: boolean
-  required?: boolean
-  disabled?: boolean
-}
+import { Field as VeeField, useFieldError } from 'vee-validate'
+import { CheckboxControl } from './controls'
+import { Label as RekaLabel } from 'reka-ui'
+import { UiIcon } from '@components/ui'
+import { CircleAlertIcon } from '@lucide/vue'
+import { toRef } from 'vue'
+import { useFieldIds } from './field-ids'
 
-const props = withDefaults(defineProps<Props>(), {
-  description: undefined,
-  srOnlyDescription: false,
-  required: false,
-  disabled: false,
-})
+defineOptions({ inheritAttrs: false })
 
-const slots = useSlots()
+const props = defineProps<FormFieldProps>()
 
-const fieldId: string = useId()
-const descriptionId: string = `${fieldId}-description`
-const errorId: string = `${fieldId}-error`
+const error = useFieldError(toRef(props, 'fieldName'))
 
-const hasDescription = computed<boolean>(() => Boolean(props.description || slots.description))
-
-function toModelValue(value: unknown): boolean {
-  return value === true
-}
-
-function describedBy(invalid: boolean): string | undefined {
-  const ids: string[] = []
-
-  if (hasDescription.value) ids.push(descriptionId)
-  if (invalid) ids.push(errorId)
-
-  return ids.join(' ') || undefined
-}
+const { fieldId, descriptionId, errorId, describedBy } = useFieldIds(() =>
+  Boolean(props.description),
+)
 </script>
 
 <template>
   <VeeField
-    v-slot="{ value, errors, handleChange }"
+    v-slot="{ componentField, errors }"
     :name="props.fieldName"
+    :validate-on-blur="false"
+    :validate-on-model-update="Boolean(error)"
   >
-    <Field
-      orientation="horizontal"
-      :data-invalid="errors.length > 0"
-    >
-      <Checkbox
-        :id="fieldId"
-        :model-value="toModelValue(value)"
-        :disabled="props.disabled"
-        :aria-required="props.required"
-        :aria-invalid="errors.length > 0"
-        :aria-describedby="describedBy(errors.length > 0)"
-        @update:model-value="(next) => handleChange(next, true)"
-      />
+    <div class="flex w-full flex-col gap-2">
+      <div class="flex items-start gap-3">
+        <span class="flex h-6 items-center">
+          <CheckboxControl
+            v-bind="{ ...$attrs, ...componentField }"
+            :id="fieldId"
+            :required="props.required"
+            :aria-invalid="Boolean(error) || undefined"
+            :aria-describedby="describedBy(Boolean(error))"
+          />
+        </span>
 
-      <FieldContent>
-        <FieldLabel
-          :for="fieldId"
-          :required-mark="props.required"
-        >
-          {{ props.label }}
-        </FieldLabel>
+        <RekaLabel :for="fieldId">
+          <slot name="label">{{ props.label }}</slot>
 
-        <FieldDescription
-          v-if="hasDescription"
+          <span
+            v-if="props.required"
+            aria-hidden="true"
+          >
+            *
+          </span>
+        </RekaLabel>
+      </div>
+
+      <div
+        v-if="props.description || errors.length"
+        class="flex flex-col gap-2 ps-8"
+      >
+        <p
+          v-if="props.description"
           :id="descriptionId"
-          :class="{ 'sr-only': props.srOnlyDescription }"
+          class="text-muted-foreground text-sm"
         >
-          <slot name="description">
-            {{ props.description }}
-          </slot>
-        </FieldDescription>
+          {{ props.description }}
+        </p>
 
-        <FieldError
-          v-if="errors.length > 0"
+        <div
+          v-if="errors.length"
           :id="errorId"
-          :errors="errors"
-        />
-      </FieldContent>
-    </Field>
+          role="alert"
+          class="flex items-start gap-1 text-destructive text-sm"
+        >
+          <UiIcon
+            :icon="CircleAlertIcon"
+            class="mt-0.5"
+          />
+
+          <span v-if="errors.length === 1">{{ errors[0] }}</span>
+
+          <ul
+            v-else
+            class="flex flex-col gap-1 pl-4 list-disc"
+          >
+            <li
+              v-for="message in errors"
+              :key="message"
+            >
+              {{ message }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </VeeField>
 </template>

@@ -1,3 +1,5 @@
+import type { Macro, MacroInput } from './calorie-calculator.types'
+
 import {
   EXCESS_WEIGHT_SHARE,
   FAT_MAX_SHARE,
@@ -8,7 +10,6 @@ import {
   PROTEIN_PER_KG,
   REFERENCE_BMI,
 } from './calorie-calculator.constants'
-import type { Macro, MacroInput } from './calorie-calculator.types'
 
 /**
  * Macro split for an already capped calorie target.

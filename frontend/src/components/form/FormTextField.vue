@@ -1,91 +1,38 @@
 <script setup lang="ts">
-import { Field as VeeField } from 'vee-validate'
-import { computed, useId, useSlots } from 'vue'
-import { Field, FieldDescription, FieldError, FieldLabel } from '../ui/field'
-import { Input } from '../ui/input'
+import type { FormFieldProps } from './form.types'
 
-interface Props {
-  fieldName: string
-  label: string
-  placeholder: string
-  type?: 'text' | 'email' | 'password'
-  srOnlyLabel?: boolean
-  description?: string
-  srOnlyDescription?: boolean
-  autocomplete?: 'on' | 'off' | 'current-password' | 'new-password' | 'email'
-  required?: boolean
-  disabled?: boolean
-}
+import FormField from './FormField.vue'
+import { InputControl } from './controls'
 
-const props = withDefaults(defineProps<Props>(), {
-  type: 'text',
-  srOnlyLabel: false,
-  description: undefined,
-  srOnlyDescription: false,
-  autocomplete: 'off',
-  required: false,
-  disabled: false,
-})
+defineOptions({ inheritAttrs: false })
 
-const slots = useSlots()
-
-const fieldId: string = useId()
-const descriptionId: string = `${fieldId}-description`
-const errorId: string = `${fieldId}-error`
-
-const hasDescription = computed<boolean>(() => Boolean(props.description || slots.description))
-
-function describedBy(invalid: boolean): string | undefined {
-  const ids: string[] = []
-
-  if (hasDescription.value) ids.push(descriptionId)
-  if (invalid) ids.push(errorId)
-
-  return ids.join(' ') || undefined
-}
+const props = defineProps<FormFieldProps>()
 </script>
 
 <template>
-  <VeeField
-    v-slot="{ componentField, errors }"
-    :name="props.fieldName"
-  >
-    <Field :data-invalid="errors.length > 0">
-      <FieldLabel
-        :for="fieldId"
-        :required-mark="props.required"
-        :class="{ 'sr-only': props.srOnlyLabel }"
+  <FormField v-bind="props">
+    <template #control="{ id, componentField, invalid, describedBy }">
+      <InputControl
+        v-bind="{ ...$attrs, ...componentField }"
+        :id="id"
+        :required="props.required"
+        :aria-invalid="invalid || undefined"
+        :aria-describedby="describedBy"
       >
-        {{ props.label }}
-      </FieldLabel>
+        <template
+          v-if="$slots.leading"
+          #leading
+        >
+          <slot name="leading" />
+        </template>
 
-      <FieldDescription
-        v-if="hasDescription"
-        :id="descriptionId"
-        :class="{ 'sr-only': props.srOnlyDescription }"
-      >
-        <slot name="description">
-          {{ props.description }}
-        </slot>
-      </FieldDescription>
-
-      <Input
-        v-bind="componentField"
-        :id="fieldId"
-        :type="props.type"
-        :placeholder="props.placeholder"
-        :autocomplete="props.autocomplete"
-        :disabled="props.disabled"
-        :aria-required="props.required"
-        :aria-invalid="errors.length > 0"
-        :aria-describedby="describedBy(errors.length > 0)"
-      />
-
-      <FieldError
-        v-if="errors.length > 0"
-        :id="errorId"
-        :errors="errors"
-      />
-    </Field>
-  </VeeField>
+        <template
+          v-if="$slots.trailing"
+          #trailing
+        >
+          <slot name="trailing" />
+        </template>
+      </InputControl>
+    </template>
+  </FormField>
 </template>

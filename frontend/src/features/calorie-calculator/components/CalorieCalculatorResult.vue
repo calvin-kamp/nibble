@@ -1,27 +1,19 @@
 <script setup lang="ts">
+import type { CalorieCalculatorValues, CalorieResult } from '../calorie-calculator.types'
+
 import { RotateCcwIcon, TargetIcon } from '@lucide/vue'
 import { computed, onMounted, useTemplateRef } from 'vue'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import LucideIcon from '@/components/shared/LucideIcon.vue'
-import InlineNotice from '@/components/shared/InlineNotice.vue'
+import { UiButton, UiCallout, UiCard, UiIcon } from '@components/ui'
 import CalorieBreakdown from './CalorieBreakdown.vue'
 import MacroSummary from './MacroSummary.vue'
 import ResultCta from './ResultCta.vue'
 import { goals } from '../calorie-calculator.data'
 import { MIN_INTAKE } from '../calorie-calculator.constants'
-import type { CalorieCalculatorValues, CalorieResult } from '../calorie-calculator.types'
 
 interface Props {
   result: CalorieResult
   values: CalorieCalculatorValues
 }
-
-const props = defineProps<Props>()
-
-defineEmits<{
-  edit: []
-}>()
 
 interface ResultNotice {
   id: string
@@ -29,6 +21,12 @@ interface ResultNotice {
   title: string
   text: string
 }
+
+const props = defineProps<Props>()
+
+defineEmits<{
+  edit: []
+}>()
 
 const GOAL_CAPTION: Record<CalorieCalculatorValues['goal'], string> = {
   diet: 'So viel darfst du täglich essen, um abzunehmen.',
@@ -123,85 +121,83 @@ const notices = computed<ResultNotice[]>(() => {
     aria-labelledby="result-heading"
     class="flex w-full flex-col gap-8 outline-hidden"
   >
-    <h2
-      id="result-heading"
-      class="font-bold"
-    >
-      Dein Ergebnis
-    </h2>
+    <h2 id="result-heading">Dein Ergebnis</h2>
 
-    <Card class="gap-0 py-0">
-      <div class="bg-primary/6 border-border flex flex-col items-start gap-1.5 border-b p-6 md:p-7">
-        <p class="text-primary dark:text-chart-1 flex items-center gap-1.5 text-sm font-semibold">
-          <LucideIcon
-            :icon="TargetIcon"
-            :size="14"
-          />
-          Ziel: {{ goalLabel }}
-        </p>
-
-        <p
-          class="flex items-baseline gap-2.5 text-5xl font-bold tracking-tighter tabular-nums md:text-6xl"
+    <UiCard class="gap-0 py-0">
+      <template #media>
+        <div
+          class="flex flex-col items-start gap-1.5 p-6 bg-primary/6 border-border border-b md:p-8"
         >
-          {{ wholeNumber.format(props.result.targetCalories) }}
-          <span class="text-muted-foreground text-base font-medium tracking-normal">
-            kcal pro Tag
-          </span>
-        </p>
+          <p class="flex items-center gap-1.5 text-primary text-sm font-medium">
+            <UiIcon
+              :icon="TargetIcon"
+              :size="16"
+            />
+            Ziel: {{ goalLabel }}
+          </p>
 
-        <p class="text-muted-foreground text-sm">
-          {{ headerCaption }}
-        </p>
-      </div>
+          <p
+            class="flex items-baseline gap-2.5 text-4xl font-semibold tracking-tight tabular-nums md:text-5xl"
+          >
+            {{ wholeNumber.format(props.result.targetCalories) }}
 
-      <CardContent
-        v-if="notices.length > 0"
-        class="flex flex-col gap-3 pt-6"
-      >
-        <InlineNotice
-          v-for="notice in notices"
-          :key="notice.id"
-          :variant="notice.variant"
-          :title="notice.title"
+            <span class="text-muted-foreground text-base font-medium tracking-normal">
+              kcal pro Tag
+            </span>
+          </p>
+
+          <p class="text-muted-foreground text-sm">
+            {{ headerCaption }}
+          </p>
+        </div>
+      </template>
+
+      <div class="flex flex-col gap-6 py-6">
+        <div
+          v-if="notices.length > 0"
+          class="flex flex-col gap-3"
         >
-          {{ notice.text }}
-        </InlineNotice>
-      </CardContent>
+          <UiCallout
+            v-for="notice in notices"
+            :key="notice.id"
+            :variant="notice.variant"
+            :title="notice.title"
+          >
+            {{ notice.text }}
+          </UiCallout>
+        </div>
 
-      <CardContent class="py-6">
         <CalorieBreakdown
           :result="props.result"
           :values="props.values"
         />
-      </CardContent>
 
-      <CardContent class="border-border border-t py-6">
-        <MacroSummary
-          :macros="props.result.macros"
-          :target-calories="props.result.targetCalories"
-        />
-      </CardContent>
+        <div class="pt-6 border-border border-t">
+          <MacroSummary
+            :macros="props.result.macros"
+            :target-calories="props.result.targetCalories"
+          />
+        </div>
 
-      <CardContent class="pb-6">
-        <InlineNotice>
+        <UiCallout>
           Das Ergebnis ist eine Schätzung auf Basis von Durchschnittswerten. Wieg dich zwei Wochen
           lang regelmäßig und pass die Menge an, wenn sich nichts bewegt. Bei Erkrankungen oder
           Medikamenten sprich mit deiner Ärztin oder deinem Arzt.
-        </InlineNotice>
-      </CardContent>
-    </Card>
+        </UiCallout>
+      </div>
+    </UiCard>
 
     <ResultCta />
 
     <div class="flex justify-center">
-      <Button
+      <UiButton
         type="button"
         variant="ghost"
         @click="$emit('edit')"
       >
-        <LucideIcon :icon="RotateCcwIcon" />
+        <UiIcon :icon="RotateCcwIcon" />
         Angaben ändern
-      </Button>
+      </UiButton>
     </div>
   </section>
 </template>

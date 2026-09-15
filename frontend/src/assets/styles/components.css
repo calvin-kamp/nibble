@@ -1,0 +1,6 @@
+@layer components {
+  .content-wrapper {
+    @apply w-full max-w-7xl px-4 mx-auto;
+    @apply md:px-5;
+  }
+}

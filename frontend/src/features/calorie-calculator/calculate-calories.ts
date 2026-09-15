@@ -1,3 +1,5 @@
+import type { CalorieCalculatorValues, CalorieResult, Workout } from './calorie-calculator.types'
+
 import { calculateMacros } from './calculate-macros'
 import {
   GOAL_FACTOR,
@@ -6,7 +8,6 @@ import {
   TEF_SHARE,
   WALKING_MET,
 } from './calorie-calculator.constants'
-import type { CalorieCalculatorValues, CalorieResult, Workout } from './calorie-calculator.types'
 
 /**
  * Reads the MET out of a compound option value (`groupIndex-optionIndex-MET`).

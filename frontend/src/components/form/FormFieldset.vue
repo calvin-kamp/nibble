@@ -1,53 +1,89 @@
 <script setup lang="ts">
-import { computed, useId, useSlots } from 'vue'
-import { FieldDescription, FieldLegend, FieldSet } from '../ui/field'
+import type { FormFieldProps } from './form.types'
 
-interface Props {
-  label: string
-  srOnlyLabel?: boolean
-  labelVariant?: 'legend' | 'label'
-  description?: string
-  srOnlyDescription?: boolean
-}
+import { Field as VeeField, useFieldError } from 'vee-validate'
+import { UiIcon } from '@components/ui'
+import { CircleAlertIcon } from '@lucide/vue'
+import { toRef, useId } from 'vue'
+import { useFieldIds } from './field-ids'
 
-const props = withDefaults(defineProps<Props>(), {
-  srOnlyLabel: false,
-  labelVariant: 'legend',
-  description: undefined,
-  srOnlyDescription: false,
-})
+const props = defineProps<FormFieldProps>()
 
-const slots = useSlots()
+const error = useFieldError(toRef(props, 'fieldName'))
 
-const fieldId: string = useId()
-const descriptionId: string = `${fieldId}-description`
-
-const hasDescription = computed<boolean>(() => Boolean(props.description || slots.description))
-
-const describedBy = computed<string | undefined>(() =>
-  hasDescription.value ? descriptionId : undefined,
+const { fieldId, descriptionId, errorId, describedBy } = useFieldIds(() =>
+  Boolean(props.description),
 )
+
+const legendId = useId()
 </script>
 
 <template>
-  <FieldSet :aria-describedby="describedBy">
-    <FieldLegend
-      :variant="props.labelVariant"
-      :class="{ 'sr-only': props.srOnlyLabel }"
-    >
-      {{ props.label }}
-    </FieldLegend>
+  <VeeField
+    v-slot="{ componentField, errors }"
+    :name="props.fieldName"
+    :validate-on-blur="false"
+    :validate-on-model-update="Boolean(error)"
+  >
+    <fieldset class="w-full min-w-0">
+      <legend
+        :id="legendId"
+        class="w-full font-medium"
+      >
+        {{ props.label }}
 
-    <FieldDescription
-      v-if="hasDescription"
-      :id="descriptionId"
-      :class="{ 'sr-only': props.srOnlyDescription }"
-    >
-      <slot name="description">
-        {{ props.description }}
-      </slot>
-    </FieldDescription>
+        <span
+          v-if="props.required"
+          aria-hidden="true"
+        >
+          *
+        </span>
+      </legend>
 
-    <slot />
-  </FieldSet>
+      <div class="mt-2 flex flex-col gap-2">
+        <p
+          v-if="props.description"
+          :id="descriptionId"
+          class="text-muted-foreground text-sm"
+        >
+          {{ props.description }}
+        </p>
+
+        <slot
+          :id="fieldId"
+          :labelled-by="legendId"
+          :component-field="componentField"
+          :invalid="Boolean(error)"
+          :described-by="describedBy(Boolean(error))"
+          name="control"
+        />
+
+        <div
+          v-if="errors.length"
+          :id="errorId"
+          role="alert"
+          class="flex items-start gap-1 text-destructive text-sm"
+        >
+          <UiIcon
+            :icon="CircleAlertIcon"
+            class="mt-0.5"
+          />
+
+          <span v-if="errors.length === 1">{{ errors[0] }}</span>
+
+          <ul
+            v-else
+            class="flex flex-col gap-1 pl-4 list-disc"
+          >
+            <li
+              v-for="message in errors"
+              :key="message"
+            >
+              {{ message }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </fieldset>
+  </VeeField>
 </template>

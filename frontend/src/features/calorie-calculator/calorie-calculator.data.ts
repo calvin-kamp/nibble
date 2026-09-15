@@ -1,7 +1,7 @@
-import type { Option, OptionGroup } from '@/types/form.types'
 import type { MacroChartEntry } from './calorie-calculator.types'
+import type { RadioOption, SelectOptionGroup } from '@components/form'
 
-export const exercises: OptionGroup[] = [
+export const exercises: SelectOptionGroup[] = [
   {
     label: 'Krafttraining',
     options: [
@@ -172,7 +172,7 @@ export const exercises: OptionGroup[] = [
   },
 ]
 
-export const sexes: Option[] = [
+export const sexes: RadioOption[] = [
   {
     value: 'male',
     label: 'Männlich',
@@ -183,7 +183,7 @@ export const sexes: Option[] = [
   },
 ]
 
-export const goals: Option[] = [
+export const goals: RadioOption[] = [
   {
     value: 'diet',
     label: 'Abnehmen',

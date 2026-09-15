@@ -31,7 +31,7 @@ export const calorieCalculatorSchema = toTypedSchema(
       .min(0)
       .max(50000, { message: 'Höchstens 50.000 Schritte pro Tag.' }),
 
-    exercises: z.array(workoutSchema).default([]),
+    exercises: z.array(workoutSchema),
 
     goal: z.enum(['diet', 'maintain', 'gain']),
   }),

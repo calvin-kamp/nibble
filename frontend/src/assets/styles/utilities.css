@@ -1,0 +1,25 @@
+@utility transition-interactive {
+  transition-property: color, background-color, border-color, box-shadow, translate;
+  transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
+}
+
+@utility focus-ring {
+  @apply outline-hidden;
+  border-color: var(--ring);
+  box-shadow:
+    0 0 0 2px var(--ring-offset, var(--background)),
+    0 0 0 4px var(--ring);
+}
+
+@utility focus-ring-* {
+  @apply outline-hidden;
+  border-color: --value(--color-*, [color]);
+  box-shadow:
+    0 0 0 2px var(--ring-offset, var(--background)),
+    0 0 0 4px --value(--color-*, [color]);
+}
+
+@utility inactive {
+  @apply cursor-not-allowed opacity-50;
+}

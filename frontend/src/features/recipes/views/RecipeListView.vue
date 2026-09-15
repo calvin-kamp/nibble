@@ -1,19 +1,25 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useRouteQuery } from '@vueuse/router'
-import { useDebounceFn } from '@vueuse/core'
-import RecipeSearchBar from '../components/RecipeSearchBar.vue'
 import RecipeFilterBar from '../components/RecipeFilterBar.vue'
 import RecipeList from '../components/RecipeList.vue'
+import RecipeSearchBar from '../components/RecipeSearchBar.vue'
+import { useRecipeFilters } from '../recipe-filters'
+import { onUnmounted, ref, watch } from 'vue'
 
-const search = useRouteQuery<string>('suche', '')
-const searchValue = ref(search.value)
+const { search } = useRecipeFilters()
 
-const commit = useDebounceFn((value: string): void => {
-  search.value = value.trim()
-}, 250)
+const searchInput = ref<string>(search.value)
 
-watch(searchValue, commit)
+let timer: ReturnType<typeof setTimeout> | undefined
+
+watch(searchInput, (value) => {
+  clearTimeout(timer)
+
+  timer = setTimeout(() => {
+    search.value = value.trim()
+  }, 250)
+})
+
+onUnmounted(() => clearTimeout(timer))
 </script>
 
 <template>
@@ -21,15 +27,15 @@ watch(searchValue, commit)
     <div class="flex flex-col gap-4">
       <h1>Rezepte</h1>
 
-      <p class="text-muted-foreground max-w-[60ch]">
+      <p class="text-muted-foreground max-w-prose">
         Finde Rezepte, die zu deinem Tag passen — gefiltert nach Ernährungsform, Mahlzeit und
         Ausstattung.
       </p>
     </div>
 
-    <div class="flex flex-col gap-3">
-      <div class="sm:max-w-sm">
-        <RecipeSearchBar v-model="searchValue" />
+    <div class="flex flex-col gap-3 lg:flex-row lg:justify-between">
+      <div class="md:max-w-sm">
+        <RecipeSearchBar v-model="searchInput" />
       </div>
 
       <RecipeFilterBar />

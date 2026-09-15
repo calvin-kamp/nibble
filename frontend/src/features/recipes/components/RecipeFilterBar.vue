@@ -1,34 +1,39 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button'
+import { useBreakpoint } from '@composables/breakpoint.ts'
+import { useRecipeFilters } from '../recipe-filters'
+import { filterOptions } from '../recipes.data'
 import RecipeFilter from './RecipeFilter.vue'
 import RecipeFilterDrawer from './RecipeFilterDrawer.vue'
-import { filterOptions } from '../recipes.data'
-import { useRecipeFilters } from '../useRecipeFilters'
+import { UiButton } from '@components/ui'
 
 const { filters, activeCount, reset } = useRecipeFilters()
+
+const { activeBreakpoint } = useBreakpoint()
 </script>
 
 <template>
-  <div class="sm:hidden">
-    <RecipeFilterDrawer />
-  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    <template v-if="activeBreakpoint === 'mobile'">
+      <RecipeFilterDrawer />
+    </template>
 
-  <div class="hidden flex-row flex-wrap items-center gap-2 sm:flex">
-    <RecipeFilter
-      v-for="filterOption in filterOptions"
-      :key="filterOption.key"
-      v-model="filters[filterOption.key]"
-      :trigger-label="filterOption.triggerLabel"
-      :filter-description="filterOption.filterDescription"
-      :options="filterOption.options"
-    />
+    <template v-else>
+      <RecipeFilter
+        v-for="filterOption in filterOptions"
+        :key="filterOption.key"
+        v-model="filters[filterOption.key]"
+        :trigger-label="filterOption.triggerLabel"
+        :filter-description="filterOption.filterDescription"
+        :options="filterOption.options"
+      />
 
-    <Button
-      v-if="activeCount > 0"
-      variant="ghost"
-      @click="reset"
-    >
-      Alle zurücksetzen
-    </Button>
+      <UiButton
+        v-if="activeCount > 0"
+        variant="ghost"
+        @click="reset"
+      >
+        Alle zurücksetzen
+      </UiButton>
+    </template>
   </div>
 </template>

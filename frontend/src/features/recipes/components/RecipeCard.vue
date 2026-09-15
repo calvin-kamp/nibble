@@ -1,93 +1,91 @@
 <script setup lang="ts">
-import LucideIcon from '@/components/shared/LucideIcon.vue'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { focusRingCardLink, focusRingResetLink } from '@/lib/interactive-styles'
+import type { Recipe, RecipeBadgeSummary } from '../recipes.types'
+
+import { getRecipeBadgeSummary, toSlug } from '../recipes.utils'
+import { UiBadge, UiCard, UiIcon } from '@components/ui'
 import { ClockIcon, FlameIcon, ImageIcon } from '@lucide/vue'
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import type { Recipe } from '../recipes.types'
-import { Badge } from '@/components/ui/badge'
-import { getRecipeBadgeSummary } from '../recipes.utils'
 
 interface Props {
   recipe: Recipe
 }
 
 const props = defineProps<Props>()
+
+const badgeSummary = computed<RecipeBadgeSummary>(() => getRecipeBadgeSummary(props.recipe))
 </script>
 
 <template>
-  <Card
+  <UiCard
     as="article"
     size="sm"
-    :class="[
-      focusRingCardLink,
-      'relative h-full hover:border-ring hover:-translate-y-0.5 active:translate-0',
-    ]"
+    title-as="h3"
+    class="relative h-full hover:ring-ring has-[a:focus-visible]:focus-ring transition-interactive hover:-translate-y-0.5 active:translate-y-0"
+    media-class="aspect-4/3 overflow-hidden"
   >
-    <CardHeader class="flex items-stretch px-0 aspect-288/216">
+    <template #media>
       <img
         v-if="props.recipe.image"
         :src="props.recipe.image.src"
         :alt="props.recipe.image.alt"
+        class="size-full object-cover"
       />
+
       <div
         v-else
         role="img"
-        class="grid place-items-center w-full bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,color-mix(in_oklab,var(--muted-foreground)_8%,transparent)_10px,color-mix(in_oklab,var(--muted-foreground)_8%,transparent)_20px)]"
+        aria-label="Kein Bild vorhanden"
+        class="grid size-full place-items-center bg-muted text-muted-foreground"
       >
-        <LucideIcon
+        <UiIcon
           :icon="ImageIcon"
           :size="32"
         />
       </div>
-    </CardHeader>
+    </template>
 
-    <CardContent>
-      <ul class="flex gap-2.5">
-        <li
-          v-for="(badge, index) in getRecipeBadgeSummary(recipe).badges"
-          :key="index"
-        >
-          <Badge :variant="badge.variant">
-            {{ badge.label }}
-          </Badge>
-        </li>
-
-        <li v-if="getRecipeBadgeSummary(recipe).hiddenCount > 0">
-          <Badge variant="outline"> +{{ getRecipeBadgeSummary(recipe).hiddenCount }} </Badge>
-        </li>
-      </ul>
-    </CardContent>
-
-    <CardContent>
-      <CardTitle
-        as="h3"
-        class="min-h-10"
+    <template #title>
+      <RouterLink
+        :to="{
+          name: 'recipe-detail',
+          params: { id: props.recipe.id, name: toSlug(props.recipe.name) },
+        }"
+        class="after:absolute after:inset-0 focus-visible:outline-hidden"
       >
-        <RouterLink
-          data-slot="card-link"
-          :to="{ name: 'calorie-calculator' }"
-          :class="[focusRingResetLink, 'after:absolute after:inset-0']"
-        >
-          {{ props.recipe.name }}
-        </RouterLink>
-      </CardTitle>
-    </CardContent>
+        {{ props.recipe.name }}
+      </RouterLink>
+    </template>
 
-    <CardFooter class="mt-auto">
-      <ul class="flex gap-6">
+    <ul class="flex flex-wrap gap-2">
+      <li
+        v-for="badge in badgeSummary.badges"
+        :key="badge.label"
+      >
+        <UiBadge :variant="badge.variant">
+          {{ badge.label }}
+        </UiBadge>
+      </li>
+
+      <li v-if="badgeSummary.hiddenCount > 0">
+        <UiBadge variant="outline">+{{ badgeSummary.hiddenCount }}</UiBadge>
+      </li>
+    </ul>
+
+    <template #footer>
+      <ul class="flex flex-wrap gap-x-6 gap-y-1">
         <li class="flex items-center gap-1.5 text-muted-foreground text-sm">
-          <LucideIcon :icon="ClockIcon" />
+          <UiIcon :icon="ClockIcon" />
 
           {{ props.recipe.durationMinutes }} Min
         </li>
 
         <li class="flex items-center gap-1.5 text-muted-foreground text-sm">
-          <LucideIcon :icon="FlameIcon" />
+          <UiIcon :icon="FlameIcon" />
 
           {{ props.recipe.kcalPerServing }} kcal / Portion
         </li>
       </ul>
-    </CardFooter>
-  </Card>
+    </template>
+  </UiCard>
 </template>

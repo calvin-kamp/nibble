@@ -10,7 +10,15 @@
   ],
   "compilerOptions": {
     "paths": {
-      "@/*": ["./src/*"]
+      "@lib/*": ["./src/lib/*"],
+      "@data/*": ["./src/data/*"],
+      "@views/*": ["./src/views/*"],
+      "@stores/*": ["./src/stores/*"],
+      "@assets/*": ["./src/assets/*"],
+      "@features/*": ["./src/features/*"],
+      "@interfaces/*": ["./src/interfaces/*"],
+      "@components/*": ["./src/components/*"],
+      "@composables/*": ["./src/composables/*"]
     }
   }
 }

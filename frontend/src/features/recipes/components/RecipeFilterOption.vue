@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { CheckboxControl } from '@components/form/controls'
+import { Label as RekaLabel } from 'reka-ui'
 import { useId } from 'vue'
-import { Checkbox } from '@/components/ui/checkbox'
-import { FieldLabel } from '@/components/ui/field'
 
 interface Props {
   label: string
@@ -17,15 +17,15 @@ const emit = defineEmits<{
   toggle: [checked: boolean]
 }>()
 
-const optionId: string = useId()
+const optionId = useId()
 </script>
 
 <template>
-  <FieldLabel
+  <RekaLabel
     :for="optionId"
-    class="hover:bg-accent flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-md px-2 font-normal"
+    class="flex min-h-11 w-full items-center gap-3 px-2 rounded-md hover:bg-accent cursor-pointer"
   >
-    <Checkbox
+    <CheckboxControl
       :id="optionId"
       :model-value="props.checked"
       :disabled="props.disabled"
@@ -33,5 +33,5 @@ const optionId: string = useId()
     />
 
     <span>{{ props.label }}</span>
-  </FieldLabel>
+  </RekaLabel>
 </template>

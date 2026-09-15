@@ -1,52 +1,47 @@
 <script setup lang="ts">
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from '@/components/ui/input-group'
+import { InputControl } from '@components/form/controls'
+import { UiButton, UiIcon } from '@components/ui'
 import { SearchIcon, XIcon } from '@lucide/vue'
-import LucideIcon from '@/components/shared/LucideIcon.vue'
+import { Label as RekaLabel } from 'reka-ui'
 import { useId } from 'vue'
-import { Field, FieldLabel } from '@/components/ui/field'
 
 const model = defineModel<string>({ default: '' })
-const fieldId: string = useId()
+
+const fieldId = useId()
 </script>
 
 <template>
-  <Field>
-    <FieldLabel
+  <div class="flex flex-col">
+    <RekaLabel
       :for="fieldId"
       class="sr-only"
     >
       Suche
-    </FieldLabel>
+    </RekaLabel>
 
-    <InputGroup>
-      <InputGroupInput
-        :id="fieldId"
-        v-model="model"
-        type="search"
-        placeholder="Rezepte durchsuchen"
-      />
+    <InputControl
+      :id="fieldId"
+      v-model="model"
+      type="search"
+      placeholder="Rezepte durchsuchen"
+    >
+      <template #leading>
+        <UiIcon :icon="SearchIcon" />
+      </template>
 
-      <InputGroupAddon>
-        <LucideIcon :icon="SearchIcon" />
-      </InputGroupAddon>
-
-      <InputGroupAddon
+      <template
         v-if="model.length > 0"
-        align="inline-end"
+        #trailing
       >
-        <InputGroupButton
-          data-size="icon-sm"
+        <UiButton
+          variant="ghost"
+          size="icon-sm"
           aria-label="Suche zurücksetzen"
           @click="model = ''"
         >
-          <LucideIcon :icon="XIcon" />
-        </InputGroupButton>
-      </InputGroupAddon>
-    </InputGroup>
-  </Field>
+          <UiIcon :icon="XIcon" />
+        </UiButton>
+      </template>
+    </InputControl>
+  </div>
 </template>

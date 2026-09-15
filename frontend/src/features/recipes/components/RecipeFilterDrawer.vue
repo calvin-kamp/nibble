@@ -1,24 +1,16 @@
 <script setup lang="ts">
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from '@/components/ui/drawer'
-import { Button } from '@/components/ui/button'
-import { FormFieldset } from '@/components/form'
-import { Separator } from '@/components/ui/separator'
-import LucideIcon from '@/components/shared/LucideIcon.vue'
-import { SlidersHorizontalIcon } from '@lucide/vue'
-import RecipeFilterOption from './RecipeFilterOption.vue'
-import { filterOptions } from '../recipes.data'
-import { useRecipeFilters } from '../useRecipeFilters'
 import type { RecipeFilterKey } from '../recipes.types'
 
+import { useRecipeFilters } from '../recipe-filters'
+import { filterOptions } from '../recipes.data'
+import RecipeFilterOption from './RecipeFilterOption.vue'
+import { UiBadge, UiButton, UiDrawer, UiIcon, UiSeparator } from '@components/ui'
+import { SlidersHorizontalIcon } from '@lucide/vue'
+import { ref } from 'vue'
+
 const { filters, activeCount, reset } = useRecipeFilters()
+
+const open = ref<boolean>(false)
 
 function isChecked(key: RecipeFilterKey, value: string): boolean {
   return filters[key].includes(value)
@@ -32,22 +24,28 @@ function toggle(key: RecipeFilterKey, value: string, checked: boolean): void {
 </script>
 
 <template>
-  <Drawer>
-    <DrawerTrigger as-child>
-      <Button
-        variant="outline"
-        class="w-full"
+  <UiDrawer
+    v-model:open="open"
+    title="Filter"
+    description="Mehrfachauswahl ist möglich. Die Auswahl wirkt sofort auf die Liste."
+    sr-only-description
+  >
+    <template #trigger>
+      <UiButton
+        variant="ghost"
+        class="w-full border border-input"
       >
-        <LucideIcon :icon="SlidersHorizontalIcon" />
+        <UiIcon :icon="SlidersHorizontalIcon" />
+
         Filter
 
-        <span
+        <UiBadge
           v-if="activeCount > 0"
-          class="bg-primary text-primary-foreground grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs font-semibold tabular-nums"
+          class="min-w-5 justify-center px-1 tabular-nums"
           aria-hidden="true"
         >
           {{ activeCount }}
-        </span>
+        </UiBadge>
 
         <span
           v-if="activeCount > 0"
@@ -55,26 +53,28 @@ function toggle(key: RecipeFilterKey, value: string, checked: boolean): void {
         >
           {{ activeCount }} Filter aktiv
         </span>
-      </Button>
-    </DrawerTrigger>
+      </UiButton>
+    </template>
 
-    <DrawerContent>
-      <DrawerHeader>
-        <DrawerTitle>Filter</DrawerTitle>
-      </DrawerHeader>
-
-      <div class="flex flex-col gap-6 overflow-y-auto px-1 pb-2">
+    <template #content>
+      <div class="flex max-h-[55vh] flex-col gap-6 overflow-y-auto px-1 pb-2">
         <template
           v-for="(filterOption, index) in filterOptions"
           :key="filterOption.key"
         >
-          <Separator v-if="index > 0" />
+          <UiSeparator v-if="index > 0" />
 
-          <FormFieldset
-            :label="filterOption.triggerLabel"
-            :description="filterOption.filterDescription"
-          >
-            <div class="flex flex-col">
+          <fieldset class="flex min-w-0 flex-col">
+            <legend class="w-full font-medium">{{ filterOption.triggerLabel }}</legend>
+
+            <p
+              v-if="filterOption.filterDescription"
+              class="mt-1 text-muted-foreground text-sm"
+            >
+              {{ filterOption.filterDescription }}
+            </p>
+
+            <div class="mt-2 flex flex-col">
               <RecipeFilterOption
                 v-for="option in filterOption.options"
                 :key="option.value"
@@ -84,23 +84,27 @@ function toggle(key: RecipeFilterKey, value: string, checked: boolean): void {
                 @toggle="(checked) => toggle(filterOption.key, option.value, checked)"
               />
             </div>
-          </FormFieldset>
+          </fieldset>
         </template>
       </div>
+    </template>
 
-      <DrawerFooter class="flex-col gap-3 sm:flex-row">
-        <DrawerClose as-child>
-          <Button>Rezepte anzeigen</Button>
-        </DrawerClose>
+    <template #footer>
+      <UiButton
+        class="w-full"
+        @click="open = false"
+      >
+        Rezepte anzeigen
+      </UiButton>
 
-        <Button
-          variant="outline"
-          :disabled="activeCount === 0"
-          @click="reset"
-        >
-          Zurücksetzen
-        </Button>
-      </DrawerFooter>
-    </DrawerContent>
-  </Drawer>
+      <UiButton
+        variant="ghost"
+        class="w-full border border-input"
+        :disabled="activeCount === 0"
+        @click="reset"
+      >
+        Zurücksetzen
+      </UiButton>
+    </template>
+  </UiDrawer>
 </template>

@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Button } from '@/components/ui/button'
-import { FormFieldset } from '@/components/form'
-import LucideIcon from '@/components/shared/LucideIcon.vue'
-import { ChevronDownIcon } from '@lucide/vue'
+import type { SelectOption } from '@components/form'
+
 import RecipeFilterOption from './RecipeFilterOption.vue'
-import type { Option } from '@/types/form.types'
+import { UiBadge, UiButton, UiIcon, UiPopover } from '@components/ui'
+import { ChevronDownIcon } from '@lucide/vue'
+import { computed } from 'vue'
 
 interface Props {
   triggerLabel: string
   filterDescription?: string
-  options: Option[]
+  options: SelectOption[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -34,22 +32,26 @@ function toggle(value: string, checked: boolean): void {
 </script>
 
 <template>
-  <Popover>
-    <PopoverTrigger as-child>
-      <Button
-        variant="outline"
+  <UiPopover
+    :title="props.triggerLabel"
+    :description="props.filterDescription"
+    align="start"
+  >
+    <template #trigger>
+      <UiButton
+        variant="ghost"
         :data-active="selectedCount > 0"
-        class="data-[active=true]:border-primary data-[active=true]:bg-primary-subtle data-[active=true]:text-primary-subtle-foreground rounded-full"
+        class="rounded-full border border-input data-[active=true]:border-primary data-[active=true]:bg-primary/10"
       >
         {{ props.triggerLabel }}
 
-        <span
+        <UiBadge
           v-if="selectedCount > 0"
-          class="bg-primary text-primary-foreground grid h-5 min-w-5 place-items-center rounded-full px-1 text-xs font-semibold tabular-nums"
+          class="min-w-5 justify-center px-1 tabular-nums"
           aria-hidden="true"
         >
           {{ selectedCount }}
-        </span>
+        </UiBadge>
 
         <span
           v-if="selectedCount > 0"
@@ -58,27 +60,19 @@ function toggle(value: string, checked: boolean): void {
           {{ selectedCount }} ausgewählt
         </span>
 
-        <LucideIcon :icon="ChevronDownIcon" />
-      </Button>
-    </PopoverTrigger>
+        <UiIcon :icon="ChevronDownIcon" />
+      </UiButton>
+    </template>
 
-    <PopoverContent align="start">
-      <FormFieldset
-        :label="props.triggerLabel"
-        :description="props.filterDescription"
-        sr-only-label
-      >
-        <div class="flex flex-col">
-          <RecipeFilterOption
-            v-for="option in props.options"
-            :key="option.value"
-            :label="option.label"
-            :checked="isChecked(option.value)"
-            :disabled="option.disabled"
-            @toggle="(checked) => toggle(option.value, checked)"
-          />
-        </div>
-      </FormFieldset>
-    </PopoverContent>
-  </Popover>
+    <template #content>
+      <RecipeFilterOption
+        v-for="option in props.options"
+        :key="option.value"
+        :label="option.label"
+        :checked="isChecked(option.value)"
+        :disabled="option.disabled"
+        @toggle="(checked) => toggle(option.value, checked)"
+      />
+    </template>
+  </UiPopover>
 </template>

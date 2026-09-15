@@ -1,0 +1,29 @@
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    @apply font-sans;
+  }
+  #app {
+    @apply flex flex-col h-dvh pb-26;
+    @apply lg:pb-0;
+  }
+  h1 {
+    @apply text-3xl font-bold leading-snug tracking-tight;
+    @apply md:text-4xl md:tracking-tighter;
+  }
+  h2 {
+    @apply text-2xl font-semibold leading-snug tracking-tight;
+    @apply md:text-3xl;
+  }
+  h3 {
+    @apply text-xl font-semibold leading-normal;
+    @apply xl:text-2xl md:tracking-tight;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}

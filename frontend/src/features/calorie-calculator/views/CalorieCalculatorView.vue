@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import type { CalorieCalculatorValues, CalorieResult } from '../calorie-calculator.types'
+
 import { nextTick, ref, useTemplateRef } from 'vue'
 import CalorieCalculatorForm from '../components/CalorieCalculatorForm.vue'
 import CalorieCalculatorResult from '../components/CalorieCalculatorResult.vue'
-import type { CalorieCalculatorValues, CalorieResult } from '../calorie-calculator.types'
 
 const result = ref<CalorieResult | null>(null)
 const submittedValues = ref<CalorieCalculatorValues | null>(null)
@@ -32,28 +33,30 @@ async function onEdit(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <h1>Kalorienrechner</h1>
+  <div class="flex flex-col gap-6 max-w-6xl mx-auto">
+    <div class="flex flex-col gap-4">
+      <h1>Kalorienrechner</h1>
 
-    <p
-      v-if="!result"
-      class="text-muted-foreground max-w-[60ch]"
-    >
-      Wie viele Kalorien brauchst du wirklich? Wir rechnen Grundumsatz, Alltag, Training und
-      Verdauung einzeln — und zeigen dir jeden Posten.
-    </p>
+      <p
+        v-if="!result"
+        class="text-muted-foreground max-w-prose"
+      >
+        Wie viele Kalorien brauchst du wirklich? Wir rechnen Grundumsatz, Alltag, Training und
+        Verdauung einzeln — und zeigen dir jeden Posten.
+      </p>
+    </div>
+
+    <CalorieCalculatorForm
+      v-show="!result"
+      ref="formContainer"
+      @calculated="onCalculated"
+    />
+
+    <CalorieCalculatorResult
+      v-if="result && submittedValues"
+      :result="result"
+      :values="submittedValues"
+      @edit="onEdit"
+    />
   </div>
-
-  <CalorieCalculatorForm
-    v-show="!result"
-    ref="formContainer"
-    @calculated="onCalculated"
-  />
-
-  <CalorieCalculatorResult
-    v-if="result && submittedValues"
-    :result="result"
-    :values="submittedValues"
-    @edit="onEdit"
-  />
 </template>

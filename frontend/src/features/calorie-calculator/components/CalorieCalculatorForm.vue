@@ -1,184 +1,229 @@
 <script setup lang="ts">
-import { TriangleAlertIcon } from '@lucide/vue'
+import type { CalorieCalculatorValues, CalorieResult } from '../calorie-calculator.types'
+
 import { useForm } from 'vee-validate'
-import { computed, nextTick, useTemplateRef } from 'vue'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { FieldGroup, FieldSeparator } from '@/components/ui/field'
-import { FormFieldset, FormNumberField, FormRadioGroupField } from '@/components/form'
-import LucideIcon from '@/components/shared/LucideIcon.vue'
-import WorkoutFieldArray from './WorkoutFieldArray.vue'
+import { DumbbellIcon } from '@lucide/vue'
+import { nextTick, useTemplateRef } from 'vue'
+import { UiButton, UiCard, UiIcon, UiSeparator } from '@components/ui'
+import {
+  FormFieldArray,
+  FormNumberField,
+  FormRadioGroupField,
+  FormSection,
+  FormSelectField,
+} from '@components/form'
 import { calculateCalories } from '../calculate-calories'
 import { calorieCalculatorSchema } from '../calorie-calculator.schema'
-import { goals, sexes } from '../calorie-calculator.data'
-import type { CalorieCalculatorValues, CalorieResult } from '../calorie-calculator.types'
+import { exercises, goals, sexes } from '../calorie-calculator.data'
+import { useUserStore } from '@stores/user.store'
 
 const emit = defineEmits<{
   calculated: [result: CalorieResult, values: CalorieCalculatorValues]
 }>()
 
-const { handleSubmit, resetForm, errors, submitCount } = useForm({
+const user = useUserStore()
+
+const { handleSubmit, resetForm } = useForm({
   validationSchema: calorieCalculatorSchema,
   initialValues: {
-    sex: 'male',
-    goal: 'maintain',
+    sex: user.sex,
+    age: user.age,
+    height: user.height,
+    weight: user.weight,
     steps: 0,
     exercises: [],
+    goal: 'maintain',
   },
 })
 
 const formElement = useTemplateRef<HTMLFormElement>('formElement')
 
-const errorCount = computed<number>(() => Object.keys(errors.value).length)
+const FOCUSABLE = 'input, select, textarea, button, [tabindex]'
 
-const showErrorSummary = computed<boolean>(() => submitCount.value > 0 && errorCount.value > 0)
+function focusableWithin(element: HTMLElement): HTMLElement {
+  if (element.matches(FOCUSABLE)) return element
 
-async function focusFirstInvalidControl(): Promise<void> {
+  return element.querySelector<HTMLElement>(FOCUSABLE) ?? element
+}
+
+function scrollBehavior(): ScrollBehavior {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+}
+
+async function revealFirstInvalidField(): Promise<void> {
   await nextTick()
 
-  formElement.value
-    ?.querySelector<HTMLElement>('input[aria-invalid="true"], button[aria-invalid="true"]')
-    ?.focus()
+  const invalid = formElement.value?.querySelector<HTMLElement>('[aria-invalid="true"]')
+
+  if (!invalid) return
+
+  focusableWithin(invalid).focus({ preventScroll: true })
+
+  invalid.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })
 }
 
 const onSubmit = handleSubmit((values) => {
   const typedValues = values as CalorieCalculatorValues
 
   emit('calculated', calculateCalories(typedValues), typedValues)
-}, focusFirstInvalidControl)
+}, revealFirstInvalidField)
 </script>
 
 <template>
-  <form
-    ref="formElement"
-    novalidate
-    @submit="onSubmit"
-  >
-    <Card>
-      <CardContent>
-        <FieldGroup>
-          <FormFieldset
-            label="Grundumsatz"
-            description="Diese vier Angaben bestimmen, was dein Körper in Ruhe verbraucht."
+  <UiCard as-child>
+    <form
+      ref="formElement"
+      novalidate
+      class="flex flex-col gap-6"
+      @submit="onSubmit"
+    >
+      <FormSection
+        label="Grundumsatz"
+        description="Diese vier Angaben bestimmen, was dein Körper in Ruhe verbraucht."
+      >
+        <FormRadioGroupField
+          field-name="sex"
+          label="Geschlecht"
+          variant="segment"
+          :options="sexes"
+          :columns="2"
+        />
+
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <FormNumberField
+            field-name="age"
+            label="Alter"
+            :min="0"
+            :max="120"
           >
-            <FormRadioGroupField
-              field-name="sex"
-              label="Geschlecht"
-              description="Bestimmt die Formel für deinen Grundumsatz."
-              variant="button"
-              :options="sexes"
-              :sr-only-description="true"
+            <template #trailing> Jahre </template>
+          </FormNumberField>
+
+          <FormNumberField
+            field-name="height"
+            label="Größe"
+            :min="0"
+            :max="250"
+          >
+            <template #trailing> cm </template>
+          </FormNumberField>
+
+          <FormNumberField
+            field-name="weight"
+            label="Gewicht"
+            :min="0"
+            :max="400"
+            :fraction-digits="1"
+          >
+            <template #trailing> kg </template>
+          </FormNumberField>
+        </div>
+      </FormSection>
+
+      <UiSeparator />
+
+      <FormSection label="Alltagsbewegung">
+        <FormNumberField
+          field-name="steps"
+          label="Schritte pro Tag"
+          :min="0"
+          :max="50000"
+          :step="100"
+          stepper
+        >
+          <template #description>
+            Dein Handy zählt schon mit — schau in der Health-App nach deinem Tagesdurchschnitt.
+
+            <br />
+
+            Zum Schätzen: rund 4.000 bei überwiegend sitzendem Alltag, rund 7.000 bei gemischtem,
+            rund 10.000 wenn du viel auf den Beinen bist.
+          </template>
+        </FormNumberField>
+      </FormSection>
+
+      <UiSeparator />
+
+      <FormSection
+        label="Training"
+        description="Optional. Nur gezielter Sport — Spaziergänge und Wege stecken schon in deinen Schritten."
+      >
+        <FormFieldArray
+          field-name="exercises"
+          entry-label="Training"
+          empty-title="Kein Training eingetragen"
+          empty-text="Wir rechnen dann nur mit Grundumsatz und Alltagsbewegung."
+          add-label="Training hinzufügen"
+          add-more-label="Weiteres Training hinzufügen"
+          :new-entry="() => ({ met: '', duration: 0, frequency: 0 })"
+        >
+          <template #media>
+            <UiIcon
+              :icon="DumbbellIcon"
+              :size="24"
+            />
+          </template>
+
+          <template #default="{ path }">
+            <FormSelectField
+              :field-name="`${path}.met`"
+              label="Sportart"
+              placeholder="Sportart wählen"
+              :options="exercises"
             />
 
-            <FieldGroup class="sm:flex-row">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
               <FormNumberField
-                field-name="age"
-                label="Alter"
-                unit="Jahre"
-                :max="120"
-              />
-
-              <FormNumberField
-                field-name="height"
-                label="Größe"
-                unit="cm"
-                :max="250"
-              />
+                :field-name="`${path}.duration`"
+                label="Dauer"
+                :min="0"
+                :max="600"
+                :step="5"
+              >
+                <template #trailing> min </template>
+              </FormNumberField>
 
               <FormNumberField
-                field-name="weight"
-                label="Gewicht"
-                unit="kg"
-                :max="400"
-                :fraction-digits="1"
-              />
-            </FieldGroup>
-          </FormFieldset>
+                :field-name="`${path}.frequency`"
+                label="Pro Woche"
+                :min="0"
+                :max="7"
+              >
+                <template #trailing> mal </template>
+              </FormNumberField>
+            </div>
+          </template>
+        </FormFieldArray>
+      </FormSection>
 
-          <FieldSeparator />
+      <UiSeparator />
 
-          <FormFieldset label="Alltagsbewegung">
-            <FormNumberField
-              field-name="steps"
-              label="Schritte pro Tag"
-              variant="stepper"
-              :step="100"
-              :max="50000"
-            >
-              <template #description>
-                Dein Handy zählt schon mit — schau in der Health-App nach deinem Tagesdurchschnitt.
+      <FormRadioGroupField
+        field-name="goal"
+        label="Dein Ziel"
+        variant="card"
+        :options="goals"
+        :columns="3"
+      />
 
-                <br />
-
-                Zum Schätzen: rund 4.000 bei überwiegend sitzendem Alltag, rund 7.000 bei
-                gemischtem, rund 10.000 wenn du viel auf den Beinen bist.
-              </template>
-            </FormNumberField>
-          </FormFieldset>
-
-          <FieldSeparator />
-
-          <FormFieldset
-            label="Training"
-            description="Optional. Nur gezielter Sport — Spaziergänge und Wege stecken schon in deinen Schritten."
-          >
-            <WorkoutFieldArray field-name="exercises" />
-          </FormFieldset>
-
-          <FieldSeparator />
-
-          <FormRadioGroupField
-            field-name="goal"
-            label="Dein Ziel"
-            variant="tile"
-            :options="goals"
-          />
-        </FieldGroup>
-      </CardContent>
-
-      <CardFooter
-        class="border-border flex-col-reverse items-stretch gap-4 border-t pt-6 sm:flex-row sm:items-center sm:justify-between"
+      <div
+        class="flex flex-col-reverse items-stretch gap-4 pt-6 border-border border-t md:flex-row md:items-center md:justify-between"
       >
-        <Button
+        <UiButton
           type="button"
           variant="ghost"
           @click="resetForm()"
         >
           Zurücksetzen
-        </Button>
+        </UiButton>
 
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <p
-            v-if="showErrorSummary"
-            role="alert"
-            class="border-destructive/30 bg-destructive/8 flex items-start gap-2 rounded-xl border p-3 text-sm sm:max-w-xs"
-          >
-            <LucideIcon
-              :icon="TriangleAlertIcon"
-              class="text-destructive mt-0.5 shrink-0"
-            />
-
-            <span>
-              <strong class="block text-destructive">
-                {{
-                  errorCount === 1
-                    ? 'Eine Angabe passt nicht.'
-                    : `${errorCount} Angaben passen nicht.`
-                }}
-              </strong>
-
-              Wir haben sie oben markiert.
-            </span>
-          </p>
-
-          <Button
-            type="submit"
-            class="w-full sm:w-auto"
-          >
-            Bedarf berechnen
-          </Button>
-        </div>
-      </CardFooter>
-    </Card>
-  </form>
+        <UiButton
+          type="submit"
+          class="w-full md:w-auto"
+        >
+          Bedarf berechnen
+        </UiButton>
+      </div>
+    </form>
+  </UiCard>
 </template>
