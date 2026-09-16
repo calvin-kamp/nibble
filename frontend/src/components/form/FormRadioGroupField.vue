@@ -2,8 +2,8 @@
 import type { RadioItemVariants } from './controls'
 import type { FormFieldProps, RadioOption } from './form.types'
 
-import FormFieldSet from './FormFieldSet.vue'
 import { RadioGroup, RadioGroupItem } from './controls'
+import { FormFieldset } from '.'
 
 interface Props extends FormFieldProps {
   options: RadioOption[]
@@ -18,7 +18,7 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <FormFieldSet
+  <FormFieldset
     :field-name="props.fieldName"
     :label="props.label"
     :required="props.required"
@@ -48,5 +48,5 @@ const props = withDefaults(defineProps<Props>(), {
         </RadioGroupItem>
       </RadioGroup>
     </template>
-  </FormFieldSet>
+  </FormFieldset>
 </template>

@@ -1,5 +1,5 @@
 export { default as FormField } from './FormField.vue'
-export { default as FormFieldSet } from './FormFieldSet.vue'
+export { default as FormFieldset } from './FormFieldset.vue'
 export { default as FormSection } from './FormSection.vue'
 
 export { default as FormCheckboxField } from './FormCheckboxField.vue'
