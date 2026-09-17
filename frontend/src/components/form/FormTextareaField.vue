@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FormFieldProps } from './form.types'
+import type { FormFieldProps } from '@interfaces/form.types'
 
 import FormField from './FormField.vue'
 import { TextareaControl } from './controls'

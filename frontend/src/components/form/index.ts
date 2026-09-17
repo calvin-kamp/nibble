@@ -12,4 +12,3 @@ export { default as FormTextareaField } from './FormTextareaField.vue'
 export { default as FormFieldArray } from './FormFieldArray.vue'
 
 export { useFieldIds } from './field-ids'
-export * from './form.types'

@@ -42,7 +42,7 @@ const activeClass = computed<string>(() =>
       :size="24"
     />
 
-    <span class="text-sm md:text-base">
+    <span class="sr-only md:not-sr-only">
       {{ props.navItem.label }}
     </span>
   </RouterLink>

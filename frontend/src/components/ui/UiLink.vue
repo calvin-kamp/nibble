@@ -12,6 +12,7 @@ interface Props {
   routeName?: string
   hash?: string
   variant?: LinkVariant
+  newTab?: boolean
   class?: HTMLAttributes['class']
   activeClass?: HTMLAttributes['class']
 }
@@ -21,14 +22,20 @@ const props = withDefaults(defineProps<Props>(), {
   routeName: undefined,
   hash: undefined,
   variant: 'inline',
+  newTab: false,
   class: undefined,
   activeClass: undefined,
 })
 
 const isExternal = computed<boolean>(() => !!props.href?.startsWith('http'))
+const opensNewTab = computed<boolean>(() => props.newTab || isExternal.value === true)
 
 const linkClasses = computed<string>(() =>
-  mergeClasses('transition-interactive focus-visible:focus-ring', linkVariants[props.variant], props.class),
+  mergeClasses(
+    'transition-interactive focus-visible:focus-ring',
+    linkVariants[props.variant],
+    props.class,
+  ),
 )
 </script>
 
@@ -36,23 +43,31 @@ const linkClasses = computed<string>(() =>
   <RouterLink
     v-if="props.routeName"
     :to="{ name: props.routeName, hash: props.hash }"
+    :target="opensNewTab ? '_blank' : undefined"
     :class="linkClasses"
     :active-class="mergeClasses(props.activeClass)"
   >
     <slot />
+
+    <span
+      v-if="opensNewTab"
+      class="sr-only"
+    >
+      (öffnet in neuem Tab)
+    </span>
   </RouterLink>
 
   <a
     v-else-if="props.href"
     :href="props.href"
-    :target="isExternal ? '_blank' : undefined"
-    :rel="isExternal ? 'noopener noreferrer' : undefined"
+    :target="opensNewTab ? '_blank' : undefined"
+    :rel="opensNewTab ? 'noopener noreferrer' : undefined"
     :class="linkClasses"
   >
     <slot />
 
     <span
-      v-if="isExternal"
+      v-if="opensNewTab"
       class="sr-only"
     >
       (öffnet in neuem Tab)

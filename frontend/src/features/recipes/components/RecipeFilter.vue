@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SelectOption } from '@components/form'
+import type { SelectOption } from '@interfaces/form.types.ts'
 
 import RecipeFilterOption from './RecipeFilterOption.vue'
 import { UiBadge, UiButton, UiIcon, UiPopover } from '@components/ui'

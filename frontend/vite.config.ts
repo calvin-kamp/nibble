@@ -2,7 +2,6 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
@@ -10,6 +9,7 @@ export default defineConfig({
   plugins: [vue(), tailwindcss()],
   resolve: {
     alias: {
+      '@api': fileURLToPath(new URL('./src/api', import.meta.url)),
       '@lib': fileURLToPath(new URL('./src/lib', import.meta.url)),
       '@data': fileURLToPath(new URL('./src/data', import.meta.url)),
       '@views': fileURLToPath(new URL('./src/views', import.meta.url)),

@@ -10,7 +10,8 @@ export const buttonVariants = cva(
     'inline-flex items-center justify-center gap-2',
     'transition-interactive',
     'focus-visible:focus-ring',
-    'disabled:inactive',
+    'disabled:not-aria-busy:inactive',
+    'aria-busy:cursor-progress',
   ],
   {
     variants: {

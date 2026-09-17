@@ -7,16 +7,18 @@ const { activeBreakpoint } = useBreakpoint()
 </script>
 
 <template>
-  <AppHeader />
+  <div class="flex flex-1 flex-col pb-26 lg:pb-0">
+    <AppHeader />
 
-  <main class="content-wrapper py-6">
-    <RouterView />
-  </main>
+    <main class="flex-1 content-wrapper py-6">
+      <RouterView />
+    </main>
 
-  <AppFooter />
+    <AppFooter />
 
-  <AppNavigation
-    v-if="activeBreakpoint !== 'desktop'"
-    variant="mobile"
-  />
+    <AppNavigation
+      v-if="activeBreakpoint !== 'desktop'"
+      variant="mobile"
+    />
+  </div>
 </template>

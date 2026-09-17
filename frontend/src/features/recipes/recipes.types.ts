@@ -1,4 +1,4 @@
-import type { SelectOption } from '@components/form'
+import type { SelectOption } from '@interfaces/form.types'
 
 export type Diet = 'Vegetarisch' | 'Vegan' | 'Pescetarisch'
 export type Intolerance = 'Glutenfrei' | 'Laktosefrei'

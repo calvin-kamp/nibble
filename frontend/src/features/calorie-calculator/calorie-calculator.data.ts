@@ -1,5 +1,5 @@
+import type { RadioOption, SelectOptionGroup } from '@interfaces/form.types'
 import type { MacroChartEntry } from './calorie-calculator.types'
-import type { RadioOption, SelectOptionGroup } from '@components/form'
 
 export const exercises: SelectOptionGroup[] = [
   {

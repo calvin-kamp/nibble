@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FormFieldProps } from './form.types'
+import type { FormFieldProps } from '@interfaces/form.types'
 
 import { Field as VeeField, useFieldError } from 'vee-validate'
 import { Label as RekaLabel } from 'reka-ui'
@@ -71,7 +71,7 @@ const { fieldId, descriptionId, errorId, describedBy } = useFieldIds(
 
         <ul
           v-else
-          class="flex flex-col gap-1 pl-4 list-disc"
+          class="flex flex-col gap-1"
         >
           <li
             v-for="error in errors"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SelectEntry } from '../form.types'
+import type { SelectEntry } from '@interfaces/form.types'
 
 import {
   SelectContent,
@@ -17,7 +17,7 @@ import {
 } from 'reka-ui'
 import { CheckIcon, ChevronDownIcon } from '@lucide/vue'
 import { UiIcon } from '@components/ui'
-import { isOptionGroup } from '../form.types'
+import { isOptionGroup } from '@interfaces/form.types'
 
 interface Props {
   options: SelectEntry[]

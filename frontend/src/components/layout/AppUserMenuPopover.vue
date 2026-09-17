@@ -1,19 +1,20 @@
 <script setup lang="ts">
 import type { UserMenuItem } from '@interfaces/navigation.types'
 
-import { UiButton, UiIcon, UiPopover, UiSeparator } from '@components/ui'
-import { userMenu } from '@data/user-menu.data'
 import { UserRoundIcon } from '@lucide/vue'
-import { useAuthStore } from '@stores/auth.store'
-import { useUserStore } from '@stores/user.store'
 import { PopoverClose } from 'reka-ui'
 import { RouterLink } from 'vue-router'
+import { UiButton, UiIcon, UiPopover, UiSeparator } from '@components/ui'
+import { useLogout } from '@composables/logout'
+import { userMenu } from '@data/user-menu.data'
+import { useAuthStore } from '@stores/auth.store'
 
 const auth = useAuthStore()
-const user = useUserStore()
+
+const { handleLogout } = useLogout()
 
 function handleAction(action: UserMenuItem['action']): void {
-  if (action === 'logout') auth.logout()
+  if (action === 'logout') handleLogout()
 }
 </script>
 
@@ -23,8 +24,8 @@ function handleAction(action: UserMenuItem['action']): void {
     trigger-label="Profil"
     sr-only-trigger-label
     align="end"
-    :title="user.name"
-    :description="user.email"
+    title="Konto"
+    :description="auth.user?.email"
   >
     <template #content>
       <UiSeparator />

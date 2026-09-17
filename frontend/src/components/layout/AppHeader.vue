@@ -8,7 +8,7 @@ const auth = useAuthStore()
 </script>
 
 <template>
-  <header class="py-2 border-b">
+  <header class="sticky top-0 py-2 bg-background border-b">
     <div class="flex gap-10 content-wrapper">
       <AppLogo />
 

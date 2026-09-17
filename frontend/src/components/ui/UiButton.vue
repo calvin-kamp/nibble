@@ -39,6 +39,18 @@ const isNativeButton = computed<boolean>(() => !props.asChild && props.as === 'b
     :aria-busy="props.loading ? true : undefined"
     :class="mergeClasses(buttonVariants({ variant: props.variant, size: props.size }), props.class)"
   >
-    <slot />
+    <slot v-if="props.asChild" />
+
+    <template v-else>
+      <span :class="['contents', props.loading && 'invisible']">
+        <slot />
+      </span>
+
+      <span
+        v-if="props.loading"
+        aria-hidden="true"
+        class="absolute inset-0 m-auto size-4.5 rounded-full border-2 border-current border-t-transparent animate-spin"
+      />
+    </template>
   </Primitive>
 </template>

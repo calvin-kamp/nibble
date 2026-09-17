@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { RadioItemVariants } from './controls'
-import type { FormFieldProps, RadioOption } from './form.types'
+import type { FormFieldProps, RadioOption } from '@interfaces/form.types'
 
 import { RadioGroup, RadioGroupItem } from './controls'
 import { FormFieldset } from '.'

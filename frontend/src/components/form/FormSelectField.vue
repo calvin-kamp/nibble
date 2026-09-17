@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FormFieldProps, SelectEntry } from './form.types'
+import type { FormFieldProps, SelectEntry } from '@interfaces/form.types'
 
 import FormField from './FormField.vue'
 import { SelectControl } from './controls'

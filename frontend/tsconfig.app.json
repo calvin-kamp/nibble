@@ -8,6 +8,7 @@
 
     // Path mapping for cleaner imports.
     "paths": {
+      "@api/*": ["./src/api/*"],
       "@lib/*": ["./src/lib/*"],
       "@data/*": ["./src/data/*"],
       "@views/*": ["./src/views/*"],
