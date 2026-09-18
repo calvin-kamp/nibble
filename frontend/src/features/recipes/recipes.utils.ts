@@ -1,6 +1,6 @@
-import type { Recipe, RecipeBadge, RecipeBadgeSummary } from './recipes.types'
+import type { RecipeBadge, RecipeBadgeSummary, RecipeListItem } from './recipes.types'
 
-import { DIET_BADGE_ORDER, PROPERTY_BADGE_ORDER } from './recipes.data'
+import { ATTRIBUTE_BADGE_ORDER, DIET_BADGE_ORDER } from './recipes.data'
 
 export function toSlug(value: string): string {
   return value
@@ -13,17 +13,17 @@ export function toSlug(value: string): string {
     .replace(/^-|-$/g, '')
 }
 
-export function getRecipeBadgeSummary(recipe: Recipe): RecipeBadgeSummary {
+export function getRecipeBadgeSummary(recipe: RecipeListItem): RecipeBadgeSummary {
   const badges: RecipeBadge[] = []
 
   const diet = DIET_BADGE_ORDER.find((diet) => recipe.diets.includes(diet))
   if (diet) badges.push({ label: diet, variant: 'default' })
 
-  const property = PROPERTY_BADGE_ORDER.find((property) => recipe.properties.includes(property))
-  if (property) badges.push({ label: property, variant: 'secondary' })
+  const attribute = ATTRIBUTE_BADGE_ORDER.find((attribute) => recipe.attributes.includes(attribute))
+  if (attribute) badges.push({ label: attribute, variant: 'secondary' })
 
   return {
     badges,
-    hiddenCount: recipe.diets.length + recipe.properties.length - badges.length,
+    hiddenCount: recipe.diets.length + recipe.attributes.length - badges.length,
   }
 }

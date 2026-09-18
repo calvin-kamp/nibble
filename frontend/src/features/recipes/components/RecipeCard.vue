@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import type { Recipe, RecipeBadgeSummary } from '../recipes.types'
+import type { RecipeBadgeSummary, RecipeListItem } from '../recipes.types'
 
-import { getRecipeBadgeSummary, toSlug } from '../recipes.utils'
+import { getRecipeBadgeSummary } from '../recipes.utils'
 import { UiBadge, UiCard, UiIcon } from '@components/ui'
 import { ClockIcon, FlameIcon, ImageIcon } from '@lucide/vue'
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 
 interface Props {
-  recipe: Recipe
+  recipe: RecipeListItem
 }
 
 const props = defineProps<Props>()
@@ -27,8 +27,8 @@ const badgeSummary = computed<RecipeBadgeSummary>(() => getRecipeBadgeSummary(pr
     <template #media>
       <img
         v-if="props.recipe.image"
-        :src="props.recipe.image.src"
-        :alt="props.recipe.image.alt"
+        :src="props.recipe.image"
+        alt=""
         class="size-full object-cover"
       />
 
@@ -47,10 +47,7 @@ const badgeSummary = computed<RecipeBadgeSummary>(() => getRecipeBadgeSummary(pr
 
     <template #title>
       <RouterLink
-        :to="{
-          name: 'recipe-detail',
-          params: { id: props.recipe.id, name: toSlug(props.recipe.name) },
-        }"
+        :to="'/rezepte/' + props.recipe.slug"
         class="after:absolute after:inset-0 focus-visible:outline-hidden"
       >
         {{ props.recipe.name }}

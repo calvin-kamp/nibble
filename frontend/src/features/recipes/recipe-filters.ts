@@ -1,5 +1,10 @@
 import type { LocationQueryValue } from 'vue-router'
-import type { RecipeFilterKey, RecipeFilterState } from './recipes.types'
+import type {
+  RecipeFilterKey,
+  RecipeFilterMode,
+  RecipeFilterState,
+  RecipeListItem,
+} from './recipes.types'
 
 import { computed, reactive, type ComputedRef, type WritableComputedRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -69,4 +74,34 @@ export function useRecipeFilters(): {
   }
 
   return { filters, search, activeCount, reset }
+}
+
+function matchesMode(recipeValues: string[], selected: string[], mode: RecipeFilterMode): boolean {
+  if (selected.length === 0) return true
+
+  switch (mode) {
+    case 'any':
+      return selected.some((value) => recipeValues.includes(value))
+    case 'all':
+      return selected.every((value) => recipeValues.includes(value))
+    case 'subset':
+      // A recipe without equipment fits every selection.
+      return recipeValues.every((value) => selected.includes(value))
+  }
+}
+
+export function filterRecipes(
+  recipes: RecipeListItem[],
+  filters: RecipeFilterState,
+  search: string,
+): RecipeListItem[] {
+  const term = search.trim().toLowerCase()
+
+  return recipes.filter(
+    (recipe) =>
+      (term === '' || recipe.name.toLowerCase().includes(term)) &&
+      filterOptions.every((filterOption) =>
+        matchesMode(recipe[filterOption.key], filters[filterOption.key], filterOption.mode),
+      ),
+  )
 }

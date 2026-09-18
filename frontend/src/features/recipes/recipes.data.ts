@@ -1,13 +1,13 @@
-import type { RecipeFilterGroup } from './recipes.types'
+import type { Attribute, Diet, RecipeFilterGroup } from './recipes.types'
 
-export const DIET_BADGE_ORDER = ['Vegan', 'Vegetarisch', 'Pescetarisch'] as const
-export const PROPERTY_BADGE_ORDER = [
+export const DIET_BADGE_ORDER: readonly Diet[] = ['Vegan', 'Vegetarisch', 'Pescetarisch']
+export const ATTRIBUTE_BADGE_ORDER: readonly Attribute[] = [
   'Proteinreich',
   'Kalorienarm',
   'Unter 30 Min',
   'Meal Prep',
   'Wenig Zutaten',
-] as const
+]
 
 export const filterOptions: RecipeFilterGroup[] = [
   {
@@ -34,7 +34,7 @@ export const filterOptions: RecipeFilterGroup[] = [
     ],
   },
   {
-    key: 'mealType',
+    key: 'mealTypes',
     param: 'mahlzeit',
     mode: 'any',
     triggerLabel: 'Mahlzeit',
@@ -47,7 +47,7 @@ export const filterOptions: RecipeFilterGroup[] = [
     ],
   },
   {
-    key: 'properties',
+    key: 'attributes',
     param: 'eigenschaften',
     mode: 'all',
     triggerLabel: 'Eigenschaften',

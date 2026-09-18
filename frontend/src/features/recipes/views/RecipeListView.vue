@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRecipeStore } from '@stores/recipe.store'
 import RecipeFilterBar from '../components/RecipeFilterBar.vue'
 import RecipeList from '../components/RecipeList.vue'
 import RecipeSearchBar from '../components/RecipeSearchBar.vue'
 import { useRecipeFilters } from '../recipe-filters'
-import { onUnmounted, ref, watch } from 'vue'
 
 const { search } = useRecipeFilters()
+
+const recipeStore = useRecipeStore()
 
 const searchInput = ref<string>(search.value)
 
@@ -17,6 +20,10 @@ watch(searchInput, (value) => {
   timer = setTimeout(() => {
     search.value = value.trim()
   }, 250)
+})
+
+onMounted(() => {
+  void recipeStore.loadRecipes()
 })
 
 onUnmounted(() => clearTimeout(timer))
