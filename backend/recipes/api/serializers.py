@@ -1,4 +1,7 @@
-from django.utils.text import slugify
+from decimal import Decimal
+
+from django.db import transaction
+from django.utils.encoding import smart_str
 from rest_framework import serializers
 
 from recipes.models import (
@@ -13,95 +16,73 @@ from recipes.models import (
     RecipeIngredient,
 )
 
+IMAGE_MAX_BYTES = 5 * 1024 * 1024
+IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
+
+TAXONOMY_FIELDS = ("diets", "intolerances", "meal_types", "equipment", "attributes")
+
 
 class ChoiceSlugRelatedField(serializers.SlugRelatedField):
+    """Reads and writes taxonomy entries by their label, e.g. "Unter 30 Min"."""
+
     def to_representation(self, obj):
         return getattr(obj, f"get_{self.slug_field}_display")()
+
+    def to_internal_value(self, data):
+        choices = self.get_queryset().model._meta.get_field(self.slug_field).choices
+        value = next((value for value, label in choices if label == data), None)
+
+        if value is None:
+            self.fail(
+                "does_not_exist", slug_name=self.slug_field, value=smart_str(data)
+            )
+
+        return super().to_internal_value(value)
+
+
+class UnitField(serializers.ChoiceField):
+    """Exposes the unit by its label ("g", "EL"), stores the integer choice."""
+
+    def __init__(self, **kwargs):
+        super().__init__(choices=RecipeIngredient.UnitChoice.labels, **kwargs)
+
+    def to_representation(self, value):
+        return RecipeIngredient.UnitChoice(value).label
+
+    def to_internal_value(self, data):
+        label = super().to_internal_value(data)
+
+        return next(unit for unit in RecipeIngredient.UnitChoice if unit.label == label)
 
 
 class CookingStepSerializer(serializers.ModelSerializer):
     class Meta:
         model = CookingStep
         fields = ("step", "text")
+        # The position in the list decides the number, see RecipeDetailSerializer.
+        read_only_fields = ("step",)
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
-    unit_label = serializers.CharField(
-        source="get_unit_display",
-        read_only=True,
+    name = serializers.CharField(source="ingredient.name", max_length=60)
+    amount = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        min_value=Decimal("0.1"),
+        coerce_to_string=False,
     )
-
-    ingredient = serializers.CharField(write_only=True)
-    ingredient_name = serializers.CharField(
-        source="ingredient.name",
-        read_only=True,
-    )
+    unit = UnitField()
 
     class Meta:
         model = RecipeIngredient
-        fields = (
-            "amount",
-            "unit",
-            "unit_label",
-            "ingredient",
-            "ingredient_name",
-        )
-        extra_kwargs = {
-            "unit": {
-                "write_only": True,
-            }
-        }
+        fields = ("name", "amount", "unit")
 
 
-class RecipeListSerializer(serializers.ModelSerializer):
-    diets = ChoiceSlugRelatedField(
-        slug_field="diet",
-        many=True,
-        read_only=True,
-    )
-    intolerances = ChoiceSlugRelatedField(
-        slug_field="intolerance",
-        many=True,
-        read_only=True,
-    )
-    meal_types = ChoiceSlugRelatedField(
-        slug_field="meal_type",
-        many=True,
-        read_only=True,
-    )
-    equipment = ChoiceSlugRelatedField(
-        slug_field="equipment",
-        many=True,
-        read_only=True,
-    )
-    attributes = ChoiceSlugRelatedField(
-        slug_field="attribute",
-        many=True,
-        read_only=True,
-    )
+class RecipeBaseSerializer(serializers.ModelSerializer):
+    """Fields shared by list and detail."""
 
-    class Meta:
-        model = Recipe
-        fields = (
-            "id",
-            "image",
-            "name",
-            "duration_minutes",
-            "diets",
-            "intolerances",
-            "meal_types",
-            "equipment",
-            "attributes",
-            "kcal_per_serving",
-            "created_at",
-        )
-
-
-class RecipeDetailSerializer(serializers.ModelSerializer):
-    slug = serializers.SerializerMethodField()
-
-    ingredients = RecipeIngredientSerializer(many=True)
-    cooking_steps = CookingStepSerializer(many=True)
+    slug = serializers.ReadOnlyField()
+    image = serializers.ImageField(read_only=True)
 
     diets = ChoiceSlugRelatedField(
         slug_field="diet",
@@ -134,12 +115,37 @@ class RecipeDetailSerializer(serializers.ModelSerializer):
         required=False,
     )
 
+
+class RecipeListSerializer(RecipeBaseSerializer):
     class Meta:
         model = Recipe
         fields = (
             "id",
-            "image",
             "slug",
+            "image",
+            "name",
+            "duration_minutes",
+            "diets",
+            "intolerances",
+            "meal_types",
+            "equipment",
+            "attributes",
+            "kcal_per_serving",
+            "created_at",
+        )
+
+
+class RecipeDetailSerializer(RecipeBaseSerializer):
+    ingredients = RecipeIngredientSerializer(many=True)
+    cooking_steps = CookingStepSerializer(many=True)
+    is_owner = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Recipe
+        fields = (
+            "id",
+            "slug",
+            "image",
             "name",
             "description",
             "ingredients",
@@ -155,52 +161,115 @@ class RecipeDetailSerializer(serializers.ModelSerializer):
             "meal_types",
             "equipment",
             "attributes",
+            "is_owner",
             "updated_at",
             "created_at",
         )
+        extra_kwargs = {
+            "protein_per_serving": {"coerce_to_string": False},
+            "carbs_per_serving": {"coerce_to_string": False},
+            "fat_per_serving": {"coerce_to_string": False},
+        }
 
-    def get_slug(self, obj):
-        name = obj.name
-        name = name.replace("ä", "ae").replace("Ä", "Ae")
-        name = name.replace("ö", "oe").replace("Ö", "Oe")
-        name = name.replace("ü", "ue").replace("Ü", "Ue")
-        name = name.replace("ß", "ss")
+    def get_is_owner(self, obj):
+        request = self.context.get("request")
 
-        slugified_name = slugify(name)
+        return bool(request and obj.owner_id and obj.owner_id == request.user.id)
 
-        return f"{obj.id}-{slugified_name}"
+    def validate_ingredients(self, value):
+        if not value:
+            raise serializers.ValidationError("Füge mindestens eine Zutat hinzu.")
 
+        return value
+
+    def validate_cooking_steps(self, value):
+        if not value:
+            raise serializers.ValidationError("Beschreibe mindestens einen Schritt.")
+
+        return value
+
+    @transaction.atomic
     def create(self, validated_data):
-        ingredients_data = validated_data.pop("ingredients")
-        cooking_steps_data = validated_data.pop("cooking_steps")
-
-        diets_data = validated_data.pop("diets", [])
-        intolerances_data = validated_data.pop("intolerances", [])
-        meal_types_data = validated_data.pop("meal_types", [])
-        equipment_data = validated_data.pop("equipment", [])
-        attributes_data = validated_data.pop("attributes", [])
-
+        relations = self._pop_relations(validated_data)
         recipe = Recipe.objects.create(**validated_data)
-
-        for ingredient in ingredients_data:
-            ingredient_name = ingredient.pop("ingredient")
-            ingredient_obj, _created = Ingredient.objects.get_or_create(
-                name=ingredient_name
-            )
-
-            RecipeIngredient.objects.create(
-                recipe=recipe,
-                ingredient=ingredient_obj,
-                **ingredient,
-            )
-
-        for cooking_step in cooking_steps_data:
-            CookingStep.objects.create(recipe=recipe, **cooking_step)
-
-        recipe.diets.set(diets_data)
-        recipe.intolerances.set(intolerances_data)
-        recipe.meal_types.set(meal_types_data)
-        recipe.equipment.set(equipment_data)
-        recipe.attributes.set(attributes_data)
+        self._save_relations(recipe, relations)
 
         return recipe
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        relations = self._pop_relations(validated_data)
+
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+
+        instance.save()
+        self._save_relations(instance, relations)
+
+        return instance
+
+    def _pop_relations(self, validated_data):
+        """Nested lists and many-to-many fields can't go into Recipe(**data)."""
+        names = (*TAXONOMY_FIELDS, "ingredients", "cooking_steps")
+
+        return {
+            name: validated_data.pop(name) for name in names if name in validated_data
+        }
+
+    def _save_relations(self, recipe, relations):
+        """Replaces every relation that was sent; missing ones stay untouched (PATCH)."""
+        if "ingredients" in relations:
+            recipe.ingredients.all().delete()
+            RecipeIngredient.objects.bulk_create(
+                RecipeIngredient(
+                    recipe=recipe,
+                    ingredient=self._get_or_create_ingredient(
+                        item["ingredient"]["name"]
+                    ),
+                    amount=item["amount"],
+                    unit=item["unit"],
+                )
+                for item in relations["ingredients"]
+            )
+
+        if "cooking_steps" in relations:
+            recipe.cooking_steps.all().delete()
+            CookingStep.objects.bulk_create(
+                CookingStep(recipe=recipe, step=number, text=item["text"])
+                for number, item in enumerate(relations["cooking_steps"], start=1)
+            )
+
+        for name in TAXONOMY_FIELDS:
+            if name in relations:
+                getattr(recipe, name).set(relations[name])
+
+    def _get_or_create_ingredient(self, name):
+        """Case-insensitive, so "zwiebel" and "Zwiebel" share one entry."""
+        ingredient = Ingredient.objects.filter(name__iexact=name).first()
+
+        return ingredient or Ingredient.objects.create(name=name)
+
+
+class RecipeImageSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField()
+
+    class Meta:
+        model = Recipe
+        fields = ("image",)
+
+    def validate_image(self, image):
+        # Pillow has already opened the file here, its format beats the file extension.
+        if (
+            getattr(image, "image", None) is None
+            or image.image.format not in IMAGE_FORMATS
+        ):
+            raise serializers.ValidationError(
+                "Dieses Format wird nicht unterstützt. Verwende JPG, PNG oder WebP."
+            )
+
+        if image.size > IMAGE_MAX_BYTES:
+            raise serializers.ValidationError(
+                "Das Bild ist größer als 5 MB. Wähle eine kleinere Datei."
+            )
+
+        return image

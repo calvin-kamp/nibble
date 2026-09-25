@@ -1,8 +1,20 @@
-from django.core.validators import MinValueValidator
+from decimal import Decimal
+from pathlib import Path
+from uuid import uuid4
+
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils.text import slugify
+
+MACRO_MAX_GRAMS = 500
 
 
-# Create your models here.
+def recipe_image_path(instance, filename):
+    """Random file name, so uploads never collide and no user file name is stored."""
+    return f"rezepte/{uuid4().hex}{Path(filename).suffix.lower()}"
+
+
 class Ingredient(models.Model):
     name = models.CharField(
         max_length=60,
@@ -100,8 +112,16 @@ class Attribute(models.Model):
 
 
 class Recipe(models.Model):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="recipes",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+    )
+
     image = models.ImageField(
-        upload_to="rezepte/",
+        upload_to=recipe_image_path,
         blank=True,
     )
 
@@ -111,13 +131,29 @@ class Recipe(models.Model):
         blank=True,
     )
 
-    protein_per_serving = models.IntegerField(validators=[MinValueValidator(0)])
-    carbs_per_serving = models.IntegerField(validators=[MinValueValidator(0)])
-    fat_per_serving = models.IntegerField(validators=[MinValueValidator(0)])
-    kcal_per_serving = models.IntegerField(validators=[MinValueValidator(0)])
+    protein_per_serving = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        validators=[MinValueValidator(0), MaxValueValidator(MACRO_MAX_GRAMS)],
+    )
+    carbs_per_serving = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        validators=[MinValueValidator(0), MaxValueValidator(MACRO_MAX_GRAMS)],
+    )
+    fat_per_serving = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        validators=[MinValueValidator(0), MaxValueValidator(MACRO_MAX_GRAMS)],
+    )
+    kcal_per_serving = models.PositiveIntegerField(editable=False)
 
-    servings = models.PositiveIntegerField()
-    duration_minutes = models.PositiveIntegerField()
+    servings = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+    )
+    duration_minutes = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(600)],
+    )
 
     diets = models.ManyToManyField(Diet, blank=True)
     intolerances = models.ManyToManyField(Intolerance, blank=True)
@@ -128,8 +164,32 @@ class Recipe(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ["-created_at"]
+
     def __str__(self):
         return self.name
+
+    @property
+    def slug(self):
+        """URL part "<id>-<name>", umlauts spelled out like the frontend does."""
+        name = self.name
+        name = name.replace("ä", "ae").replace("Ä", "Ae")
+        name = name.replace("ö", "oe").replace("Ö", "Oe")
+        name = name.replace("ü", "ue").replace("Ü", "Ue")
+        name = name.replace("ß", "ss")
+
+        return f"{self.id}-{slugify(name)}"
+
+    def save(self, *args, **kwargs):
+        kcal = (
+            Decimal(self.protein_per_serving) * 4
+            + Decimal(self.carbs_per_serving) * 4
+            + Decimal(self.fat_per_serving) * 9
+        )
+        self.kcal_per_serving = round(kcal)
+
+        super().save(*args, **kwargs)
 
 
 class RecipeIngredient(models.Model):
@@ -154,7 +214,7 @@ class RecipeIngredient(models.Model):
     amount = models.DecimalField(
         decimal_places=1,
         max_digits=5,
-        validators=[MinValueValidator(0)],
+        validators=[MinValueValidator(Decimal("0.1"))],
     )
     unit = models.IntegerField(choices=UnitChoice)
     recipe = models.ForeignKey(
@@ -166,6 +226,9 @@ class RecipeIngredient(models.Model):
         Ingredient,
         on_delete=models.CASCADE,
     )
+
+    class Meta:
+        ordering = ["id"]
 
     def __str__(self):
         return self.ingredient.name
