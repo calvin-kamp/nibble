@@ -22,6 +22,10 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
 
+  --color-macro-protein: var(--macro-protein);
+  --color-macro-carbs: var(--macro-carbs);
+  --color-macro-fat: var(--macro-fat);
+
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -80,6 +84,9 @@
   --chart-3: oklch(0.627 0.194 149.214);
   --chart-4: oklch(0.527 0.154 150.069);
   --chart-5: oklch(0.448 0.119 151.328);
+  --macro-protein: oklch(0.48 0.12 165);
+  --macro-carbs: oklch(0.47 0.15 145);
+  --macro-fat: oklch(0.46 0.13 120);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0.001 106.423);
   --sidebar-foreground: oklch(0.147 0.004 49.25);
@@ -115,6 +122,9 @@
   --chart-3: oklch(0.627 0.194 149.214);
   --chart-4: oklch(0.527 0.154 150.069);
   --chart-5: oklch(0.448 0.119 151.328);
+  --macro-protein: oklch(0.82 0.13 165);
+  --macro-carbs: oklch(0.8 0.17 145);
+  --macro-fat: oklch(0.78 0.14 120);
   --sidebar: oklch(0.216 0.006 56.043);
   --sidebar-foreground: oklch(0.985 0.001 106.423);
   --sidebar-primary: oklch(0.723 0.219 149.579);

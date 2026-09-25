@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { LucideIcon } from '@lucide/vue'
+import type { HTMLAttributes } from 'vue'
 import type { ButtonVariants } from './variants'
 
 import { useId } from 'vue'
 import { PopoverArrow, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
+import { mergeClasses } from '@lib/merge-classes'
 
 import { UiButton, UiIcon } from '.'
 
@@ -19,6 +21,7 @@ interface Props {
   srOnlyDescription?: boolean
   side?: 'top' | 'right' | 'bottom' | 'left'
   align?: 'start' | 'center' | 'end'
+  contentClass?: HTMLAttributes['class']
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -32,7 +35,12 @@ const props = withDefaults(defineProps<Props>(), {
   srOnlyDescription: false,
   side: 'bottom',
   align: 'center',
+  contentClass: undefined,
 })
+
+const emit = defineEmits<{
+  openAutoFocus: [event: Event]
+}>()
 
 const titleId = useId()
 const descriptionId = useId()
@@ -66,7 +74,13 @@ const descriptionId = useId()
         :side-offset="4"
         :aria-labelledby="titleId"
         :aria-describedby="props.description ? descriptionId : undefined"
-        class="z-50 flex w-72 max-w-(--reka-popover-content-available-width) flex-col gap-4 p-4 bg-popover rounded-lg shadow-md ring-1 ring-foreground/10 outline-hidden text-popover-foreground origin-(--reka-popover-content-transform-origin) duration-100 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+        :class="
+          mergeClasses(
+            'z-50 flex w-72 max-w-(--reka-popover-content-available-width) flex-col gap-4 p-4 bg-popover rounded-lg shadow-md ring-1 ring-foreground/10 outline-hidden text-popover-foreground origin-(--reka-popover-content-transform-origin) duration-100 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+            props.contentClass,
+          )
+        "
+        @open-auto-focus="(event: Event) => emit('openAutoFocus', event)"
       >
         <div class="flex flex-col gap-1 pr-6">
           <p

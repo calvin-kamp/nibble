@@ -7,7 +7,7 @@ const textLink = 'font-medium underline decoration-1 underline-offset-3 hover:de
 export const buttonVariants = cva(
   [
     'relative',
-    'inline-flex items-center justify-center gap-2',
+    'inline-flex items-center justify-center gap-2 shrink-0',
     'transition-interactive',
     'focus-visible:focus-ring',
     'disabled:not-aria-busy:inactive',

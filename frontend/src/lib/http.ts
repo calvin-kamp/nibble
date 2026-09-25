@@ -53,17 +53,28 @@ async function readBody(response: Response): Promise<unknown> {
   return response.json()
 }
 
+/** FormData goes out as multipart; the browser sets the Content-Type including the boundary */
+function toBody(payload: unknown): BodyInit | undefined {
+  if (payload === undefined) return undefined
+  if (payload instanceof FormData) return payload
+
+  return JSON.stringify(payload)
+}
+
 function send(method: HttpMethod, endpoint: string, payload: unknown): Promise<Response> {
   const headers = new Headers({ Accept: 'application/json' })
 
-  if (payload !== undefined) headers.set('Content-Type', 'application/json')
+  if (payload !== undefined && !(payload instanceof FormData)) {
+    headers.set('Content-Type', 'application/json')
+  }
+
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`)
 
   return fetch(API_BASE_URL + endpoint, {
     method,
     headers,
     credentials: 'include',
-    body: payload === undefined ? undefined : JSON.stringify(payload),
+    body: toBody(payload),
   })
 }
 

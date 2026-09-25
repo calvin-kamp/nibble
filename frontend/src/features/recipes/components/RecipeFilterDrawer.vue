@@ -4,8 +4,8 @@ import type { RecipeFilterKey } from '../recipes.types'
 import { useRecipeFilters } from '../recipe-filters'
 import { filterOptions } from '../recipes.data'
 import RecipeFilterOption from './RecipeFilterOption.vue'
-import { UiBadge, UiButton, UiDrawer, UiIcon, UiSeparator } from '@components/ui'
-import { SlidersHorizontalIcon } from '@lucide/vue'
+import RecipeFilterTrigger from './RecipeFilterTrigger.vue'
+import { UiButton, UiDrawer, UiSeparator } from '@components/ui'
 import { ref } from 'vue'
 
 const { filters, activeCount, reset } = useRecipeFilters()
@@ -31,29 +31,7 @@ function toggle(key: RecipeFilterKey, value: string, checked: boolean): void {
     sr-only-description
   >
     <template #trigger>
-      <UiButton
-        variant="ghost"
-        class="w-full border border-input"
-      >
-        <UiIcon :icon="SlidersHorizontalIcon" />
-
-        Filter
-
-        <UiBadge
-          v-if="activeCount > 0"
-          class="min-w-5 justify-center px-1 tabular-nums"
-          aria-hidden="true"
-        >
-          {{ activeCount }}
-        </UiBadge>
-
-        <span
-          v-if="activeCount > 0"
-          class="sr-only"
-        >
-          {{ activeCount }} Filter aktiv
-        </span>
-      </UiButton>
+      <RecipeFilterTrigger />
     </template>
 
     <template #content>

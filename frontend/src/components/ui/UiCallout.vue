@@ -35,11 +35,15 @@ const iconClass = computed<string>(() =>
 
 <template>
   <div :class="mergeClasses(calloutVariants({ variant: props.variant }), props.class)">
-    <UiIcon
+    <span
       v-if="icon"
-      :icon="icon"
-      :class="mergeClasses('mt-0.5', iconClass)"
-    />
+      class="flex h-6 items-center"
+    >
+      <UiIcon
+        :icon="icon"
+        :class="iconClass"
+      />
+    </span>
 
     <div class="flex min-w-0 flex-col gap-1">
       <p
@@ -49,7 +53,7 @@ const iconClass = computed<string>(() =>
         {{ props.title }}
       </p>
 
-      <p class="text-muted-foreground text-sm">
+      <p class="max-w-prose mt-0.5 text-muted-foreground text-sm">
         <slot />
       </p>
     </div>

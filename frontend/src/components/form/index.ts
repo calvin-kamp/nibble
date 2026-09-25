@@ -3,6 +3,8 @@ export { default as FormFieldset } from './FormFieldset.vue'
 export { default as FormSection } from './FormSection.vue'
 
 export { default as FormCheckboxField } from './FormCheckboxField.vue'
+export { default as FormCheckboxGroupField } from './FormCheckboxGroupField.vue'
+export { default as FormImageField } from './FormImageField.vue'
 export { default as FormNumberField } from './FormNumberField.vue'
 export { default as FormPasswordField } from './FormPasswordField.vue'
 export { default as FormRadioGroupField } from './FormRadioGroupField.vue'

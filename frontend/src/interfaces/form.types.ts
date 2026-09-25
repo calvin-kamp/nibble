@@ -28,3 +28,9 @@ export interface RadioOption {
   description?: string
   disabled?: boolean
 }
+
+export interface CheckboxOption {
+  value: string
+  label: string
+  disabled?: boolean
+}

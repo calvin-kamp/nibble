@@ -7,10 +7,10 @@ import { useRouter } from 'vue-router'
 import { FormCheckboxField, FormPasswordField, FormTextField } from '@components/form'
 import { UiButton, UiCallout, UiLink } from '@components/ui'
 import { HttpError } from '@lib/http'
+import { revealFirstInvalidField } from '@lib/scroll'
 import { useAuthStore } from '@stores/auth.store'
 import { authErrorMessages } from '../auth.data'
 import { registerSchema } from '../auth.schemas'
-import { focusFirstInvalidField } from '../auth.utils'
 
 type RegisterField = keyof RegisterCredentials
 
@@ -67,10 +67,10 @@ const onSubmit = handleSubmit(
       }
 
       setErrors(fieldErrors)
-      await focusFirstInvalidField(formRef.value)
+      await revealFirstInvalidField(formRef.value)
     }
   },
-  () => focusFirstInvalidField(formRef.value),
+  () => revealFirstInvalidField(formRef.value),
 )
 </script>
 

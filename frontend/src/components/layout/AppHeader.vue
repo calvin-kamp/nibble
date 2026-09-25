@@ -8,8 +8,8 @@ const auth = useAuthStore()
 </script>
 
 <template>
-  <header class="sticky top-0 py-2 bg-background border-b">
-    <div class="flex gap-10 content-wrapper">
+  <header class="sticky top-0 h-16 bg-background border-b z-20">
+    <div class="flex h-full items-center gap-10 content-wrapper">
       <AppLogo />
 
       <div class="flex items-center justify-between w-full">

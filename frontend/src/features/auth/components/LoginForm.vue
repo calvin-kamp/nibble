@@ -7,10 +7,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { FormPasswordField, FormTextField } from '@components/form'
 import { UiButton, UiCallout } from '@components/ui'
 import { HttpError } from '@lib/http'
+import { revealFirstInvalidField } from '@lib/scroll'
 import { useAuthStore } from '@stores/auth.store'
 import { authErrorMessages } from '../auth.data'
 import { loginSchema } from '../auth.schemas'
-import { focusFirstInvalidField, getNoticeText, getRedirectTarget } from '../auth.utils'
+import { getNoticeText, getRedirectTarget } from '../auth.utils'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -44,7 +45,7 @@ const onSubmit = handleSubmit(
           : authErrorMessages.unreachable
     }
   },
-  () => focusFirstInvalidField(formRef.value),
+  () => revealFirstInvalidField(formRef.value),
 )
 </script>
 

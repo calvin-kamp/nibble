@@ -1,10 +1,5 @@
 import type { LocationQueryValue } from 'vue-router'
-import type {
-  RecipeFilterKey,
-  RecipeFilterMode,
-  RecipeFilterState,
-  RecipeListItem,
-} from './recipes.types'
+import type { RecipeFilterKey, RecipeFilterState, RecipeListQuery } from './recipes.types'
 
 import { computed, reactive, type ComputedRef, type WritableComputedRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -12,6 +7,10 @@ import { filterOptions } from './recipes.data'
 import { toSlug } from './recipes.utils'
 
 type QueryValue = LocationQueryValue | LocationQueryValue[] | undefined
+
+function firstValue(raw: QueryValue): string {
+  return (Array.isArray(raw) ? raw[0] : raw) ?? ''
+}
 
 function toSlugList(raw: QueryValue): string[] {
   const value = Array.isArray(raw) ? raw.join(',') : (raw ?? '')
@@ -22,14 +21,20 @@ function toSlugList(raw: QueryValue): string[] {
 export function useRecipeFilters(): {
   filters: RecipeFilterState
   search: WritableComputedRef<string>
+  page: WritableComputedRef<number>
+  apiQuery: ComputedRef<RecipeListQuery>
   activeCount: ComputedRef<number>
   reset: () => void
+  resetPage: () => void
 } {
   const route = useRoute()
   const router = useRouter()
 
+  /** A changed filter or search starts again on page 1 */
   function write(param: string, value: string): void {
-    void router.replace({ query: { ...route.query, [param]: value || undefined } })
+    void router.replace({
+      query: { ...route.query, [param]: value || undefined, seite: undefined },
+    })
   }
 
   const queries = {} as Record<RecipeFilterKey, WritableComputedRef<string[]>>
@@ -51,12 +56,35 @@ export function useRecipeFilters(): {
   const filters = reactive(queries)
 
   const search = computed<string>({
-    get: () => {
-      const raw = route.query.suche
-
-      return (Array.isArray(raw) ? raw[0] : raw) ?? ''
-    },
+    get: () => firstValue(route.query.suche),
     set: (value) => write('suche', value),
+  })
+
+  /** Page 1 stays out of the URL; push instead of replace, so the browser back button returns to the previous page */
+  const page = computed<number>({
+    get: () => {
+      const value = Number.parseInt(firstValue(route.query.seite), 10)
+
+      return Number.isInteger(value) && value > 1 ? value : 1
+    },
+    set: (value) =>
+      void router.push({ query: { ...route.query, seite: value > 1 ? String(value) : undefined } }),
+  })
+
+  /** Only known values go to the server, in the same form as in the URL */
+  const apiQuery = computed<RecipeListQuery>(() => {
+    const query: RecipeListQuery = {}
+
+    for (const filterOption of filterOptions) {
+      const values = filters[filterOption.key]
+
+      if (values.length > 0) query[filterOption.param] = values.map(toSlug).join(',')
+    }
+
+    if (search.value) query.suche = search.value
+    if (page.value > 1) query.seite = String(page.value)
+
+    return query
   })
 
   const activeCount = computed<number>(() =>
@@ -70,38 +98,14 @@ export function useRecipeFilters(): {
       delete query[filterOption.param]
     }
 
+    delete query.seite
+
     void router.replace({ query })
   }
 
-  return { filters, search, activeCount, reset }
-}
-
-function matchesMode(recipeValues: string[], selected: string[], mode: RecipeFilterMode): boolean {
-  if (selected.length === 0) return true
-
-  switch (mode) {
-    case 'any':
-      return selected.some((value) => recipeValues.includes(value))
-    case 'all':
-      return selected.every((value) => recipeValues.includes(value))
-    case 'subset':
-      // A recipe without equipment fits every selection.
-      return recipeValues.every((value) => selected.includes(value))
+  function resetPage(): void {
+    void router.replace({ query: { ...route.query, seite: undefined } })
   }
-}
 
-export function filterRecipes(
-  recipes: RecipeListItem[],
-  filters: RecipeFilterState,
-  search: string,
-): RecipeListItem[] {
-  const term = search.trim().toLowerCase()
-
-  return recipes.filter(
-    (recipe) =>
-      (term === '' || recipe.name.toLowerCase().includes(term)) &&
-      filterOptions.every((filterOption) =>
-        matchesMode(recipe[filterOption.key], filters[filterOption.key], filterOption.mode),
-      ),
-  )
+  return { filters, search, page, apiQuery, activeCount, reset, resetPage }
 }

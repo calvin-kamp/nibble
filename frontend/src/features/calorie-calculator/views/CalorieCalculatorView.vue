@@ -2,6 +2,7 @@
 import type { CalorieCalculatorValues, CalorieResult } from '../calorie-calculator.types'
 
 import { nextTick, ref, useTemplateRef } from 'vue'
+import { scrollBehavior } from '@lib/scroll'
 import CalorieCalculatorForm from '../components/CalorieCalculatorForm.vue'
 import CalorieCalculatorResult from '../components/CalorieCalculatorResult.vue'
 
@@ -13,10 +14,6 @@ const formContainer = useTemplateRef<{ $el?: HTMLElement }>('formContainer')
 function onCalculated(next: CalorieResult, values: CalorieCalculatorValues): void {
   result.value = next
   submittedValues.value = values
-}
-
-function scrollBehavior(): ScrollBehavior {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 }
 
 async function onEdit(): Promise<void> {
@@ -33,7 +30,7 @@ async function onEdit(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 max-w-6xl mx-auto">
+  <div :class="['flex flex-col gap-6 w-full mx-auto', result ? 'max-w-6xl' : 'max-w-2xl']">
     <div class="flex flex-col gap-4">
       <h1>Kalorienrechner</h1>
 

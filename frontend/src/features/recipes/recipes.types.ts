@@ -29,7 +29,7 @@ export type RecipeUnit =
   | 'Packung'
 
 export interface RecipeIngredient {
-  ingredient: string
+  name: string
   amount: number
   unit: RecipeUnit
 }
@@ -63,25 +63,27 @@ export interface RecipeDetail extends RecipeListItem {
   fatPerServing: number
   ingredients: RecipeIngredient[]
   cookingSteps: CookingStep[]
+  /** Only the owner may edit or delete */
+  isOwner: boolean
+  updatedAt: string
 }
 
 // Filter keys are the recipe fields they filter, so the filter can read the field directly.
 export type RecipeFilterKey = 'diets' | 'intolerances' | 'mealTypes' | 'equipment' | 'attributes'
 
-/** any: at least one selected value · all: every selected value · subset: recipe needs nothing unselected */
-export type RecipeFilterMode = 'any' | 'all' | 'subset'
-
 export interface RecipeFilterGroup {
   key: RecipeFilterKey
   /** URL query parameter, e.g. 'ernaehrung'. */
   param: string
-  mode: RecipeFilterMode
   triggerLabel: string
   filterDescription?: string
   options: SelectOption[]
 }
 
 export type RecipeFilterState = Record<RecipeFilterKey, string[]>
+
+/** Query parameters of the list endpoint, same names as in the page URL */
+export type RecipeListQuery = Record<string, string>
 
 export interface RecipeBadge {
   label: string
@@ -92,3 +94,27 @@ export interface RecipeBadgeSummary {
   badges: RecipeBadge[]
   hiddenCount: number
 }
+
+/** Form input — matches recipeSchema */
+export interface RecipeFormValues {
+  /** File: new upload · string: URL of the saved image · null: no image */
+  image: File | string | null
+  name: string
+  description: string
+  servings: number
+  durationMinutes: number
+  mealTypes: MealType[]
+  equipment: Equipment[]
+  diets: Diet[]
+  intolerances: Intolerance[]
+  attributes: Attribute[]
+  ingredients: RecipeIngredient[]
+  /** Numbered by the backend in list order */
+  cookingSteps: Pick<CookingStep, 'text'>[]
+  proteinPerServing: number
+  carbsPerServing: number
+  fatPerServing: number
+}
+
+/** Body for create and update — the image has its own endpoint, kcal is calculated by the backend */
+export type RecipePayload = Omit<RecipeFormValues, 'image'>

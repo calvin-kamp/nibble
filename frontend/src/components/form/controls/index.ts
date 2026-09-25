@@ -1,4 +1,5 @@
 export { default as CheckboxControl } from './CheckboxControl.vue'
+export { default as ImageControl } from './ImageControl.vue'
 export { default as InputControl } from './InputControl.vue'
 export { default as NumberInputControl } from './NumberControl.vue'
 export { default as SelectControl } from './SelectControl.vue'
@@ -10,3 +11,5 @@ export {
   radioItemVariants,
   type RadioItemVariants,
 } from './radio-group'
+
+export { CheckboxGroup, CheckboxGroupItem } from './checkbox-group'

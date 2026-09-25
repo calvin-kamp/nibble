@@ -7,7 +7,7 @@ import {
 } from 'reka-ui'
 import { MinusIcon, PlusIcon } from '@lucide/vue'
 import { UiButton, UiIcon } from '@components/ui'
-import { computed } from 'vue'
+import { computed, useAttrs } from 'vue'
 
 interface Props {
   min?: number
@@ -30,6 +30,15 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const modelValue = defineModel<number>()
+
+const attrs = useAttrs()
+
+/** vee-validate's onInput/onChange read the input's text, the number comes via update:modelValue */
+function inputAttrs(): Record<string, unknown> {
+  const { onInput: _onInput, onChange: _onChange, ...rest } = attrs
+
+  return rest
+}
 
 const formatOptions = computed<Intl.NumberFormatOptions>(() => ({
   maximumFractionDigits: props.fractionDigits,
@@ -77,7 +86,8 @@ const formatOptions = computed<Intl.NumberFormatOptions>(() => ({
     </span>
 
     <NumberFieldInput
-      v-bind="$attrs"
+      size="1"
+      v-bind="inputAttrs()"
       :class="[
         'min-w-0 flex-1 bg-transparent outline-hidden text-base',
         props.stepper ? 'text-center' : 'text-start',

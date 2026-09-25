@@ -69,10 +69,9 @@ const { fieldId, descriptionId, errorId, describedBy } = useFieldIds(() =>
           role="alert"
           class="flex items-start gap-1 text-destructive text-sm"
         >
-          <UiIcon
-            :icon="CircleAlertIcon"
-            class="mt-0.5"
-          />
+          <span class="flex h-5 items-center">
+            <UiIcon :icon="CircleAlertIcon" />
+          </span>
 
           <span v-if="errors.length === 1">{{ errors[0] }}</span>
 

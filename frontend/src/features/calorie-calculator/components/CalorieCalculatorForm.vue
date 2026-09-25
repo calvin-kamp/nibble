@@ -3,7 +3,7 @@ import type { CalorieCalculatorValues, CalorieResult } from '../calorie-calculat
 
 import { useForm } from 'vee-validate'
 import { DumbbellIcon } from '@lucide/vue'
-import { nextTick, useTemplateRef } from 'vue'
+import { useTemplateRef } from 'vue'
 import { UiButton, UiCard, UiIcon, UiSeparator } from '@components/ui'
 import {
   FormFieldArray,
@@ -15,6 +15,7 @@ import {
 import { calculateCalories } from '../calculate-calories'
 import { calorieCalculatorSchema } from '../calorie-calculator.schema'
 import { exercises, goals, sexes } from '../calorie-calculator.data'
+import { revealFirstInvalidField } from '@lib/scroll'
 import { useUserStore } from '@stores/user.store'
 
 const emit = defineEmits<{
@@ -26,10 +27,10 @@ const user = useUserStore()
 const { handleSubmit, resetForm } = useForm({
   validationSchema: calorieCalculatorSchema,
   initialValues: {
-    sex: user.sex,
-    age: user.age,
-    height: user.height,
-    weight: user.weight,
+    sex: user.sex || undefined,
+    age: user.age || undefined,
+    height: user.height || undefined,
+    weight: user.weight || undefined,
     steps: 0,
     exercises: [],
     goal: 'maintain',
@@ -38,35 +39,14 @@ const { handleSubmit, resetForm } = useForm({
 
 const formElement = useTemplateRef<HTMLFormElement>('formElement')
 
-const FOCUSABLE = 'input, select, textarea, button, [tabindex]'
+const onSubmit = handleSubmit(
+  (values: CalorieCalculatorValues) => {
+    const typedValues = values
 
-function focusableWithin(element: HTMLElement): HTMLElement {
-  if (element.matches(FOCUSABLE)) return element
-
-  return element.querySelector<HTMLElement>(FOCUSABLE) ?? element
-}
-
-function scrollBehavior(): ScrollBehavior {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-}
-
-async function revealFirstInvalidField(): Promise<void> {
-  await nextTick()
-
-  const invalid = formElement.value?.querySelector<HTMLElement>('[aria-invalid="true"]')
-
-  if (!invalid) return
-
-  focusableWithin(invalid).focus({ preventScroll: true })
-
-  invalid.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })
-}
-
-const onSubmit = handleSubmit((values) => {
-  const typedValues = values as CalorieCalculatorValues
-
-  emit('calculated', calculateCalories(typedValues), typedValues)
-}, revealFirstInvalidField)
+    emit('calculated', calculateCalories(typedValues), typedValues)
+  },
+  () => revealFirstInvalidField(formElement.value),
+)
 </script>
 
 <template>
@@ -154,7 +134,7 @@ const onSubmit = handleSubmit((values) => {
           empty-title="Kein Training eingetragen"
           empty-text="Wir rechnen dann nur mit Grundumsatz und Alltagsbewegung."
           add-label="Training hinzufügen"
-          add-more-label="Weiteres Training hinzufügen"
+          add-more-label="Training hinzufügen"
           :new-entry="() => ({ met: '', duration: 0, frequency: 0 })"
         >
           <template #media>
