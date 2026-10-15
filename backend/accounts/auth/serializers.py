@@ -97,3 +97,35 @@ class LoginSerializer(TokenObtainPairSerializer):
         data["user"] = UserSerializer(self.user).data
 
         return data
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    current_password = serializers.CharField(trim_whitespace=False)
+    new_password = serializers.CharField(trim_whitespace=False)
+
+    def validate_current_password(self, value):
+        if not self.context["request"].user.check_password(value):
+            raise serializers.ValidationError("Das aktuelle Passwort stimmt nicht.")
+
+        return value
+
+    def validate_new_password(self, value):
+        try:
+            django_validate_password(value, self.context["request"].user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(list(exc.messages)) from exc
+
+        return value
+
+
+class AccountDeleteSerializer(serializers.Serializer):
+    password = serializers.CharField(
+        trim_whitespace=False,
+        error_messages={"blank": "Gib dein Passwort ein."},
+    )
+
+    def validate_password(self, value):
+        if not self.context["request"].user.check_password(value):
+            raise serializers.ValidationError("Das Passwort stimmt nicht.")
+
+        return value

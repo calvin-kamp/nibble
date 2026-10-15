@@ -55,6 +55,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "recipes",
     "accounts",
+    "food",
+    "tracking",
 ]
 
 if DEBUG and find_spec("django_extensions") is not None:

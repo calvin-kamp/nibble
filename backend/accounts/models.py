@@ -79,17 +79,24 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class Profile(models.Model):
-    class GoalChoices(models.TextChoices):
-        LOSE_WEIGHT = "diet", "Abnehmen"
-        MAINTAIN_WEIGHT = "maintain", "Gewicht halten"
-        GAIN_WEIGHT = "gain", "Zunehmen"
+    """Account settings of a user. Body data and daily goals are health data and
+    live in the tracking app, behind the consent below."""
 
-    class SexChoices(models.TextChoices):
-        MALE = (
-            "male",
-            "Männlich",
-        )
-        FEMALE = "female", "Weiblich"
+    class Usage(models.TextChoices):
+        TRACKING = "tracking", "Tracking"
+        RECIPES = "rezepte", "Rezepte"
+        BOTH = "beides", "Beides"
+
+    class Diet(models.TextChoices):
+        ALL = "alles", "Alles"
+        VEGETARIAN = "vegetarisch", "Vegetarisch"
+        VEGAN = "vegan", "Vegan"
+        PESCETARIAN = "pescetarisch", "Pescetarisch"
+
+    class Onboarding(models.TextChoices):
+        OPEN = "offen", "Offen"
+        COMPLETED = "abgeschlossen", "Abgeschlossen"
+        SKIPPED = "uebersprungen", "Übersprungen"
 
     username = models.CharField(
         unique=True,
@@ -104,56 +111,18 @@ class Profile(models.Model):
         related_name="profile",
     )
 
-    sex = models.CharField(
-        choices=SexChoices,
-        max_length=6,
-        blank=True,
-        null=True,
-    )
+    name = models.CharField(max_length=100, blank=True)
 
-    height = models.IntegerField(
-        blank=True,
-        null=True,
-    )
+    # Decides the start page after login; the navigation stays the same.
+    usage = models.CharField(choices=Usage, max_length=8, blank=True, null=True)
+    # Preselects the diet filter of the recipe list.
+    diet = models.CharField(choices=Diet, max_length=12, default=Diet.ALL)
 
-    weight = models.DecimalField(
-        max_digits=4,
-        decimal_places=1,
-        blank=True,
-        null=True,
+    onboarding = models.CharField(
+        choices=Onboarding, max_length=13, default=Onboarding.OPEN
     )
-
-    target_calories = models.IntegerField(
-        blank=True,
-        null=True,
-    )
-
-    target_fat = models.IntegerField(
-        blank=True,
-        null=True,
-    )
-
-    target_protein = models.IntegerField(
-        blank=True,
-        null=True,
-    )
-
-    target_carbs = models.IntegerField(
-        blank=True,
-        null=True,
-    )
-
-    goal = models.CharField(
-        choices=GoalChoices,
-        blank=True,
-        null=True,
-        max_length=15,
-    )
-
-    date_of_birth = models.DateField(
-        blank=True,
-        null=True,
-    )
+    # The step to resume with, while the onboarding is open.
+    onboarding_step = models.CharField(max_length=20, blank=True)
 
     data_consent = models.BooleanField(default=False)
     data_consent_date_granted = models.DateTimeField(blank=True, null=True)

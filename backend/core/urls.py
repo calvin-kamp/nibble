@@ -19,12 +19,23 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from tracking.api.urls import (
+    diary_urlpatterns,
+    goal_urlpatterns,
+    meal_urlpatterns,
+    weight_urlpatterns,
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("auth/", include("accounts.auth.urls")),
     path("profile/", include("accounts.profile.urls")),
     path("recipes/", include("recipes.api.urls")),
+    path("foods/", include("food.api.urls")),
+    path("diary/", include(diary_urlpatterns)),
+    path("meals/", include(meal_urlpatterns)),
+    path("weight/", include(weight_urlpatterns)),
+    path("goals/", include(goal_urlpatterns)),
 ]
 
 if settings.DEBUG:

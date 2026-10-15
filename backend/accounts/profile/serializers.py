@@ -1,71 +1,62 @@
-from django.conf import settings
-from django.utils import timezone
 from rest_framework import serializers
-from rest_framework.validators import UniqueValidator
 
 from accounts.models import Profile
 
 
+class ConsentSerializer(serializers.Serializer):
+    granted = serializers.BooleanField(source="data_consent")
+    granted_at = serializers.DateTimeField(source="data_consent_date_granted")
+    version = serializers.IntegerField(source="data_consent_version")
+
+
 class ProfileSerializer(serializers.ModelSerializer):
-    age = serializers.SerializerMethodField()
-    username = serializers.CharField(
-        max_length=32,
-        required=False,
-        allow_null=True,
-        validators=[
-            UniqueValidator(
-                queryset=Profile.objects.all(),
-                lookup="iexact",
-                message="Dieser Benutzername ist bereits vergeben.",
-            )
-        ],
+    """The account page and the start: name, usage, diet, onboarding, consent.
+
+    The consent changes only through /profile/consent/, so that granting and
+    withdrawing (with the deletion) can't happen as a side effect.
+    """
+
+    email = serializers.EmailField(source="user.email", read_only=True)
+    tos_accepted_at = serializers.DateTimeField(
+        source="user.tos_accepted_date", read_only=True
     )
+    name = serializers.CharField(
+        max_length=100,
+        required=False,
+        trim_whitespace=True,
+        error_messages={"blank": "Gib deinen Namen ein."},
+    )
+    consent = ConsentSerializer(source="*", read_only=True)
 
     class Meta:
         model = Profile
-        exclude = (
-            "data_consent_date_granted",
-            "data_consent_date_revoked",
-            "data_consent_version",
+        fields = (
+            "email",
+            "name",
+            "usage",
+            "diet",
+            "onboarding",
+            "onboarding_step",
+            "consent",
+            "tos_accepted_at",
         )
         extra_kwargs = {
-            "date_of_birth": {
-                "write_only": True,
-            }
+            "usage": {
+                "error_messages": {
+                    "invalid_choice": "Wähle aus, wofür du Nibble nutzen möchtest."
+                }
+            },
         }
 
-    def get_age(self, obj):
-        if obj.date_of_birth is None:
-            return None
-
-        today = timezone.now().date()
-        date_of_birth = obj.date_of_birth
-
-        return (
-            today.year
-            - date_of_birth.year
-            - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
-        )
-
     def validate(self, attrs):
-        data_consent = attrs.get("data_consent", self.instance.data_consent)
-
-        if data_consent is False:
-            attrs["sex"] = None
-            attrs["height"] = None
-            attrs["weight"] = None
-            attrs["target_calories"] = None
-            attrs["target_fat"] = None
-            attrs["target_protein"] = None
-            attrs["target_carbs"] = None
-            attrs["goal"] = None
-            attrs["date_of_birth"] = None
-
-        if data_consent is True and self.instance.data_consent is False:
-            attrs["data_consent_date_granted"] = timezone.now()
-            attrs["data_consent_version"] = settings.SENSITIVE_DATA_CONSENT_VERSION
-
-        if data_consent is False and self.instance.data_consent is True:
-            attrs["data_consent_date_revoked"] = timezone.now()
+        # Finishing or skipping ends the onboarding; there's no step to resume.
+        if attrs.get("onboarding", Profile.Onboarding.OPEN) != Profile.Onboarding.OPEN:
+            attrs["onboarding_step"] = ""
 
         return attrs
+
+
+class ConsentStatusSerializer(ConsentSerializer):
+    revoked_at = serializers.DateTimeField(source="data_consent_date_revoked")
+    # What a revocation would delete, for the confirmation dialog.
+    deletes = serializers.DictField(child=serializers.IntegerField(), read_only=True)
