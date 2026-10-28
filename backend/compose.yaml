@@ -1,0 +1,81 @@
+# Logs go to the host's journald, which deletes them after 14 days (see README).
+# Docker Desktop has no journald: local development sets LOG_DRIVER=json-file in .env.
+x-logging: &logging
+  driver: ${LOG_DRIVER:-journald}
+
+x-backend: &backend
+  build: .
+  restart: unless-stopped
+  logging: *logging
+  env_file: .env
+  environment:
+    DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/1
+  volumes:
+    - media_data:/app/media
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:17
+    container_name: nibble-db
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8
+    container_name: nibble-redis
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    <<: *backend
+    container_name: nibble-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+
+  worker:
+    <<: *backend
+    container_name: nibble-worker
+    command: celery -A config worker --loglevel=info
+
+  beat:
+    <<: *backend
+    container_name: nibble-beat
+    command: celery -A config beat --loglevel=info --schedule /tmp/celerybeat-schedule
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
+  static_data:

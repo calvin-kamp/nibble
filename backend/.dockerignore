@@ -16,4 +16,4 @@ venv/
 .vscode/
 .idea/
 requirements-dev.txt
-docker-compose.yml
+compose.yaml
