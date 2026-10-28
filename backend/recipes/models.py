@@ -1,123 +1,115 @@
-from decimal import Decimal
 from pathlib import Path
-from uuid import uuid4
 
-from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import Q
+from django.utils import timezone
 from django.utils.text import slugify
 
-MACRO_MAX_GRAMS = 500
+
+def slug_for(name):
+    """URL-safe name, umlauts spelled out like the frontend does."""
+    for umlaut, replacement in (
+        ("ä", "ae"),
+        ("Ä", "Ae"),
+        ("ö", "oe"),
+        ("Ö", "Oe"),
+        ("ü", "ue"),
+        ("Ü", "Ue"),
+        ("ß", "ss"),
+    ):
+        name = name.replace(umlaut, replacement)
+
+    return slugify(name)
 
 
 def recipe_image_path(instance, filename):
-    """Random file name, so uploads never collide and no user file name is stored."""
-    return f"rezepte/{uuid4().hex}{Path(filename).suffix.lower()}"
+    """recipes/{id}-{slug}.{ext}; the file name never comes from the user."""
+    return f"recipes/{instance.pk}-{slug_for(instance.name)}{Path(filename).suffix}"
 
 
-class Ingredient(models.Model):
-    name = models.CharField(
-        max_length=60,
-        unique=True,
+def submission_image_path(instance, filename):
+    recipe = instance.recipe
+
+    return (
+        f"recipes/revisions/{recipe.pk}-{slug_for(recipe.name)}{Path(filename).suffix}"
     )
 
-    def __str__(self):
-        return self.name
 
-
-class Diet(models.Model):
-    class DietChoice(models.TextChoices):
-        VEGAN = "vegan", "Vegan"
-        VEGETARISCH = "vegetarisch", "Vegetarisch"
-        PESCETARISCH = "pescetarisch", "Pescetarisch"
-
-    diet = models.CharField(
-        choices=DietChoice,
-        max_length=12,
-        unique=True,
+def macro_field(**kwargs):
+    return models.DecimalField(
+        max_digits=7,
+        decimal_places=1,
+        validators=[MinValueValidator(0)],
+        **kwargs,
     )
 
-    def __str__(self):
-        return self.get_diet_display()
 
+class RecipeQuerySet(models.QuerySet):
+    def visible_to(self, user):
+        """Approved recipes for everyone, unapproved ones only for author and staff."""
+        if user.is_authenticated and user.is_staff:
+            return self
 
-class Intolerance(models.Model):
-    class IntoleranceChoice(models.TextChoices):
-        GLUTENFREI = "glutenfrei", "Glutenfrei"
-        LAKTOSEFREI = "laktosefrei", "Laktosefrei"
+        if user.is_authenticated:
+            return self.filter(Q(status=Recipe.Status.APPROVED) | Q(author=user.profile))
 
-    intolerance = models.CharField(
-        choices=IntoleranceChoice,
-        max_length=11,
-        unique=True,
-    )
-
-    def __str__(self):
-        return self.get_intolerance_display()
-
-
-class MealType(models.Model):
-    class MealTypeChoice(models.TextChoices):
-        FRUEHSTUECK = "fruehstueck", "Frühstück"
-        MITTAGESSEN = "mittagessen", "Mittagessen"
-        ABENDESSEN = "abendessen", "Abendessen"
-
-        SNACK = "snack", "Snack"
-        DESSERT = "dessert", "Dessert"
-
-    meal_type = models.CharField(
-        choices=MealTypeChoice,
-        max_length=11,
-        unique=True,
-    )
-
-    def __str__(self):
-        return self.get_meal_type_display()
-
-
-class Equipment(models.Model):
-    class EquipmentChoice(models.TextChoices):
-        BACKOFEN = "backofen", "Backofen"
-        HERD = "herd", "Herd"
-        AIRFRYER = "airfryer", "Airfryer"
-        MIXER = "mixer", "Mixer"
-        OHNE_KOCHEN = "ohne-kochen", "Ohne Kochen"
-
-    equipment = models.CharField(
-        choices=EquipmentChoice,
-        max_length=11,
-        unique=True,
-    )
-
-    def __str__(self):
-        return self.get_equipment_display()
-
-
-class Attribute(models.Model):
-    class AttributeChoice(models.TextChoices):
-        PROTEINREICH = "proteinreich", "Proteinreich"
-        KALORIENARM = "kalorienarm", "Kalorienarm"
-        MEAL_PREP = "meal-prep", "Meal Prep"
-        UNTER_30_MIN = "unter-30-min", "Unter 30 Min"
-        WENIG_ZUTATEN = "wenig-zutaten", "Wenig Zutaten"
-
-    attribute = models.CharField(
-        choices=AttributeChoice,
-        max_length=13,
-        unique=True,
-    )
-
-    def __str__(self):
-        return self.get_attribute_display()
+        return self.filter(status=Recipe.Status.APPROVED)
 
 
 class Recipe(models.Model):
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+    """The live version; changes to approved recipes wait in RecipeSubmission."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Offen"
+        APPROVED = "approved", "Freigegeben"
+        REJECTED = "rejected", "Abgelehnt"
+
+    class Diet(models.TextChoices):
+        VEGETARIAN = "vegetarian", "Vegetarisch"
+        VEGAN = "vegan", "Vegan"
+        PESCETARIAN = "pescetarian", "Pescetarisch"
+
+    class Intolerance(models.TextChoices):
+        GLUTEN_FREE = "gluten_free", "Glutenfrei"
+        LACTOSE_FREE = "lactose_free", "Laktosefrei"
+
+    class MealType(models.TextChoices):
+        BREAKFAST = "breakfast", "Frühstück"
+        LUNCH = "lunch", "Mittagessen"
+        DINNER = "dinner", "Abendessen"
+        SNACK = "snack", "Snack"
+        DESSERT = "dessert", "Dessert"
+
+    class Equipment(models.TextChoices):
+        OVEN = "oven", "Backofen"
+        STOVE = "stove", "Herd"
+        MIXER = "mixer", "Mixer"
+        AIRFRYER = "airfryer", "Airfryer"
+
+    class Property(models.TextChoices):
+        PROTEIN_RICH = "protein_rich", "Proteinreich"
+        LOW_CALORIE = "low_calorie", "Kalorienarm"
+        FEW_INGREDIENTS = "few_ingredients", "Wenig Zutaten"
+        UNDER_30_MIN = "under_30_min", "Unter 30 Min"
+
+    author = models.ForeignKey(
+        "accounts.Profile",
         related_name="recipes",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
+    )
+
+    status = models.CharField(
+        choices=Status,
+        default=Status.PENDING,
+        max_length=8,
+    )
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
     )
 
     image = models.ImageField(
@@ -126,125 +118,216 @@ class Recipe(models.Model):
     )
 
     name = models.CharField(max_length=120)
-    description = models.TextField(
-        max_length=500,
+    description = models.TextField(max_length=2000)
+    prep_time_minutes = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(10080)],
+    )
+    servings = models.PositiveIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+    )
+
+    diet = models.CharField(
+        choices=Diet,
+        max_length=11,
+        blank=True,
+        null=True,
+    )
+    intolerances = ArrayField(
+        models.CharField(choices=Intolerance, max_length=12),
+        default=list,
+        blank=True,
+    )
+    equipment = ArrayField(
+        models.CharField(choices=Equipment, max_length=8),
+        default=list,
+        blank=True,
+    )
+    meal_types = ArrayField(
+        models.CharField(choices=MealType, max_length=9),
+        default=list,
+    )
+    # Computed on save, see submissions.compute_properties().
+    properties = ArrayField(
+        models.CharField(choices=Property, max_length=15),
+        default=list,
         blank=True,
     )
 
-    protein_per_serving = models.DecimalField(
-        max_digits=4,
-        decimal_places=1,
-        validators=[MinValueValidator(0), MaxValueValidator(MACRO_MAX_GRAMS)],
-    )
-    carbs_per_serving = models.DecimalField(
-        max_digits=4,
-        decimal_places=1,
-        validators=[MinValueValidator(0), MaxValueValidator(MACRO_MAX_GRAMS)],
-    )
-    fat_per_serving = models.DecimalField(
-        max_digits=4,
-        decimal_places=1,
-        validators=[MinValueValidator(0), MaxValueValidator(MACRO_MAX_GRAMS)],
-    )
-    kcal_per_serving = models.PositiveIntegerField(editable=False)
+    kcal = macro_field()
+    protein = macro_field()
+    carbs = macro_field()
+    fat = macro_field()
 
-    servings = models.PositiveIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(12)],
-    )
-    duration_minutes = models.PositiveIntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(600)],
-    )
-
-    diets = models.ManyToManyField(Diet, blank=True)
-    intolerances = models.ManyToManyField(Intolerance, blank=True)
-    meal_types = models.ManyToManyField(MealType, blank=True)
-    equipment = models.ManyToManyField(Equipment, blank=True)
-    attributes = models.ManyToManyField(Attribute, blank=True)
-
-    updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = RecipeQuerySet.as_manager()
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-created_at", "-id"]
 
     def __str__(self):
         return self.name
 
-    @property
-    def slug(self):
-        """URL part "<id>-<name>", umlauts spelled out like the frontend does."""
-        name = self.name
-        name = name.replace("ä", "ae").replace("Ä", "Ae")
-        name = name.replace("ö", "oe").replace("Ö", "Oe")
-        name = name.replace("ü", "ue").replace("Ü", "Ue")
-        name = name.replace("ß", "ss")
-
-        return f"{self.id}-{slugify(name)}"
-
-    def save(self, *args, **kwargs):
-        kcal = (
-            Decimal(self.protein_per_serving) * 4
-            + Decimal(self.carbs_per_serving) * 4
-            + Decimal(self.fat_per_serving) * 9
-        )
-        self.kcal_per_serving = round(kcal)
-
-        super().save(*args, **kwargs)
-
 
 class RecipeIngredient(models.Model):
-    class UnitChoice(models.IntegerChoices):
-        G = 10, "g"
-        KG = 11, "kg"
+    class Unit(models.TextChoices):
+        G = "g", "g"
+        KG = "kg", "kg"
+        ML = "ml", "ml"
+        L = "l", "l"
+        TBSP = "tbsp", "EL"
+        TSP = "tsp", "TL"
+        PIECE = "piece", "Stück"
+        PINCH = "pinch", "Prise"
+        CUP = "cup", "Tasse"
+        SLICE = "slice", "Scheibe"
+        BUNCH = "bunch", "Bund"
+        CLOVE = "clove", "Zehe"
+        CAN = "can", "Dose"
+        PACK = "pack", "Packung"
 
-        ML = 20, "ml"
-        L = 21, "l"
-
-        TL = 30, "TL"
-        EL = 31, "EL"
-        PRISE = 32, "Prise"
-
-        STUECK = 40, "Stück"
-        ZEHE = 41, "Zehe"
-        BUND = 42, "Bund"
-        SCHEIBE = 43, "Scheibe"
-        DOSE = 44, "Dose"
-        PACKUNG = 45, "Packung"
-
-    amount = models.DecimalField(
-        decimal_places=1,
-        max_digits=5,
-        validators=[MinValueValidator(Decimal("0.1"))],
-    )
-    unit = models.IntegerField(choices=UnitChoice)
     recipe = models.ForeignKey(
         Recipe,
         related_name="ingredients",
         on_delete=models.CASCADE,
     )
-    ingredient = models.ForeignKey(
-        Ingredient,
-        on_delete=models.CASCADE,
+    position = models.PositiveIntegerField()
+
+    name = models.CharField(max_length=100)
+    amount = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+    )
+    unit = models.CharField(
+        choices=Unit,
+        max_length=5,
     )
 
     class Meta:
-        ordering = ["id"]
+        ordering = ["position"]
 
     def __str__(self):
-        return self.ingredient.name
+        return self.name
 
 
-class CookingStep(models.Model):
+class RecipeStep(models.Model):
     recipe = models.ForeignKey(
         Recipe,
+        related_name="steps",
         on_delete=models.CASCADE,
-        related_name="cooking_steps",
     )
-    text = models.TextField(max_length=500)
-    step = models.PositiveIntegerField()
+    step_number = models.PositiveIntegerField()
+    text = models.TextField(max_length=2000)
 
     class Meta:
-        ordering = ["step"]
+        ordering = ["step_number"]
 
     def __str__(self):
-        return f"{self.step}. {self.text}"
+        return f"{self.step_number}. {self.text}"
+
+
+class RecipeSubmission(models.Model):
+    """A new recipe or a change to an approved one, waiting for moderation.
+
+    The content is stored as RecipeInput JSON. For new recipes it mirrors the
+    recipe itself; revisions only reach the recipe on approval.
+    """
+
+    class Kind(models.TextChoices):
+        NEW = "new", "Neues Rezept"
+        REVISION = "revision", "Änderung"
+
+    class ImageAction(models.TextChoices):
+        KEEP = "keep", "Beibehalten"
+        REPLACE = "replace", "Ersetzen"
+        REMOVE = "remove", "Entfernen"
+
+    recipe = models.ForeignKey(
+        Recipe,
+        related_name="submissions",
+        on_delete=models.CASCADE,
+    )
+    kind = models.CharField(
+        choices=Kind,
+        max_length=8,
+    )
+    status = models.CharField(
+        choices=Recipe.Status,
+        default=Recipe.Status.PENDING,
+        max_length=8,
+    )
+
+    content = models.JSONField()
+
+    # Revisions only; new recipes carry their image themselves.
+    image = models.ImageField(
+        upload_to=submission_image_path,
+        blank=True,
+    )
+    image_action = models.CharField(
+        choices=ImageAction,
+        default=ImageAction.KEEP,
+        max_length=7,
+    )
+
+    submitted_at = models.DateTimeField(default=timezone.now)
+
+    reviewed_by = models.ForeignKey(
+        "accounts.Profile",
+        related_name="+",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    reviewed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        ordering = ["submitted_at", "id"]
+
+    def __str__(self):
+        return f"{self.get_kind_display()}: {self.content.get('name', self.recipe)}"
+
+    @property
+    def effective_image(self):
+        """The image the recipe will have once this submission is approved."""
+        if self.kind == self.Kind.REVISION:
+            if self.image_action == self.ImageAction.REPLACE:
+                return self.image
+
+            if self.image_action == self.ImageAction.REMOVE:
+                return None
+
+        return self.recipe.image or None
+
+
+class SavedRecipe(models.Model):
+    profile = models.ForeignKey(
+        "accounts.Profile",
+        related_name="saved_recipes",
+        on_delete=models.CASCADE,
+    )
+    recipe = models.ForeignKey(
+        Recipe,
+        related_name="saved_by",
+        on_delete=models.CASCADE,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["profile", "recipe"],
+                name="unique_saved_recipe",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.profile} → {self.recipe}"

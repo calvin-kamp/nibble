@@ -1,45 +1,37 @@
-from django.urls import path, register_converter
+from django.urls import path
 from rest_framework import routers
 
-from .converters import IsoDateConverter
-from .diary_views import (
-    DiaryCalendarView,
-    DiaryDayView,
-    DiaryEntryViewSet,
-    DiarySummaryView,
-    RecentFoodsView,
+from .views import (
+    BodyProfileView,
+    DaySummaryView,
+    EntryCreateView,
+    EntryDetailView,
+    EntryFromMealView,
+    GoalView,
+    MealViewSet,
+    WeekDetailView,
+    WeekListView,
+    WeightDetailView,
+    WeightListView,
 )
-from .goal_views import GoalView
-from .meal_views import MealViewSet
-from .weight_views import WeightDayView, WeightOverviewView
 
-register_converter(IsoDateConverter, "isodate")
+router = routers.SimpleRouter(trailing_slash=False)
+router.register(r"meals", MealViewSet, basename="meal")
 
-diary_router = routers.SimpleRouter()
-diary_router.register(r"entries", DiaryEntryViewSet, basename="diary-entry")
-
-meal_router = routers.SimpleRouter()
-meal_router.register(r"", MealViewSet, basename="meal")
-
-diary_urlpatterns = [
-    path("days/<isodate:date>/", DiaryDayView.as_view(), name="diary-day"),
+urlpatterns = [
+    path("goal", GoalView.as_view(), name="goal"),
+    path("body", BodyProfileView.as_view(), name="body"),
+    path("entries", EntryCreateView.as_view(), name="entry_create"),
+    path("entries/from-meal", EntryFromMealView.as_view(), name="entry_from_meal"),
+    path("entries/<int:pk>", EntryDetailView.as_view(), name="entry_detail"),
+    path("days/<str:date>", DaySummaryView.as_view(), name="day_summary"),
+    path("weights", WeightListView.as_view(), name="weights"),
+    path("weights/weeks", WeekListView.as_view(), name="weight_weeks"),
     path(
-        "days/<isodate:date>/summary/",
-        DiarySummaryView.as_view(),
-        name="diary-summary",
+        "weights/weeks/<int:iso_year>/<int:iso_week>",
+        WeekDetailView.as_view(),
+        name="weight_week_detail",
     ),
-    path("calendar/", DiaryCalendarView.as_view(), name="diary-calendar"),
-    path("recent/", RecentFoodsView.as_view(), name="diary-recent"),
-    *diary_router.urls,
-]
-
-meal_urlpatterns = meal_router.urls
-
-weight_urlpatterns = [
-    path("", WeightOverviewView.as_view(), name="weight-overview"),
-    path("<isodate:date>/", WeightDayView.as_view(), name="weight-day"),
-]
-
-goal_urlpatterns = [
-    path("", GoalView.as_view(), name="goals"),
+    path("weights/<int:pk>", WeightDetailView.as_view(), name="weight_detail"),
+    *router.urls,
 ]

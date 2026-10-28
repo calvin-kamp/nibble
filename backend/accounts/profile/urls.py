@@ -1,9 +1,12 @@
 from django.urls import path
 
-from .views import ConsentView, ExportView, ProfileView
+from .views import ProfileView, UsernameAvailabilityView
 
 urlpatterns = [
-    path("", ProfileView.as_view(), name="profile"),
-    path("consent/", ConsentView.as_view(), name="profile-consent"),
-    path("export/", ExportView.as_view(), name="profile-export"),
+    path("profile", ProfileView.as_view(), name="profile"),
+    path(
+        "profile/username-availability",
+        UsernameAvailabilityView.as_view(),
+        name="username_availability",
+    ),
 ]

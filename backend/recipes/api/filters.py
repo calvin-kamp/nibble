@@ -1,66 +1,98 @@
-import django_filters
-from django.db.models import Count, Q
+from django_filters import rest_framework as filters
+from rest_framework.exceptions import NotAuthenticated
 
 from recipes.models import Recipe
 
-
-class CharAnyFilter(django_filters.BaseInFilter, django_filters.CharFilter):
-    pass
-
-
-class CharAllFilter(django_filters.BaseCSVFilter, django_filters.CharFilter):
-    def filter(self, qs, value):
-        if not value:
-            return qs
-
-        for item in value:
-            qs = qs.filter(**{f"{self.field_name}__{self.lookup_expr}": item})
-
-        return qs.distinct()
+# A diet filter also shows the stricter diets.
+DIET_HIERARCHY = {
+    Recipe.Diet.VEGAN: [Recipe.Diet.VEGAN],
+    Recipe.Diet.VEGETARIAN: [Recipe.Diet.VEGETARIAN, Recipe.Diet.VEGAN],
+    Recipe.Diet.PESCETARIAN: [
+        Recipe.Diet.PESCETARIAN,
+        Recipe.Diet.VEGETARIAN,
+        Recipe.Diet.VEGAN,
+    ],
+}
 
 
-class EquipmentSubsetFilter(django_filters.BaseCSVFilter, django_filters.CharFilter):
-    def filter(self, qs, value):
-        if not value:
-            return qs
-
-        return qs.annotate(
-            outside=Count("equipment", filter=~Q(equipment__equipment__in=value))
-        ).filter(outside=0)
-
-
-class RecipeFilter(django_filters.FilterSet):
-    suche = django_filters.CharFilter(
+class RecipeFilter(filters.FilterSet):
+    q = filters.CharFilter(
         field_name="name",
         lookup_expr="icontains",
+        max_length=100,
     )
-    ernaehrung = CharAnyFilter(
-        field_name="diets__diet",
-        lookup_expr="in",
-        distinct=True,
+    diet = filters.ChoiceFilter(
+        choices=Recipe.Diet.choices,
+        method="filter_diet",
     )
-    unvertraeglichkeit = CharAllFilter(
-        field_name="intolerances__intolerance",
-        lookup_expr="iexact",
+    intolerances = filters.MultipleChoiceFilter(
+        choices=Recipe.Intolerance.choices,
+        method="filter_all",
     )
-    mahlzeit = CharAnyFilter(
-        field_name="meal_types__meal_type",
-        lookup_expr="in",
-        distinct=True,
+    meal_types = filters.MultipleChoiceFilter(
+        choices=Recipe.MealType.choices,
+        method="filter_any",
     )
-    eigenschaften = CharAllFilter(
-        field_name="attributes__attribute",
-        lookup_expr="iexact",
+    properties = filters.MultipleChoiceFilter(
+        choices=Recipe.Property.choices,
+        method="filter_all",
     )
-    ausstattung = EquipmentSubsetFilter()
+    equipment = filters.MultipleChoiceFilter(
+        choices=Recipe.Equipment.choices,
+        method="filter_equipment",
+    )
+    mine = filters.BooleanFilter(method="filter_mine")
+    saved = filters.BooleanFilter(method="filter_saved")
 
     class Meta:
         model = Recipe
         fields = (
-            "suche",
-            "ernaehrung",
-            "unvertraeglichkeit",
-            "mahlzeit",
-            "eigenschaften",
-            "ausstattung",
+            "q",
+            "diet",
+            "intolerances",
+            "meal_types",
+            "properties",
+            "equipment",
+            "mine",
+            "saved",
         )
+
+    def filter_queryset(self, queryset):
+        # The list shows approved recipes; mine=true shows the own ones in any status.
+        if not self.form.cleaned_data.get("mine"):
+            queryset = queryset.filter(status=Recipe.Status.APPROVED)
+
+        return super().filter_queryset(queryset)
+
+    def filter_diet(self, queryset, name, value):
+        return queryset.filter(diet__in=DIET_HIERARCHY[value])
+
+    def filter_all(self, queryset, name, value):
+        return queryset.filter(**{f"{name}__contains": value})
+
+    def filter_any(self, queryset, name, value):
+        return queryset.filter(**{f"{name}__overlap": value})
+
+    def filter_equipment(self, queryset, name, value):
+        """Only recipes whose equipment is fully covered; none needed matches always."""
+        return queryset.filter(equipment__contained_by=value)
+
+    def filter_mine(self, queryset, name, value):
+        if not value:
+            return queryset
+
+        return queryset.filter(author=self.profile())
+
+    def filter_saved(self, queryset, name, value):
+        if not value:
+            return queryset
+
+        return queryset.filter(saved_by__profile=self.profile())
+
+    def profile(self):
+        user = self.request.user
+
+        if not user.is_authenticated:
+            raise NotAuthenticated()
+
+        return user.profile

@@ -1,0 +1,2267 @@
+openapi: 3.1.0
+info:
+  title: Nutrition Tracker API
+  version: 0.1.0
+  description: |
+    API einer Ernährungs-Tracking-Webapp mit Rezeptdatenbank. Backend: Django, Django REST Framework, PostgreSQL.
+    Endpunkte, Felder und Enum-Werte sind englisch, Beschreibungen und Fehlermeldungen deutsch.
+
+    ## Übersicht der Bereiche
+
+    | Bereich | Pfade | Inhalt |
+    |---|---|---|
+    | Auth | `/auth/*` | Registrierung, Login, Refresh, Logout, E-Mail-Verifizierung, Passwort ändern/vergessen |
+    | Account | `/account/*` | Konto löschen (7 Tage Frist), Datenexport |
+    | Onboarding | `/onboarding`, `/profile`, `/privacy/consent` | Username, Datenschutzeinwilligung, Fortschritt |
+    | Rezepte | `/recipes/*` | Anlegen, Filtern, Bearbeiten, Merken, Bild |
+    | Moderation | `/moderation/*` | Freigabe und Ablehnung (nur Staff) |
+    | Tracking | `/foods/search`, `/tracking/goal`, `/tracking/entries`, `/tracking/days`, `/tracking/meals` | Lebensmittel, Zielwerte, Einträge, Tagesauswertung, eigene Mahlzeiten |
+    | Gewicht | `/tracking/weights/*` | Einträge, Diagramm, Kalenderwochen |
+
+    ## Konventionen
+
+    **Auth über Cookies.** Access- und Refresh-Token sind JWTs in HttpOnly-Cookies. Das Frontend kann sie nicht lesen.
+
+    | Cookie | Laufzeit | Pfad | Inhalt |
+    |---|---|---|---|
+    | `access_token` | 15 Minuten | `/` | JWT für alle geschützten Endpunkte |
+    | `refresh_token` | 7 Tage | `/auth/` | JWT, nur für `/auth/refresh` und `/auth/logout` |
+    | `csrftoken` | Session | `/` | CSRF-Token, lesbar für das Frontend |
+
+    Alle Cookies: `Secure`, `SameSite=Lax`, `Domain=.example.com` (Frontend und API liegen auf Subdomains derselben Domain). `csrftoken` ist als einziges nicht `HttpOnly`.
+
+    **Ablauf im Frontend:** Beim Seitenaufruf `GET /auth/me`. Bei `401` einmal `POST /auth/refresh` und `/auth/me` wiederholen. Schlägt der Refresh fehl, ist die Sitzung abgelaufen und das Frontend zeigt den Login. Jeder Refresh stellt ein neues Refresh-Token aus und sperrt das alte (Rotation), die Sitzung verlängert sich dadurch bei Nutzung um jeweils 7 Tage.
+
+    **CSRF.** Jede Anfrage mit `POST`, `PUT`, `PATCH` oder `DELETE` braucht den Header `X-CSRFToken` mit dem Wert des Cookies `csrftoken`. Vor dem ersten Login einmal `GET /auth/csrf` aufrufen. CORS: nur die Frontend-Subdomain, mit `credentials`.
+
+    **Fehlerformat.** Jede Fehlerantwort hat die Form `{ "code": "...", "message": "deutscher Text", "errors": { "feld": ["..."] } }`. `errors` gibt es nur bei Validierungsfehlern.
+
+    **Datum und Zeit.** Zeitzone `Europe/Berlin`. Datumsfelder sind `YYYY-MM-DD`, Zeitstempel ISO 8601 mit Offset. „Heute“ ist das Berliner Datum, Einträge für spätere Tage werden mit `400 future_date_not_allowed` abgelehnt.
+
+    **Paginierung** (nur Rezeptliste, Moderation, Lebensmittelsuche): `?page=1`, feste Größe 20. Antwort: `{ count, next, previous, results }`.
+
+    **Einwilligung.** Alle Endpunkte unter `/tracking/*` verlangen eine erteilte Datenschutzeinwilligung. Ohne sie antwortet die API mit `403 consent_required`. Beim Widerruf werden alle Tracking-Daten sofort gelöscht (siehe `PUT /privacy/consent`).
+
+    **Account und Profil.** Ein `User` ist nur für Authentifizierung zuständig (E-Mail, Passwort, Verifizierung). Alle anderen Daten hängen am `Profile` (1:1 zum User). Die API macht diese Trennung nicht sichtbar.
+
+    **Verifizierung.** Ein nicht verifizierter Account kann alles nutzen (auch Passwort ändern und Konto löschen), es werden dann nur keine Benachrichtigungs-E-Mails versendet.
+
+    **Gültigkeit der Links in E-Mails:** Verifizierung 3 Tage, Passwort-Reset 1 Stunde. Die Links zeigen auf Frontend-Seiten, die den Token an die API weitergeben.
+
+    ## Rate Limits
+
+    Bei Überschreitung: `429 throttled` mit Header `Retry-After`.
+
+    | Endpunkt | Limit |
+    |---|---|
+    | `POST /auth/register` | 10 pro Stunde je IP |
+    | `POST /auth/login` | 5 pro Minute je IP |
+    | `POST /auth/refresh` | 30 pro Minute je IP |
+    | `POST /auth/password/forgot` | 5 pro Stunde je IP, 3 pro Stunde je E-Mail |
+    | `POST /auth/email/verification/resend` | 3 pro Stunde je User |
+    | `POST /auth/password/change` | 5 pro 15 Minuten je User |
+    | `POST /auth/email/change` | 3 pro Stunde je User |
+    | `GET /profile/username-availability` | 60 pro Minute je User |
+    | `POST /account/deletion`, `GET /account/export` | je 3 pro Stunde je User |
+    | alle übrigen Endpunkte | 120 pro Minute je User, 60 pro Minute je IP ohne Login |
+  contact:
+    name: API-Team
+    email: dev@example.com
+servers:
+  - url: https://api.example.com
+    description: Produktion
+  - url: http://localhost:8000
+    description: Lokale Entwicklung
+tags:
+  - name: Auth
+  - name: Account
+  - name: Onboarding
+  - name: Recipes
+  - name: Moderation
+  - name: Foods
+  - name: Tracking
+  - name: Weight
+  - name: Stats
+
+paths:
+  # --------------------------------------------------------------- Stats
+  /stats:
+    get:
+      tags: [Stats]
+      summary: Kennzahlen für die Startseite
+      description: |
+        Öffentliche Gesamtzahlen, bis zu 10 Minuten alt (Cache). Nutzer zählen nur aktive Konten ohne Staff und ohne geplante Löschung, Rezepte nur freigegebene.
+      security: []
+      responses:
+        "200":
+          description: Gesamtzahlen.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [users, recipes, foods, entries]
+                properties:
+                  users: { type: integer, description: Aktive Konten. }
+                  recipes: { type: integer, description: Freigegebene Rezepte. }
+                  foods: { type: integer, description: Lebensmittel im Open-Food-Facts-Bestand. }
+                  entries: { type: integer, description: Einträge im Ernährungstagebuch, über alle Nutzer. }
+
+  # ---------------------------------------------------------------- Auth
+  /auth/csrf:
+    get:
+      tags: [Auth]
+      summary: CSRF-Cookie abholen
+      description: Setzt das Cookie `csrftoken` und gibt den Wert zusätzlich im Body zurück. Vor dem ersten schreibenden Aufruf (Registrierung, Login) einmal aufrufen.
+      security: []
+      responses:
+        "200":
+          description: Cookie gesetzt.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [csrf_token]
+                properties:
+                  csrf_token: { type: string }
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registrieren
+      description: |
+        Legt User und Profil an, meldet den neuen User direkt an (setzt beide Token-Cookies) und versendet die Verifizierungs-E-Mail.
+        Danach beginnt das Onboarding (`GET /onboarding`).
+      security: [{ csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+                password: { $ref: "#/components/schemas/Password" }
+      responses:
+        "201":
+          description: Registriert und angemeldet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountState" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409":
+          description: "E-Mail ist bereits registriert (`code: email_taken`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/Throttled" }
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Anmelden
+      description: |
+        Setzt `access_token` und `refresh_token`. Die Antwort enthält den Account-Zustand inklusive Einwilligung, Onboarding-Fortschritt und geplanter Löschung.
+        Ist `deletion_scheduled_for` gesetzt, hebt der Login die Löschung **nicht** automatisch auf. Das Frontend fragt den Nutzer, ob die Löschung abgebrochen werden soll (siehe `DELETE /account/deletion`).
+      security: [{ csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Angemeldet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountState" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401":
+          description: "E-Mail oder Passwort falsch (`code: invalid_credentials`). Die Meldung verrät nicht, welches von beiden falsch ist."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/Throttled" }
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Token erneuern
+      description: |
+        Liest `refresh_token` aus dem Cookie, setzt neue Cookies für beide Token und sperrt das alte Refresh-Token.
+        Ein bereits gesperrtes, abgelaufenes oder ungültiges Token führt zu `401`.
+      security: [{ csrfHeader: [] }]
+      responses:
+        "204":
+          description: Neue Cookies gesetzt.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/Throttled" }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Abmelden
+      description: |
+        Sperrt das Refresh-Token (Blacklist) und löscht beide Cookies. Funktioniert auch, wenn das Access-Token schon abgelaufen ist.
+        Das Access-Token selbst bleibt technisch bis zu 15 Minuten gültig, wird aber vom Browser nicht mehr gesendet.
+      security: [{ csrfHeader: [] }]
+      responses:
+        "204":
+          description: Abgemeldet.
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Aktuellen Account-Zustand lesen
+      description: Wird beim Laden der Seite aufgerufen, um zu prüfen, ob der Nutzer angemeldet ist.
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Account-Zustand.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountState" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /auth/email/verify:
+    post:
+      tags: [Auth]
+      summary: E-Mail-Adresse verifizieren
+      description: Wird von der Frontend-Seite aufgerufen, die der Link aus der Verifizierungs-E-Mail öffnet. Kein Login nötig, damit der Link auch in einem anderen Browser funktioniert.
+      security: [{ csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "204":
+          description: Verifiziert (auch, wenn schon verifiziert).
+        "400":
+          description: "Token ungültig oder abgelaufen (`code: invalid_token`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /auth/email/verification/resend:
+    post:
+      tags: [Auth]
+      summary: Verifizierungs-E-Mail erneut senden
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      responses:
+        "204":
+          description: E-Mail versendet.
+        "400":
+          description: "Account ist bereits verifiziert (`code: already_verified`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/Throttled" }
+  /auth/email/change:
+    post:
+      tags: [Auth]
+      summary: E-Mail-Adresse ändern
+      description: |
+        Das aktuelle Passwort ist Pflicht. An die neue Adresse geht ein Bestätigungslink (`/email-aendern?token=...`, 24 Stunden gültig); die Adresse des Kontos ändert sich erst, wenn er geöffnet wird. Bis dahin wird nichts gespeichert.
+        Ist der Account verifiziert, geht außerdem ein Hinweis mit der neuen Adresse an die bisherige, für den Fall, dass die Änderung nicht vom Nutzer kam.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, maxLength: 254 }
+                password: { type: string }
+      responses:
+        "204":
+          description: Bestätigungslink und Hinweis versendet.
+        "400":
+          $ref: "#/components/responses/ValidationError"
+          description: "Z. B. `errors.password` (falsches Passwort) oder `errors.email` (schon die eigene Adresse oder vergeben)."
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/Throttled" }
+  /auth/email/change/confirm:
+    post:
+      tags: [Auth]
+      summary: Neue E-Mail-Adresse bestätigen
+      description: Wird von der Frontend-Seite aufgerufen, die der Link aus der Bestätigungs-E-Mail öffnet. Kein Login nötig, damit der Link auch in einem anderen Browser funktioniert. Die neue Adresse gilt danach als verifiziert; ältere Verifizierungs- und Passwort-Links verfallen.
+      security: [{ csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "204":
+          description: Adresse geändert (auch, wenn der Link schon einmal geöffnet wurde).
+        "400":
+          description: "Token ungültig, abgelaufen oder die Adresse hat sich inzwischen anders geändert (`code: invalid_token`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: "Die neue Adresse wurde inzwischen registriert (`code: email_taken`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /auth/password/change:
+    post:
+      tags: [Auth]
+      summary: Passwort ändern
+      description: |
+        Das aktuelle Passwort ist Pflicht. Ist der Account verifiziert, geht danach eine Benachrichtigungs-E-Mail an die hinterlegte Adresse, für den Fall, dass die Änderung nicht vom Nutzer kam.
+        Alle anderen Refresh-Tokens des Users werden gesperrt, die aktuelle Sitzung bekommt neue Cookies.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: { type: string }
+                new_password: { $ref: "#/components/schemas/Password" }
+      responses:
+        "204":
+          description: Passwort geändert.
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/Throttled" }
+  /auth/password/forgot:
+    post:
+      tags: [Auth]
+      summary: Passwort-Reset anfordern
+      description: Antwortet immer mit `204`, auch wenn die Adresse nicht existiert. So lässt sich nicht herausfinden, wer registriert ist. Existiert der Account, geht eine E-Mail mit Reset-Link raus.
+      security: [{ csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "204":
+          description: Anfrage angenommen.
+        "429": { $ref: "#/components/responses/Throttled" }
+  /auth/password/reset:
+    post:
+      tags: [Auth]
+      summary: Neues Passwort mit Reset-Token setzen
+      description: Sperrt alle Refresh-Tokens des Users. Der Nutzer muss sich danach neu anmelden.
+      security: [{ csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token: { type: string }
+                new_password: { $ref: "#/components/schemas/Password" }
+      responses:
+        "204":
+          description: Passwort gesetzt.
+        "400":
+          description: "Token ungültig oder abgelaufen (`code: invalid_token`) oder Passwort ungültig (`validation_error`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # ------------------------------------------------------------- Account
+  /account/deletion:
+    post:
+      tags: [Account]
+      summary: Kontolöschung anfordern
+      description: |
+        Verlangt das aktuelle Passwort. Es gibt keinen Bestätigungsschritt per E-Mail, die **7-Tage-Frist startet sofort**.
+        Bei einem verifizierten Account geht eine Info-Mail raus: Die Löschung wurde beantragt, das Konto wird an einem genannten Datum endgültig gelöscht, bis dahin lässt sie sich durch Anmelden und Abbrechen zurücknehmen. Nicht verifizierte Accounts bekommen keine Mail.
+
+        Bis zum Ablauf ist der Account normal nutzbar. Die Löschung endet nur durch `DELETE /account/deletion`, nicht automatisch durch einen Login. Nach Ablauf wird der Account endgültig gelöscht (täglicher Job).
+
+        **Was gelöscht wird:** User, Profil, Einwilligungsverlauf, Körperdaten, Ziele, Gewichts- und Ernährungseinträge, eigene Mahlzeiten mit Notizen, gemerkte Rezepte, noch nicht freigegebene Rezepte und offene Änderungsvorschläge.
+        **Was bleibt:** freigegebene Rezepte ohne Zuordnung zur Person (in der Moderation `author: null`).
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        "200":
+          description: Anfrage angenommen.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeletionStatus" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/Throttled" }
+    delete:
+      tags: [Account]
+      summary: Geplante Kontolöschung zurücknehmen
+      description: Das Frontend ruft das auf, nachdem der Nutzer nach dem Login die Abfrage „Löschung abbrechen?“ bestätigt hat. Das Konto bleibt dann unverändert bestehen.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      responses:
+        "204":
+          description: Löschung abgebrochen.
+        "404":
+          description: "Es ist keine Löschung geplant (`code: not_found`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /account/export:
+    get:
+      tags: [Account]
+      summary: Datenexport herunterladen
+      description: |
+        Liefert alle Daten des Nutzers als JSON-Datei (`Content-Disposition: attachment; filename="export.json"`).
+        Enthalten sind Account-Daten (ohne Passwort-Hash, mit letztem Login und geplantem Löschdatum), Profil, Onboarding-Stand, aktuelle Einwilligung und Einwilligungsverlauf, Körperdaten, Zielwert-Historie, Gewichts- und Ernährungseinträge, eigene Mahlzeiten mit Notizen, eigene Rezepte und Einreichungen mit Status und Ablehnungsgrund (ohne Bilddateien, nur Bild-URL) und die IDs gemerkter Rezepte.
+        Gesundheitsdaten (`body`, `goal_history`, `weights`, `entries`, `meals`) sind nur enthalten, wenn eingewilligt wurde.
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: JSON-Datei.
+          headers:
+            Content-Disposition:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExportDocument" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/Throttled" }
+
+  # ---------------------------------------------------------- Onboarding
+  /onboarding:
+    get:
+      tags: [Onboarding]
+      summary: Onboarding-Fortschritt lesen
+      description: |
+        Schritte: `username` → `consent` → `goal` → `targets` → `summary`. Die Schritte `goal` und `targets` gibt es nur bei erteilter Einwilligung.
+        Der Fortschritt wird gespeichert, ein Abbruch ist also fortsetzbar.
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Fortschritt.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OnboardingState" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Onboarding]
+      summary: Zu einem Onboarding-Schritt wechseln
+      description: |
+        Für Wechsel, die nur das Frontend kennt, z. B. „später“ bei den Zielwerten (springt zu `summary`) oder Ablehnung der Einwilligung (springt zu `summary`).
+        Die Daten der einzelnen Schritte werden über die jeweiligen Endpunkte gespeichert:
+        Username über `PATCH /profile`, Einwilligung über `PUT /privacy/consent`, Ziel und Zielwerte über `PATCH /tracking/goal`.
+        Regeln: `consent` und alles danach setzt einen Username voraus. `goal` und `targets` setzen eine erteilte Einwilligung voraus. `summary` setzt eine getroffene Einwilligungsentscheidung voraus.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_step]
+              properties:
+                current_step: { $ref: "#/components/schemas/OnboardingStep" }
+      responses:
+        "200":
+          description: Neuer Fortschritt.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OnboardingState" }
+        "400":
+          description: "Wechsel nicht erlaubt (`code: onboarding_step_not_allowed`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /onboarding/complete:
+    post:
+      tags: [Onboarding]
+      summary: Onboarding abschließen
+      description: Nur im Schritt `summary` möglich.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      responses:
+        "200":
+          description: Abgeschlossen.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OnboardingState" }
+        "400":
+          description: "Noch nicht im Schritt `summary` (`code: onboarding_step_not_allowed`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /profile:
+    get:
+      tags: [Onboarding]
+      summary: Profil lesen
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Profil.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Onboarding]
+      summary: Username setzen oder ändern
+      description: Onboarding-Schritt 1. Der Username ist ohne Beachtung der Groß-/Kleinschreibung eindeutig.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username]
+              properties:
+                username: { $ref: "#/components/schemas/Username" }
+      responses:
+        "200":
+          description: Gespeichert.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Profile" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: "Username ist vergeben (`code: username_taken`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /profile/username-availability:
+    get:
+      tags: [Onboarding]
+      summary: Prüfen, ob ein Username frei ist
+      description: Wird nach der Eingabe aufgerufen. Der eigene aktuelle Username gilt als frei.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: username
+          in: query
+          required: true
+          schema: { $ref: "#/components/schemas/Username" }
+      responses:
+        "200":
+          description: Ergebnis.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [username, available]
+                properties:
+                  username: { type: string }
+                  available: { type: boolean }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/Throttled" }
+  /privacy/consent:
+    get:
+      tags: [Onboarding]
+      summary: Datenschutzeinwilligung lesen
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Zustand.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsentState" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    put:
+      tags: [Onboarding]
+      summary: Einwilligung erteilen oder widerrufen
+      description: |
+        Onboarding-Schritt 2. Gilt auch später für Widerruf und erneute Einwilligung.
+
+        - `accepted: true` schaltet das Tracking frei.
+        - `accepted: false` nach einer erteilten Einwilligung **löscht sofort und endgültig** alle Gewichtseinträge, Ernährungseinträge, Körperdaten, eigenen Mahlzeiten samt Notizen und die Zielwerte inklusive Ziel (abnehmen/halten/zunehmen) samt Historie. Danach antworten alle `/tracking/*`-Endpunkte mit `403 consent_required`. Das Frontend muss den Widerruf vorher bestätigen lassen.
+        - Eine erneute Einwilligung ist jederzeit möglich, die gelöschten Daten kommen dadurch nicht zurück.
+        - Jede Entscheidung, auch ein Widerruf, wird mit Zeitpunkt und Version des Datenschutztexts an den Einwilligungsverlauf angehängt. Der Verlauf wird nie geändert, bleibt beim Widerruf erhalten und wird erst mit dem Konto gelöscht. Er steht im Datenexport (`consent_history`).
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accepted, policy_version]
+              properties:
+                accepted: { type: boolean }
+                policy_version:
+                  type: string
+                  maxLength: 32
+                  description: Version des Datenschutztexts, der angezeigt wurde. Pflicht, auch beim Widerruf.
+                  examples: ["2026-10-27"]
+      responses:
+        "200":
+          description: Neuer Zustand.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConsentState" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ------------------------------------------------------------- Recipes
+  /recipes:
+    get:
+      tags: [Recipes]
+      summary: Rezepte auflisten und filtern
+      description: |
+        Ohne Login lesbar. Gelistet werden nur freigegebene Rezepte, mit `mine=true` zusätzlich die eigenen in jedem Status.
+        20 Rezepte pro Seite, neueste zuerst.
+
+        **Filterlogik** (verschiedene Filter werden mit UND verknüpft):
+        - `diet`: Hierarchie. `vegan` zeigt nur vegane Rezepte, `vegetarian` zeigt vegetarische und vegane, `pescetarian` zeigt pescetarische, vegetarische und vegane. Rezepte ohne Ernährungsform (z. B. mit Fleisch) erscheinen bei keinem dieser Filter.
+        - `intolerances`: Das Rezept muss **alle** gewählten Eigenschaften haben.
+        - `meal_types`: Das Rezept muss **mindestens eine** der gewählten Mahlzeiten haben.
+        - `properties`: Das Rezept muss **alle** gewählten Eigenschaften haben. Die Eigenschaften werden beim Speichern vom Backend berechnet.
+        - `equipment`: Es erscheinen nur Rezepte, deren benötigte Geräte **vollständig** in der Auswahl enthalten sind. Bei `mixer` und `stove` erscheinen Rezepte mit nur Herd, nur Mixer oder Herd und Mixer, aber keins, das zusätzlich einen Backofen braucht. Rezepte ganz ohne Gerät erscheinen immer. Ohne den Parameter wird nicht nach Ausstattung gefiltert.
+        - `q`: Suche im Rezeptnamen, ohne Beachtung der Groß-/Kleinschreibung.
+        - `saved=true`: nur vom Nutzer gemerkte Rezepte (Login nötig).
+      security: [{}, { cookieAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Page" }
+        - name: q
+          in: query
+          schema: { type: string, maxLength: 100 }
+        - name: diet
+          in: query
+          schema: { $ref: "#/components/schemas/Diet" }
+        - name: intolerances
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/Intolerance" }
+        - name: meal_types
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/RecipeMealType" }
+        - name: properties
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/RecipeProperty" }
+        - name: equipment
+          in: query
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { $ref: "#/components/schemas/Equipment" }
+        - name: mine
+          in: query
+          description: Eigene Rezepte in jedem Status (Login nötig).
+          schema: { type: boolean, default: false }
+        - name: saved
+          in: query
+          description: Nur gemerkte Rezepte (Login nötig).
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: Seite mit Rezepten.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items: { $ref: "#/components/schemas/RecipeListItem" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Recipes]
+      summary: Rezept anlegen
+      description: |
+        Das Rezept bekommt den Status `pending`, ist nur für den Autor sichtbar und geht in die Moderation. Das Staff-Team bekommt eine E-Mail.
+        `properties` (proteinreich usw.) werden vom Backend berechnet und nicht mitgeschickt. Das Bild wird danach über `PUT /recipes/{id}/image` hochgeladen (optional).
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecipeInput" }
+      responses:
+        "201":
+          description: Angelegt.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecipeDetail" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /recipes/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Recipes]
+      summary: Rezept lesen
+      description: Freigegebene Rezepte sind für alle lesbar. Nicht freigegebene sehen nur Autor und Staff, für alle anderen antwortet die API mit `404`.
+      security: [{}, { cookieAuth: [] }]
+      responses:
+        "200":
+          description: Rezept.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecipeDetail" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Recipes]
+      summary: Eigenes Rezept bearbeiten
+      description: |
+        Nur der Autor darf bearbeiten (`403` sonst). Es wird immer das ganze Rezept gesendet.
+
+        - **Rezept noch nie freigegeben** (`pending` oder `rejected`): Die Änderung ersetzt den Inhalt direkt, der Status wird `pending` und das Rezept geht erneut in die Moderation.
+        - **Rezept freigegeben**: Die Live-Version bleibt unverändert sichtbar. Die Änderung wird als Änderungsvorschlag gespeichert (`pending_revision`) und geht in die Moderation. Bis zur Freigabe sieht jeder die alte Version. Ein bestehender offener Vorschlag wird ersetzt.
+
+        Bei jeder neuen Einreichung geht eine E-Mail an das Staff-Team. Wird ein bereits offener Vorschlag nur überschrieben, geht keine neue E-Mail raus.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecipeInput" }
+      responses:
+        "200":
+          description: Gespeichert.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecipeDetail" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Recipes]
+      summary: Eigenes Rezept löschen
+      description: Nur der Autor. Das Rezept verschwindet auch aus den Merklisten aller Nutzer, Bild und offene Vorschläge werden mitgelöscht.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      responses:
+        "204":
+          description: Gelöscht.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /recipes/{id}/image:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    put:
+      tags: [Recipes]
+      summary: Rezeptbild hochladen oder ersetzen
+      description: |
+        Nur der Autor. Ein Bild pro Rezept, optional. Erlaubt: JPG, PNG, WebP, maximal 5 MB.
+        Gespeichert wird als Media-Datei unter `recipes/{recipe_id}-{slug}.{ext}`, der Dateiname kommt also nie vom Nutzer.
+        Das Bild wird neu kodiert und verliert dabei alle Metadaten (EXIF inklusive GPS, XMP, IPTC). Die Ausrichtung aus EXIF wird vorher auf die Pixel angewendet, das Farbprofil bleibt.
+        Bei einem freigegebenen Rezept gehört das neue Bild zum Änderungsvorschlag und wird erst mit der Freigabe live.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        "200":
+          description: Gespeichert.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecipeDetail" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Recipes]
+      summary: Rezeptbild entfernen
+      description: Nur der Autor. Bei freigegebenen Rezepten wirkt das ebenfalls erst nach Freigabe.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      responses:
+        "200":
+          description: Entfernt.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecipeDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /recipes/{id}/saved:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    put:
+      tags: [Recipes]
+      summary: Rezept merken
+      description: Jedes freigegebene Rezept lässt sich merken, auch das eigene. Mehrfaches Merken ist unschädlich.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      responses:
+        "204":
+          description: Gemerkt.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Recipes]
+      summary: Rezept aus der Merkliste entfernen
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      responses:
+        "204":
+          description: Entfernt (auch, wenn es nicht gemerkt war).
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ---------------------------------------------------------- Moderation
+  /moderation/submissions:
+    get:
+      tags: [Moderation]
+      summary: Eingereichte Rezepte und Änderungen auflisten
+      description: Nur Staff (`is_staff`). Eine Einreichung ist ein neues Rezept oder ein Änderungsvorschlag zu einem freigegebenen Rezept. Älteste zuerst.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Page" }
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/SubmissionStatus"
+            default: pending
+      responses:
+        "200":
+          description: Seite mit Einreichungen.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          { $ref: "#/components/schemas/SubmissionSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /moderation/submissions/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Moderation]
+      summary: Einreichung im Detail lesen
+      description: Bei Änderungsvorschlägen steht die aktuelle Live-Version zum Vergleich in `current`.
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Einreichung.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmissionDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /moderation/submissions/{id}/approve:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    post:
+      tags: [Moderation]
+      summary: Einreichung freigeben
+      description: |
+        Neues Rezept: wird sichtbar. Änderungsvorschlag: ersetzt die Live-Version. Der Autor bekommt eine E-Mail über die Freigabe.
+        Nur für Einreichungen mit Status `pending`.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      responses:
+        "200":
+          description: Freigegeben.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmissionDetail" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "Einreichung ist nicht mehr offen (`code: submission_not_pending`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /moderation/submissions/{id}/reject:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    post:
+      tags: [Moderation]
+      summary: Einreichung ablehnen
+      description: Die Begründung ist Pflicht. Der Autor bekommt eine E-Mail mit der Begründung und sieht sie im Rezept (`rejection_reason`). Die Live-Version eines freigegebenen Rezepts bleibt unverändert.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 1000 }
+      responses:
+        "200":
+          description: Abgelehnt.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SubmissionDetail" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "Einreichung ist nicht mehr offen (`code: submission_not_pending`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  # --------------------------------------------------------------- Foods
+  /foods/search:
+    get:
+      tags: [Foods]
+      summary: Lebensmittel suchen (Open Food Facts)
+      description: |
+        Durchsucht den importierten Open-Food-Facts-Bestand (Produkte aus Deutschland, Österreich und der Schweiz). Mindestens `q` oder `barcode` ist Pflicht.
+        Der Bestand wird regelmäßig (wöchentlich) aus dem CSV-Export von OFF aktualisiert. Übernommen werden nur Produkte mit Namen und allen vier Nährwerten, die in den letzten zwei Jahren (und im laufenden) mindestens einmal in der OFF-App gescannt wurden, also sehr wahrscheinlich noch verkauft werden. Offensichtlich fehlerhafte Werte werden aussortiert. Alle trackbaren Lebensmittel kommen aus diesem Bestand.
+        Die Daten stehen unter der ODbL-Lizenz, das Frontend zeigt einen Quellenhinweis „Daten von Open Food Facts“.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/Page" }
+        - name: q
+          in: query
+          description: Suchtext, mindestens 2 Zeichen.
+          schema: { type: string, minLength: 2, maxLength: 100 }
+        - name: barcode
+          in: query
+          description: Barcode (EAN/GTIN), exakte Suche.
+          schema: { type: string, pattern: "^[0-9]{8,14}$" }
+      responses:
+        "200":
+          description: Seite mit Produkten.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Paginated"
+                  - type: object
+                    properties:
+                      results:
+                        type: array
+                        items: { $ref: "#/components/schemas/FoodProduct" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ------------------------------------------------------------ Tracking
+  /tracking/goal:
+    get:
+      tags: [Tracking]
+      summary: Aktuelles Ziel und Zielwerte lesen
+      description: Liefert den derzeit gültigen Stand. Ohne bisherige Eingabe sind alle Felder `null`.
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Aktueller Stand.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GoalState" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+    patch:
+      tags: [Tracking]
+      summary: Ziel und/oder Zielwerte setzen
+      description: |
+        Onboarding-Schritte 3 und 5 sowie späteres Ändern. Die Zielwerte (Kalorien, Protein, Kohlenhydrate, Fett) werden im Frontend berechnet oder von Hand eingegeben, das Backend speichert sie nur.
+        Jede Änderung gilt ab **heute**. Frühere Tage werden weiter mit den damals gültigen Werten verglichen (Historie, ein Eintrag pro Tag, bei mehreren Änderungen am selben Tag wird überschrieben).
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                goal: { $ref: "#/components/schemas/Goal" }
+                targets: { $ref: "#/components/schemas/Targets" }
+      responses:
+        "200":
+          description: Neuer Stand.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GoalState" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+  /tracking/body:
+    get:
+      tags: [Tracking]
+      summary: Körperdaten lesen
+      description: Geburtsdatum, Größe und Geschlecht für den Kalorienrechner. Gesundheitsdaten, daher nur mit Einwilligung. Ohne bisherige Eingabe sind alle Felder `null`.
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Aktueller Stand.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BodyProfile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+    patch:
+      tags: [Tracking]
+      summary: Körperdaten ändern
+      description: Ändert nur die gesendeten Felder, `null` leert eines. Ein Widerruf der Einwilligung löscht die Körperdaten sofort.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BodyProfile" }
+      responses:
+        "200":
+          description: Neuer Stand.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BodyProfile" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+
+  /tracking/entries:
+    post:
+      tags: [Tracking]
+      summary: Lebensmittel tracken
+      description: |
+        Legt einen Ernährungseintrag an. Lebensmittel gibt es nur aus dem OFF-Bestand, `off_code` ist Pflicht. Das Backend kopiert Name, Marke, Nährwerte je 100 g/ml und Portionsgröße in den Eintrag und rechnet kcal und Makros aus Menge und Einheit (auf eine Nachkommastelle gerundet). Spätere Änderungen oder Löschungen im OFF-Bestand verändern alte Tage nicht.
+        Rechenregel: bei `g`/`ml` Wert = Wert je 100 × Menge ÷ 100, bei `portion` Wert = Wert je 100 × Menge × Portionsgröße ÷ 100.
+        `unit` muss der `base_unit` des Produkts entsprechen oder `portion` sein (nur bei Produkten mit Portionsgröße), sonst `400`. Unbekannter `off_code`: `400` mit `errors.off_code`.
+        `consumed_on` darf nicht in der Zukunft liegen. `tracked_at` setzt der Server.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EntryInput" }
+      responses:
+        "201":
+          description: Angelegt.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrackingEntry" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+  /tracking/entries/from-meal:
+    post:
+      tags: [Tracking]
+      summary: Eigene Mahlzeit als Eintrag tracken
+      description: |
+        Erzeugt einen Eintrag (`source: meal`) mit dem Namen der Mahlzeit, Menge 1, Einheit `portion` und den gespeicherten Gesamtwerten. Rezepte lassen sich nicht tracken.
+        Bei solchen Einträgen sind später nur `consumed_on` und `meal_type` änderbar.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [meal_id, consumed_on, meal_type]
+              properties:
+                meal_id: { type: integer }
+                consumed_on: { type: string, format: date }
+                meal_type: { $ref: "#/components/schemas/TrackingMealType" }
+      responses:
+        "201":
+          description: Angelegt.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrackingEntry" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /tracking/entries/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    patch:
+      tags: [Tracking]
+      summary: Ernährungseintrag ändern
+      description: |
+        Nur eigene Einträge. Es genügen die geänderten Felder, `consumed_on` darf weiterhin nicht in der Zukunft liegen.
+        Bei `source: off` werden kcal und Makros nach einer Änderung von `amount` oder `unit` aus den im Eintrag gespeicherten Werten je 100 neu berechnet. Bei `source: meal` sind nur `consumed_on` und `meal_type` änderbar (sonst `400`).
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EntryPatch" }
+      responses:
+        "200":
+          description: Geändert.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrackingEntry" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Tracking]
+      summary: Ernährungseintrag löschen
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      responses:
+        "204":
+          description: Gelöscht.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /tracking/days/{date}:
+    parameters:
+      - name: date
+        in: path
+        required: true
+        schema: { type: string, format: date }
+    get:
+      tags: [Tracking]
+      summary: Tagesauswertung lesen
+      description: |
+        Liefert alle Einträge des Tages, die Summen nach Mahlzeit und gesamt sowie die an diesem Tag gültigen Zielwerte.
+        `difference` ist Aufnahme minus Ziel. Ist `difference.kcal` größer als 0, wurde das Kalorienziel überschritten, die Einfärbung macht das Frontend. Es gibt keine Toleranzgrenze.
+        Ohne gesetzte Zielwerte sind `targets` und `difference` `null`. Tage ohne Einträge liefern leere Summen.
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Tagesauswertung.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DaySummary" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+  /tracking/meals:
+    get:
+      tags: [Tracking]
+      summary: Eigene Mahlzeiten auflisten
+      description: Mahlzeiten sind vom Nutzer erstellte Zusammenstellungen aus Lebensmitteln (z. B. „Mein Frühstücksbowl“). Nicht zu verwechseln mit `meal_type` (Frühstück, Mittagessen …).
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Alle eigenen Mahlzeiten, alphabetisch.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Meal" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+    post:
+      tags: [Tracking]
+      summary: Mahlzeit anlegen
+      description: |
+        Die Lebensmittel werden wie bei Einträgen über `off_code` angegeben. Das Backend berechnet die Nährwerte je Lebensmittel aus den OFF-Daten zum Zeitpunkt des Speicherns sowie die Gesamtwerte (`totals`) und speichert sie.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MealInput" }
+      responses:
+        "201":
+          description: Angelegt.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Meal" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+  /tracking/meals/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    get:
+      tags: [Tracking]
+      summary: Mahlzeit lesen
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Mahlzeit.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Meal" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Tracking]
+      summary: Mahlzeit ändern
+      description: Ersetzt Namen und Lebensmittel komplett. Bereits getrackte Einträge, die aus dieser Mahlzeit entstanden sind, bleiben unverändert.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MealInput" }
+      responses:
+        "200":
+          description: Geändert.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Meal" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Tracking]
+      summary: Mahlzeit löschen
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      responses:
+        "204":
+          description: Gelöscht.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # -------------------------------------------------------------- Weight
+  /tracking/weights:
+    get:
+      tags: [Weight]
+      summary: Gewichtsverlauf für das Diagramm lesen
+      description: |
+        Liefert die Einträge des gewählten Zeitraums, aufsteigend nach `measured_on`. Standard sind die letzten 7 Tage (heute und die 6 Tage davor).
+        `1m` sind die letzten 30 Tage, `1y` die letzten 365 Tage, `all` der gesamte Verlauf.
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: ["7d", "14d", "1m", "1y", all]
+            default: "7d"
+      responses:
+        "200":
+          description: Einträge im Zeitraum.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [range, from, to, results]
+                properties:
+                  range: { type: string }
+                  from: { type: string, format: date }
+                  to: { type: string, format: date }
+                  results:
+                    type: array
+                    items: { $ref: "#/components/schemas/WeightEntry" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+    post:
+      tags: [Weight]
+      summary: Gewicht eintragen
+      description: Ein Eintrag pro Tag. `measured_on` darf nicht in der Zukunft liegen. `recorded_at` setzt der Server.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [weight_kg, measured_on]
+              properties:
+                weight_kg: { $ref: "#/components/schemas/WeightKg" }
+                measured_on: { type: string, format: date }
+      responses:
+        "201":
+          description: Angelegt.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WeightEntry" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "409":
+          description: "Für diesen Tag gibt es schon einen Eintrag (`code: weight_entry_exists`). Der Eintrag lässt sich per `PATCH` ändern."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /tracking/weights/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/Id" }
+    patch:
+      tags: [Weight]
+      summary: Gewichtseintrag ändern
+      description: Es genügen die geänderten Felder. Ein neues `measured_on` darf nicht in der Zukunft liegen und nicht auf einen Tag mit anderem Eintrag fallen.
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                weight_kg: { $ref: "#/components/schemas/WeightKg" }
+                measured_on: { type: string, format: date }
+      responses:
+        "200":
+          description: Geändert.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WeightEntry" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: "Für diesen Tag gibt es schon einen Eintrag (`code: weight_entry_exists`)."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    delete:
+      tags: [Weight]
+      summary: Gewichtseintrag löschen
+      security: [{ cookieAuth: [], csrfHeader: [] }]
+      responses:
+        "204":
+          description: Gelöscht.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /tracking/weights/weeks:
+    get:
+      tags: [Weight]
+      summary: Kalenderwochen mit Durchschnitt auflisten
+      description: |
+        Je Woche der Durchschnitt (eine Nachkommastelle) und der Vergleich mit der **letzten davor liegenden Woche, die Einträge hat**. Wochen ohne Einträge werden übersprungen. ISO-Kalenderwochen, Montag bis Sonntag.
+        Standard sind die 10 neuesten Wochen. Für „mehr laden“ den Wert `next_before` der Antwort als `before` übergeben, das liefert die nächsten 10 älteren Wochen.
+        Die älteste Woche im Datenbestand hat keinen Vergleich (`change_kg` und `trend` sind `null`).
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - name: before
+          in: query
+          description: ISO-Woche im Format `YYYY-Www`. Liefert nur Wochen, die davor liegen (die genannte Woche selbst nicht).
+          schema:
+            {
+              type: string,
+              pattern: "^[0-9]{4}-W(0[1-9]|[1-4][0-9]|5[0-3])$",
+              examples: ["2026-W40"],
+            }
+      responses:
+        "200":
+          description: Bis zu 10 Wochen, neueste zuerst.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results, next_before]
+                properties:
+                  results:
+                    type: array
+                    maxItems: 10
+                    items: { $ref: "#/components/schemas/WeekSummary" }
+                  next_before:
+                    type: [string, "null"]
+                    description: Wert für `before`, um weitere Wochen zu laden. `null`, wenn es keine älteren Wochen gibt.
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+  /tracking/weights/weeks/{iso_year}/{iso_week}:
+    parameters:
+      - name: iso_year
+        in: path
+        required: true
+        schema: { type: integer, minimum: 2000, maximum: 2100 }
+      - name: iso_week
+        in: path
+        required: true
+        schema: { type: integer, minimum: 1, maximum: 53 }
+    get:
+      tags: [Weight]
+      summary: Eine Kalenderwoche im Detail lesen
+      description: Liefert Durchschnitt, Vergleich mit der Vorwoche und die einzelnen Tageseinträge (auch als Datenbasis für das Diagramm). Wochen ohne Einträge antworten mit `404`.
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: Wochendetail.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WeekDetail" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/ConsentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: JWT-Access-Token im HttpOnly-Cookie. Wird vom Browser automatisch gesendet.
+    csrfHeader:
+      type: apiKey
+      in: header
+      name: X-CSRFToken
+      description: Wert des Cookies `csrftoken`. Pflicht bei `POST`, `PUT`, `PATCH`, `DELETE`.
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+
+  responses:
+    ValidationError:
+      description: "Eingabe ungültig (`code: validation_error`, Details in `errors`; Datum in der Zukunft: `code: future_date_not_allowed`)."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: "Nicht angemeldet oder Token abgelaufen (`code: not_authenticated`). Das Frontend versucht einmal `POST /auth/refresh`."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: "Keine Berechtigung (`code: forbidden`), z. B. fremdes Rezept bearbeiten oder Moderation ohne Staff-Rechte."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ConsentRequired:
+      description: "Nicht angemeldet (`401`) oder Datenschutzeinwilligung fehlt (`403`, `code: consent_required`)."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: "Nicht gefunden (`code: not_found`). Auch fremde, nicht freigegebene Rezepte und fremde Einträge antworten so."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Throttled:
+      description: "Zu viele Anfragen (`code: throttled`)."
+      headers:
+        Retry-After:
+          description: Sekunden bis zum nächsten erlaubten Versuch.
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    # ---- Allgemein
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, examples: [validation_error] }
+        message: { type: string, examples: [Die Eingabe ist ungültig.] }
+        errors:
+          type: object
+          description: Fehlermeldungen je Feld. Verschachtelte Felder mit Punkt-Notation (`ingredients.0.amount`).
+          additionalProperties:
+            type: array
+            items: { type: string }
+    Paginated:
+      type: object
+      required: [count, next, previous, results]
+      properties:
+        count: { type: integer, description: Gesamtzahl der Treffer. }
+        next: { type: [string, "null"], format: uri }
+        previous: { type: [string, "null"], format: uri }
+        results: { type: array, items: {} }
+    Password:
+      type: string
+      format: password
+      minLength: 8
+      maxLength: 128
+      description: Mindestens 8 Zeichen. Zusätzlich gelten die Django-Validatoren (nicht zu häufig, nicht nur Ziffern, nicht zu ähnlich zur E-Mail).
+    Username:
+      type: string
+      minLength: 3
+      maxLength: 20
+      pattern: "^[A-Za-z0-9_]+$"
+      description: Buchstaben, Ziffern und Unterstrich.
+    Macros:
+      type: object
+      required: [kcal, protein, carbs, fat]
+      properties:
+        kcal: { type: number, minimum: 0, maximum: 100000 }
+        protein:
+          { type: number, minimum: 0, maximum: 10000, description: Gramm. }
+        carbs: { type: number, minimum: 0, maximum: 10000, description: Gramm. }
+        fat: { type: number, minimum: 0, maximum: 10000, description: Gramm. }
+
+    # ---- Enums (Frontend und Backend halten dieselbe Liste)
+    Goal:
+      type: string
+      enum: [lose, maintain, gain]
+      description: abnehmen, Gewicht halten, zunehmen.
+    Diet:
+      type: string
+      enum: [vegetarian, vegan, pescetarian]
+    Intolerance:
+      type: string
+      enum: [gluten_free, lactose_free]
+    RecipeMealType:
+      type: string
+      enum: [breakfast, lunch, dinner, snack, dessert]
+    TrackingMealType:
+      type: string
+      enum: [breakfast, lunch, dinner, snack]
+    Equipment:
+      type: string
+      enum: [oven, stove, mixer, airfryer]
+    RecipeProperty:
+      type: string
+      enum: [protein_rich, low_calorie, few_ingredients, under_30_min]
+      description: |
+        Wird beim Speichern berechnet.
+        `protein_rich`: mindestens 10 g Protein je 100 kcal (Protein ≥ 0,1 × kcal je Portion).
+        `low_calorie`: höchstens 450 kcal je Portion.
+        `few_ingredients`: höchstens 5 Zutaten.
+        `under_30_min`: Zubereitungszeit unter 30 Minuten.
+    IngredientUnit:
+      type: string
+      enum:
+        [
+          g,
+          kg,
+          ml,
+          l,
+          tbsp,
+          tsp,
+          piece,
+          pinch,
+          cup,
+          slice,
+          bunch,
+          clove,
+          can,
+          pack,
+        ]
+      description: Feste Liste. Deutsche Anzeige im Frontend, z. B. tbsp = EL, tsp = TL, piece = Stück, pinch = Prise.
+    FoodUnit:
+      type: string
+      enum: [g, ml, portion]
+      description: "`g` oder `ml` je nach `base_unit` des Produkts, `portion` nur bei Produkten mit Portionsgröße (`serving_quantity`)."
+    SubmissionStatus:
+      type: string
+      enum: [pending, approved, rejected]
+    OnboardingStep:
+      type: string
+      enum: [username, consent, goal, targets, summary]
+
+    # ---- Account
+    AccountState:
+      type: object
+      required:
+        [
+          id,
+          email,
+          email_verified,
+          username,
+          privacy_consent,
+          onboarding,
+          is_staff,
+          deletion_scheduled_for,
+        ]
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email }
+        email_verified: { type: boolean }
+        username:
+          type: [string, "null"]
+          description: "`null`, solange der Onboarding-Schritt 1 fehlt."
+        privacy_consent:
+          type: [boolean, "null"]
+          description: "`true` = eingewilligt (Tracking freigeschaltet), `false` = abgelehnt oder widerrufen, `null` = noch keine Entscheidung."
+        onboarding: { $ref: "#/components/schemas/OnboardingState" }
+        is_staff:
+          { type: boolean, description: Für die Moderationsseite im Frontend. }
+        deletion_scheduled_for:
+          type: [string, "null"]
+          format: date-time
+          description: Zeitpunkt der endgültigen Löschung, wenn eine Löschung läuft.
+    DeletionStatus:
+      type: object
+      required: [scheduled_for]
+      properties:
+        scheduled_for:
+          type: string
+          format: date-time
+          description: Zeitpunkt der endgültigen Löschung (7 Tage nach der Anfrage).
+    OnboardingState:
+      type: object
+      required: [completed, current_step]
+      properties:
+        completed: { type: boolean }
+        current_step: { $ref: "#/components/schemas/OnboardingStep" }
+    Profile:
+      type: object
+      required: [username, created_at]
+      properties:
+        username: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+    ConsentState:
+      type: object
+      required: [accepted, decided_at, policy_version]
+      properties:
+        accepted:
+          {
+            type: [boolean, "null"],
+            description: "`null` = noch keine Entscheidung.",
+          }
+        decided_at: { type: [string, "null"], format: date-time }
+        policy_version: { type: [string, "null"] }
+    ConsentRecord:
+      type: object
+      description: Eintrag im Einwilligungsverlauf, einer pro Entscheidung.
+      required: [accepted, policy_version, decided_at]
+      properties:
+        accepted: { type: boolean, description: "`false` = abgelehnt oder widerrufen." }
+        policy_version:
+          type: string
+          description: Version des Datenschutztexts. Bei Einträgen von vor dem Verlauf ohne bekannte Version `unbekannt`.
+        decided_at: { type: string, format: date-time }
+    ExportDocument:
+      type: object
+      description: Struktur des JSON-Exports. Die Feldnamen der Einträge entsprechen den API-Modellen.
+      required:
+        [
+          exported_at,
+          account,
+          profile,
+          onboarding,
+          privacy_consent,
+          consent_history,
+          recipes,
+          submissions,
+          saved_recipe_ids,
+        ]
+      properties:
+        exported_at: { type: string, format: date-time }
+        account:
+          type: object
+          properties:
+            email: { type: string, format: email }
+            email_verified: { type: boolean }
+            created_at: { type: string, format: date-time }
+            last_login: { type: [string, "null"], format: date-time }
+            deletion_scheduled_for: { type: [string, "null"], format: date-time }
+        profile: { $ref: "#/components/schemas/Profile" }
+        onboarding: { $ref: "#/components/schemas/OnboardingState" }
+        privacy_consent: { $ref: "#/components/schemas/ConsentState" }
+        consent_history:
+          type: array
+          items: { $ref: "#/components/schemas/ConsentRecord" }
+        body:
+          oneOf:
+            - { $ref: "#/components/schemas/BodyProfile" }
+            - { type: "null" }
+          description: Nur mit Einwilligung; `null`, wenn nie etwas eingetragen wurde.
+        goal_history:
+          type: array
+          items: { $ref: "#/components/schemas/GoalState" }
+        weights:
+          type: array
+          items: { $ref: "#/components/schemas/WeightEntry" }
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/TrackingEntry" }
+        meals:
+          type: array
+          items: { $ref: "#/components/schemas/Meal" }
+        recipes:
+          type: array
+          items: { $ref: "#/components/schemas/RecipeDetail" }
+        submissions:
+          type: array
+          items: { $ref: "#/components/schemas/SubmissionExport" }
+        saved_recipe_ids:
+          type: array
+          items: { type: integer }
+
+    # ---- Rezepte
+    Ingredient:
+      type: object
+      required: [name, amount, unit]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        amount: { type: number, exclusiveMinimum: 0, maximum: 100000 }
+        unit: { $ref: "#/components/schemas/IngredientUnit" }
+    RecipeStep:
+      type: object
+      required: [step_number, text]
+      properties:
+        step_number:
+          {
+            type: integer,
+            minimum: 1,
+            description: Muss lückenlos bei 1 beginnen und der Reihenfolge im Array entsprechen.,
+          }
+        text: { type: string, minLength: 1, maxLength: 2000 }
+    RecipeInput:
+      type: object
+      required:
+        [
+          name,
+          description,
+          prep_time_minutes,
+          meal_types,
+          servings,
+          nutrition_per_serving,
+          ingredients,
+          steps,
+        ]
+      properties:
+        name: { type: string, minLength: 3, maxLength: 120 }
+        description: { type: string, minLength: 1, maxLength: 2000 }
+        prep_time_minutes: { type: integer, minimum: 1, maximum: 10080 }
+        diet:
+          oneOf:
+            - { $ref: "#/components/schemas/Diet" }
+            - { type: "null" }
+          description: Ernährungsform des Rezepts. `null` für Rezepte ohne Einschränkung, z. B. mit Fleisch.
+        intolerances:
+          type: array
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/Intolerance" }
+          description: Eigenschaften, die das Rezept erfüllt (frei von Gluten bzw. Laktose).
+        equipment:
+          type: array
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/Equipment" }
+          description: Benötigte Geräte. Leer, wenn keine nötig sind.
+        meal_types:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/RecipeMealType" }
+        servings: { type: integer, minimum: 1, maximum: 100 }
+        nutrition_per_serving: { $ref: "#/components/schemas/Macros" }
+        ingredients:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: "#/components/schemas/Ingredient" }
+        steps:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: "#/components/schemas/RecipeStep" }
+    RecipeAuthor:
+      type: [object, "null"]
+      description: "Nur in der Moderation, öffentliche Rezept-Antworten nennen keinen Benutzernamen. `null`, wenn der Autor sein Konto gelöscht hat."
+      properties:
+        username: { type: string }
+    IsOwn:
+      type: [boolean, "null"]
+      description: "`true`, wenn der angemeldete Nutzer das Rezept geschrieben hat; `null` ohne Login."
+    RecipeListItem:
+      type: object
+      required:
+        [
+          id,
+          name,
+          image_url,
+          prep_time_minutes,
+          diet,
+          intolerances,
+          equipment,
+          meal_types,
+          properties,
+          nutrition_per_serving,
+          is_own,
+          status,
+          has_pending_revision,
+          is_saved,
+        ]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        image_url: { type: [string, "null"], format: uri }
+        prep_time_minutes: { type: integer }
+        diet:
+          { oneOf: [{ $ref: "#/components/schemas/Diet" }, { type: "null" }] }
+        intolerances:
+          type: array
+          items: { $ref: "#/components/schemas/Intolerance" }
+        equipment:
+          type: array
+          items: { $ref: "#/components/schemas/Equipment" }
+        meal_types:
+          type: array
+          items: { $ref: "#/components/schemas/RecipeMealType" }
+        properties:
+          type: array
+          items: { $ref: "#/components/schemas/RecipeProperty" }
+        nutrition_per_serving: { $ref: "#/components/schemas/Macros" }
+        is_own: { $ref: "#/components/schemas/IsOwn" }
+        status:
+          $ref: "#/components/schemas/SubmissionStatus"
+          description: Nur bei eigenen Rezepten relevant, in der öffentlichen Liste immer `approved`.
+        has_pending_revision: { type: boolean }
+        is_saved:
+          type: [boolean, "null"]
+          description: "`null` ohne Login."
+    PendingRevision:
+      type: object
+      description: Änderungsvorschlag zu einem freigegebenen Rezept.
+      required: [id, status, submitted_at, rejection_reason, content]
+      properties:
+        id: { type: integer, description: ID der Einreichung. }
+        status:
+          type: string
+          enum: [pending, rejected]
+        submitted_at: { type: string, format: date-time }
+        rejection_reason: { type: [string, "null"] }
+        image_url: { type: [string, "null"], format: uri }
+        content: { $ref: "#/components/schemas/RecipeInput" }
+    RecipeDetail:
+      allOf:
+        - $ref: "#/components/schemas/RecipeInput"
+        - type: object
+          required:
+            [
+              id,
+              image_url,
+              properties,
+              is_own,
+              status,
+              rejection_reason,
+              pending_revision,
+              is_saved,
+              created_at,
+              updated_at,
+            ]
+          properties:
+            id: { type: integer }
+            image_url: { type: [string, "null"], format: uri }
+            properties:
+              type: array
+              items: { $ref: "#/components/schemas/RecipeProperty" }
+            is_own: { $ref: "#/components/schemas/IsOwn" }
+            status:
+              $ref: "#/components/schemas/SubmissionStatus"
+              description: Zustand der Live-Version. Bei einem schon einmal freigegebenen Rezept immer `approved`, offene Änderungen stehen in `pending_revision`.
+            rejection_reason:
+              type: [string, "null"]
+              description: Begründung, wenn ein noch nie freigegebenes Rezept abgelehnt wurde.
+            pending_revision:
+              oneOf:
+                - { $ref: "#/components/schemas/PendingRevision" }
+                - { type: "null" }
+              description: Nur für Autor und Staff sichtbar.
+            is_saved: { type: [boolean, "null"] }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+    SubmissionExport:
+      type: object
+      description: Eigene Einreichung im Datenexport. Wer moderiert hat, steht nicht darin.
+      required:
+        [
+          id,
+          recipe_id,
+          kind,
+          status,
+          submitted_at,
+          reviewed_at,
+          rejection_reason,
+          content,
+          image_action,
+          image_url,
+        ]
+      properties:
+        id: { type: integer }
+        recipe_id: { type: integer }
+        kind: { type: string, enum: [new, revision] }
+        status: { $ref: "#/components/schemas/SubmissionStatus" }
+        submitted_at: { type: string, format: date-time }
+        reviewed_at: { type: [string, "null"], format: date-time }
+        rejection_reason: { type: [string, "null"] }
+        content: { $ref: "#/components/schemas/RecipeInput" }
+        image_action: { type: string, enum: [keep, replace, remove] }
+        image_url: { type: [string, "null"], format: uri }
+    SubmissionSummary:
+      type: object
+      required: [id, recipe_id, kind, status, name, author, submitted_at]
+      properties:
+        id: { type: integer }
+        recipe_id: { type: integer }
+        kind:
+          type: string
+          enum: [new, revision]
+        status: { $ref: "#/components/schemas/SubmissionStatus" }
+        name: { type: string }
+        author: { $ref: "#/components/schemas/RecipeAuthor" }
+        submitted_at: { type: string, format: date-time }
+    SubmissionDetail:
+      allOf:
+        - $ref: "#/components/schemas/SubmissionSummary"
+        - type: object
+          required:
+            [
+              content,
+              current,
+              image_url,
+              rejection_reason,
+              reviewed_by,
+              reviewed_at,
+            ]
+          properties:
+            content: { $ref: "#/components/schemas/RecipeInput" }
+            image_url: { type: [string, "null"], format: uri }
+            current:
+              oneOf:
+                - { $ref: "#/components/schemas/RecipeInput" }
+                - { type: "null" }
+              description: "Aktuelle Live-Version, nur bei `kind: revision`."
+            rejection_reason: { type: [string, "null"] }
+            reviewed_by:
+              { type: [string, "null"], description: Username des Moderators. }
+            reviewed_at: { type: [string, "null"], format: date-time }
+
+    # ---- Tracking
+    Targets:
+      allOf:
+        - $ref: "#/components/schemas/Macros"
+        - type: object
+          properties:
+            kcal: { minimum: 500, maximum: 10000 }
+            protein: { maximum: 1000 }
+            carbs: { maximum: 2000 }
+            fat: { maximum: 1000 }
+    GoalState:
+      type: object
+      required: [goal, targets, valid_from]
+      properties:
+        goal:
+          oneOf:
+            - { $ref: "#/components/schemas/Goal" }
+            - { type: "null" }
+        targets:
+          oneOf:
+            - { $ref: "#/components/schemas/Targets" }
+            - { type: "null" }
+        valid_from:
+          type: [string, "null"]
+          format: date
+          description: Ab diesem Datum gilt der Stand.
+    FoodProduct:
+      type: object
+      required:
+        [
+          code,
+          name,
+          brand,
+          base_unit,
+          nutrition_per_100,
+          serving_quantity,
+          package_quantity,
+        ]
+      properties:
+        code: { type: string, description: Barcode / OFF-Code. }
+        name:
+          {
+            type: string,
+            description: Produktname aus OFF in der Hauptsprache des Produkts (bei DACH-Produkten meist Deutsch).,
+          }
+        brand: { type: [string, "null"] }
+        base_unit:
+          type: string
+          enum: [g, ml]
+          description: Bezugseinheit der Nährwerte, beim Import aus den OFF-Daten abgeleitet (Getränke in `ml`).
+        nutrition_per_100:
+          allOf:
+            - $ref: "#/components/schemas/Macros"
+          description: Nährwerte je 100 g bzw. 100 ml.
+        serving_quantity:
+          type: [number, "null"]
+          description: Portionsgröße in g bzw. ml. `null` heißt, die Einheit `portion` ist für dieses Produkt nicht möglich.
+        package_quantity:
+          type: [number, "null"]
+          description: Inhalt der Packung in g bzw. ml, `null`, wenn OFF ihn nicht kennt.
+    EntryInput:
+      type: object
+      required: [off_code, amount, unit, consumed_on, meal_type]
+      properties:
+        off_code:
+          {
+            type: string,
+            pattern: "^[0-9]{8,14}$",
+            description: Code des Produkts aus `/foods/search`.,
+          }
+        amount: { type: number, exclusiveMinimum: 0, maximum: 100000 }
+        unit: { $ref: "#/components/schemas/FoodUnit" }
+        consumed_on:
+          {
+            type: string,
+            format: date,
+            description: Tag,
+            an dem gegessen wurde. Nicht in der Zukunft.,
+          }
+        meal_type: { $ref: "#/components/schemas/TrackingMealType" }
+    EntryPatch:
+      type: object
+      minProperties: 1
+      properties:
+        amount: { type: number, exclusiveMinimum: 0, maximum: 100000 }
+        unit: { $ref: "#/components/schemas/FoodUnit" }
+        consumed_on: { type: string, format: date }
+        meal_type: { $ref: "#/components/schemas/TrackingMealType" }
+    TrackingEntry:
+      description: Die Felder `kcal`, `protein`, `carbs`, `fat` sind die berechneten Werte für `amount` und `unit`.
+      allOf:
+        - $ref: "#/components/schemas/Macros"
+        - type: object
+          required:
+            [
+              id,
+              source,
+              food_name,
+              brand,
+              off_code,
+              nutrition_per_100,
+              serving_quantity,
+              amount,
+              unit,
+              consumed_on,
+              meal_type,
+              tracked_at,
+            ]
+          properties:
+            id: { type: integer }
+            source:
+              type: string
+              enum: [off, meal]
+              description: "`off` = Lebensmittel aus OFF, `meal` = aus einer eigenen Mahlzeit getrackt."
+            food_name:
+              {
+                type: string,
+                description: Name zum Zeitpunkt des Trackens (bei `meal` der Name der Mahlzeit).,
+              }
+            brand: { type: [string, "null"] }
+            off_code:
+              {
+                type: [string, "null"],
+                description: "`null` bei `source: meal`.",
+              }
+            nutrition_per_100:
+              oneOf:
+                - { $ref: "#/components/schemas/Macros" }
+                - { type: "null" }
+              description: "Gespeicherte Nährwerte je 100 g/ml zum Zeitpunkt des Trackens. `null` bei `source: meal`."
+            serving_quantity: { type: [number, "null"] }
+            amount: { type: number }
+            unit: { $ref: "#/components/schemas/FoodUnit" }
+            consumed_on: { type: string, format: date }
+            meal_type: { $ref: "#/components/schemas/TrackingMealType" }
+            tracked_at:
+              {
+                type: string,
+                format: date-time,
+                description: Zeitpunkt,
+                an dem der Eintrag gemacht wurde (Server).,
+              }
+    DaySummary:
+      type: object
+      required: [date, targets, intake, difference, by_meal_type, entries]
+      properties:
+        date: { type: string, format: date }
+        targets:
+          oneOf:
+            - { $ref: "#/components/schemas/Targets" }
+            - { type: "null" }
+          description: Die an diesem Tag gültigen Zielwerte.
+        intake: { $ref: "#/components/schemas/Macros" }
+        difference:
+          oneOf:
+            - { $ref: "#/components/schemas/Macros" }
+            - { type: "null" }
+          description: Aufnahme minus Ziel. Positiv = Ziel überschritten.
+        by_meal_type:
+          type: object
+          description: Summen je Mahlzeit. Mahlzeiten ohne Einträge fehlen.
+          propertyNames: { $ref: "#/components/schemas/TrackingMealType" }
+          additionalProperties: { $ref: "#/components/schemas/Macros" }
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/TrackingEntry" }
+    MealItemInput:
+      type: object
+      required: [off_code, amount, unit]
+      properties:
+        off_code: { type: string, pattern: "^[0-9]{8,14}$" }
+        amount: { type: number, exclusiveMinimum: 0, maximum: 100000 }
+        unit: { $ref: "#/components/schemas/FoodUnit" }
+    MealItem:
+      description: Lebensmittel einer Mahlzeit. kcal und Makros sind für `amount` und `unit` berechnet.
+      allOf:
+        - $ref: "#/components/schemas/Macros"
+        - type: object
+          required:
+            [
+              off_code,
+              food_name,
+              brand,
+              amount,
+              unit,
+              nutrition_per_100,
+              serving_quantity,
+            ]
+          properties:
+            off_code: { type: string }
+            food_name: { type: string }
+            brand: { type: [string, "null"] }
+            amount: { type: number }
+            unit: { $ref: "#/components/schemas/FoodUnit" }
+            nutrition_per_100: { $ref: "#/components/schemas/Macros" }
+            serving_quantity: { type: [number, "null"] }
+    MealInput:
+      type: object
+      required: [name, items]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        note:
+          type: string
+          maxLength: 300
+          description: Optional. Fehlt sie oder ist sie leer, wird eine vorhandene Notiz gelöscht.
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { $ref: "#/components/schemas/MealItemInput" }
+    Meal:
+      type: object
+      required: [id, name, note, items, totals]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        note: { type: string, description: Leer ohne Notiz. }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MealItem" }
+        totals:
+          allOf:
+            - $ref: "#/components/schemas/Macros"
+          description: Summe der Lebensmittel, vom Backend berechnet und gespeichert.
+
+    # ---- Körperdaten
+    BodyProfile:
+      type: object
+      properties:
+        birth_date:
+          type: [string, "null"]
+          format: date
+          description: Alter zwischen 16 und 120 Jahren, wie im Kalorienrechner.
+        height_cm: { type: [integer, "null"], minimum: 120, maximum: 250 }
+        sex: { type: [string, "null"], enum: [male, female, null] }
+
+    # ---- Gewicht
+    WeightKg:
+      type: number
+      minimum: 20
+      maximum: 500
+      multipleOf: 0.1
+    WeightEntry:
+      type: object
+      required: [id, weight_kg, measured_on, recorded_at]
+      properties:
+        id: { type: integer }
+        weight_kg: { $ref: "#/components/schemas/WeightKg" }
+        measured_on:
+          {
+            type: string,
+            format: date,
+            description: Für welchen Tag der Eintrag gilt.,
+          }
+        recorded_at:
+          {
+            type: string,
+            format: date-time,
+            description: Wann der Eintrag gemacht wurde (Server).,
+          }
+    Trend:
+      type: string
+      enum: [up, down, same]
+    WeekSummary:
+      type: object
+      required:
+        [
+          iso_year,
+          iso_week,
+          week_start,
+          week_end,
+          average_kg,
+          entries_count,
+          change_kg,
+          trend,
+        ]
+      properties:
+        iso_year: { type: integer }
+        iso_week: { type: integer }
+        week_start: { type: string, format: date, description: Montag. }
+        week_end: { type: string, format: date, description: Sonntag. }
+        average_kg:
+          {
+            type: number,
+            description: Durchschnitt der Einträge der Woche,
+            eine Nachkommastelle.,
+          }
+        entries_count: { type: integer }
+        change_kg:
+          type: [number, "null"]
+          description: Durchschnitt dieser Woche minus Durchschnitt der letzten Woche mit Einträgen. `null`, wenn es keine frühere Woche gibt.
+        trend:
+          oneOf:
+            - { $ref: "#/components/schemas/Trend" }
+            - { type: "null" }
+    WeekDetail:
+      allOf:
+        - $ref: "#/components/schemas/WeekSummary"
+        - type: object
+          required: [previous_week, entries]
+          properties:
+            previous_week:
+              type: [object, "null"]
+              description: Die Vergleichswoche (letzte Woche davor mit Einträgen).
+              properties:
+                iso_year: { type: integer }
+                iso_week: { type: integer }
+                average_kg: { type: number }
+            entries:
+              type: array
+              description: Tageseinträge der Woche, aufsteigend nach Datum.
+              items: { $ref: "#/components/schemas/WeightEntry" }

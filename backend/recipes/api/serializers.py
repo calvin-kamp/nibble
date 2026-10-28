@@ -1,268 +1,242 @@
 from decimal import Decimal
 
-from django.db import transaction
-from django.utils.encoding import smart_str
 from rest_framework import serializers
 
-from recipes.models import (
-    Attribute,
-    CookingStep,
-    Diet,
-    Equipment,
-    Ingredient,
-    Intolerance,
-    MealType,
-    Recipe,
-    RecipeIngredient,
-)
+from config.fields import RoundedDecimalField
+from config.serializers import MacrosSerializer
+from recipes.models import Recipe, RecipeIngredient, RecipeSubmission, SavedRecipe
+from recipes.utils import without_metadata
 
 IMAGE_MAX_BYTES = 5 * 1024 * 1024
-IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
+IMAGE_EXTENSIONS = {"JPEG": ".jpg", "PNG": ".png", "WEBP": ".webp"}
+# Many phones write MPO: a JPEG with further pictures (e.g. depth or a second lens) appended.
+# The first picture is a plain JPEG, so it is stored as one.
+SAVED_AS = {"MPO": "JPEG"}
 
-TAXONOMY_FIELDS = ("diets", "intolerances", "meal_types", "equipment", "attributes")
+
+def absolute_url(request, file):
+    if not file:
+        return None
+
+    return request.build_absolute_uri(file.url) if request else file.url
 
 
-class ChoiceSlugRelatedField(serializers.SlugRelatedField):
-    """Reads and writes taxonomy entries by their label, e.g. "Unter 30 Min"."""
+def author_data(profile):
+    """For moderation only; public recipe responses never name the author.
 
-    def to_representation(self, obj):
-        return getattr(obj, f"get_{self.slug_field}_display")()
+    None once the author has deleted the account.
+    """
+    if profile is None:
+        return None
+
+    return {"username": profile.username}
+
+
+def can_see_drafts(user, recipe):
+    return user.is_authenticated and (
+        user.is_staff or recipe.author_id == user.profile.pk
+    )
+
+
+class UniqueChoiceListField(serializers.ListField):
+    """List of enum values where every value may appear only once."""
+
+    def __init__(self, choices, **kwargs):
+        super().__init__(child=serializers.ChoiceField(choices=choices), **kwargs)
 
     def to_internal_value(self, data):
-        choices = self.get_queryset().model._meta.get_field(self.slug_field).choices
-        value = next((value for value, label in choices if label == data), None)
+        values = super().to_internal_value(data)
 
-        if value is None:
-            self.fail(
-                "does_not_exist", slug_name=self.slug_field, value=smart_str(data)
+        if len(set(values)) != len(values):
+            raise serializers.ValidationError("Jeder Wert darf nur einmal vorkommen.")
+
+        return values
+
+
+class IngredientSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=100)
+    amount = RoundedDecimalField(
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        max_value=100000,
+    )
+    unit = serializers.ChoiceField(choices=RecipeIngredient.Unit)
+
+
+class StepSerializer(serializers.Serializer):
+    step_number = serializers.IntegerField(min_value=1)
+    text = serializers.CharField(max_length=2000)
+
+
+class RecipeInputSerializer(serializers.Serializer):
+    """Recipe content as the author sends it (RecipeInput).
+
+    Validated data is flat like the Recipe model (kcal, protein ... on top
+    level), so it also renders a Recipe or a stored submission back to JSON.
+    """
+
+    name = serializers.CharField(min_length=3, max_length=120)
+    description = serializers.CharField(max_length=2000)
+    prep_time_minutes = serializers.IntegerField(min_value=1, max_value=10080)
+    diet = serializers.ChoiceField(
+        choices=Recipe.Diet,
+        allow_null=True,
+        required=False,
+        default=None,
+    )
+    intolerances = UniqueChoiceListField(
+        Recipe.Intolerance,
+        required=False,
+        default=list,
+    )
+    equipment = UniqueChoiceListField(
+        Recipe.Equipment,
+        required=False,
+        default=list,
+    )
+    meal_types = UniqueChoiceListField(Recipe.MealType, min_length=1)
+    servings = serializers.IntegerField(min_value=1, max_value=100)
+    nutrition_per_serving = MacrosSerializer(source="*")
+    ingredients = IngredientSerializer(many=True, min_length=1, max_length=100)
+    steps = StepSerializer(many=True, min_length=1, max_length=100)
+
+    def validate_steps(self, steps):
+        numbers = [step["step_number"] for step in steps]
+
+        if numbers != list(range(1, len(steps) + 1)):
+            raise serializers.ValidationError(
+                "Die Schritte müssen lückenlos bei 1 beginnen und in der "
+                "Reihenfolge der Liste stehen."
             )
 
-        return super().to_internal_value(value)
+        return steps
 
 
-class UnitField(serializers.ChoiceField):
-    """Exposes the unit by its label ("g", "EL"), stores the integer choice."""
+class RecipeOutputMixin:
+    """Fields shared by list and detail that depend on the request."""
 
-    def __init__(self, **kwargs):
-        super().__init__(choices=RecipeIngredient.UnitChoice.labels, **kwargs)
+    def get_image_url(self, recipe):
+        return absolute_url(self.context.get("request"), recipe.image)
 
-    def to_representation(self, value):
-        return RecipeIngredient.UnitChoice(value).label
-
-    def to_internal_value(self, data):
-        label = super().to_internal_value(data)
-
-        return next(unit for unit in RecipeIngredient.UnitChoice if unit.label == label)
-
-
-class CookingStepSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CookingStep
-        fields = ("step", "text")
-        # The position in the list decides the number, see RecipeDetailSerializer.
-        read_only_fields = ("step",)
-
-
-class RecipeIngredientSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(source="ingredient.name", max_length=60)
-    amount = serializers.DecimalField(
-        max_digits=5,
-        decimal_places=1,
-        min_value=Decimal("0.1"),
-        coerce_to_string=False,
-    )
-    unit = UnitField()
-
-    class Meta:
-        model = RecipeIngredient
-        fields = ("name", "amount", "unit")
-
-
-class RecipeBaseSerializer(serializers.ModelSerializer):
-    """Fields shared by list and detail."""
-
-    slug = serializers.ReadOnlyField()
-    image = serializers.ImageField(read_only=True)
-
-    diets = ChoiceSlugRelatedField(
-        slug_field="diet",
-        queryset=Diet.objects.all(),
-        many=True,
-        required=False,
-    )
-    intolerances = ChoiceSlugRelatedField(
-        slug_field="intolerance",
-        queryset=Intolerance.objects.all(),
-        many=True,
-        required=False,
-    )
-    meal_types = ChoiceSlugRelatedField(
-        slug_field="meal_type",
-        queryset=MealType.objects.all(),
-        many=True,
-        required=False,
-    )
-    equipment = ChoiceSlugRelatedField(
-        slug_field="equipment",
-        queryset=Equipment.objects.all(),
-        many=True,
-        required=False,
-    )
-    attributes = ChoiceSlugRelatedField(
-        slug_field="attribute",
-        queryset=Attribute.objects.all(),
-        many=True,
-        required=False,
-    )
-
-
-class RecipeListSerializer(RecipeBaseSerializer):
-    class Meta:
-        model = Recipe
-        fields = (
-            "id",
-            "slug",
-            "image",
-            "name",
-            "duration_minutes",
-            "diets",
-            "intolerances",
-            "meal_types",
-            "equipment",
-            "attributes",
-            "kcal_per_serving",
-            "created_at",
-        )
-
-
-class RecipeDetailSerializer(RecipeBaseSerializer):
-    ingredients = RecipeIngredientSerializer(many=True)
-    cooking_steps = CookingStepSerializer(many=True)
-    is_owner = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Recipe
-        fields = (
-            "id",
-            "slug",
-            "image",
-            "name",
-            "description",
-            "ingredients",
-            "cooking_steps",
-            "protein_per_serving",
-            "carbs_per_serving",
-            "fat_per_serving",
-            "kcal_per_serving",
-            "servings",
-            "duration_minutes",
-            "diets",
-            "intolerances",
-            "meal_types",
-            "equipment",
-            "attributes",
-            "is_owner",
-            "updated_at",
-            "created_at",
-        )
-        extra_kwargs = {
-            "protein_per_serving": {"coerce_to_string": False},
-            "carbs_per_serving": {"coerce_to_string": False},
-            "fat_per_serving": {"coerce_to_string": False},
-        }
-
-    def get_is_owner(self, obj):
+    def get_is_own(self, recipe):
+        """Whether the signed-in user wrote the recipe; None without login."""
         request = self.context.get("request")
 
-        return bool(request and obj.owner_id and obj.owner_id == request.user.id)
+        if request is None or not request.user.is_authenticated:
+            return None
 
-    def validate_ingredients(self, value):
-        if not value:
-            raise serializers.ValidationError("Füge mindestens eine Zutat hinzu.")
+        return recipe.author_id == request.user.profile.pk
 
-        return value
+    def get_is_saved(self, recipe):
+        """Uses the annotation from the view, queries otherwise; None without login."""
+        request = self.context.get("request")
 
-    def validate_cooking_steps(self, value):
-        if not value:
-            raise serializers.ValidationError("Beschreibe mindestens einen Schritt.")
+        if request is None or not request.user.is_authenticated:
+            return None
 
-        return value
+        if hasattr(recipe, "saved"):
+            return recipe.saved
 
-    @transaction.atomic
-    def create(self, validated_data):
-        relations = self._pop_relations(validated_data)
-        recipe = Recipe.objects.create(**validated_data)
-        self._save_relations(recipe, relations)
-
-        return recipe
-
-    @transaction.atomic
-    def update(self, instance, validated_data):
-        relations = self._pop_relations(validated_data)
-
-        for field, value in validated_data.items():
-            setattr(instance, field, value)
-
-        instance.save()
-        self._save_relations(instance, relations)
-
-        return instance
-
-    def _pop_relations(self, validated_data):
-        """Nested lists and many-to-many fields can't go into Recipe(**data)."""
-        names = (*TAXONOMY_FIELDS, "ingredients", "cooking_steps")
-
-        return {
-            name: validated_data.pop(name) for name in names if name in validated_data
-        }
-
-    def _save_relations(self, recipe, relations):
-        """Replaces every relation that was sent; missing ones stay untouched (PATCH)."""
-        if "ingredients" in relations:
-            recipe.ingredients.all().delete()
-            RecipeIngredient.objects.bulk_create(
-                RecipeIngredient(
-                    recipe=recipe,
-                    ingredient=self._get_or_create_ingredient(
-                        item["ingredient"]["name"]
-                    ),
-                    amount=item["amount"],
-                    unit=item["unit"],
-                )
-                for item in relations["ingredients"]
-            )
-
-        if "cooking_steps" in relations:
-            recipe.cooking_steps.all().delete()
-            CookingStep.objects.bulk_create(
-                CookingStep(recipe=recipe, step=number, text=item["text"])
-                for number, item in enumerate(relations["cooking_steps"], start=1)
-            )
-
-        for name in TAXONOMY_FIELDS:
-            if name in relations:
-                getattr(recipe, name).set(relations[name])
-
-    def _get_or_create_ingredient(self, name):
-        """Case-insensitive, so "zwiebel" and "Zwiebel" share one entry."""
-        ingredient = Ingredient.objects.filter(name__iexact=name).first()
-
-        return ingredient or Ingredient.objects.create(name=name)
+        return SavedRecipe.objects.filter(
+            recipe=recipe, profile=request.user.profile
+        ).exists()
 
 
-class RecipeImageSerializer(serializers.ModelSerializer):
-    image = serializers.ImageField()
+class RecipeListSerializer(RecipeOutputMixin, serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    nutrition_per_serving = MacrosSerializer(source="*", read_only=True)
+    is_own = serializers.SerializerMethodField()
+    has_pending_revision = serializers.SerializerMethodField()
+    is_saved = serializers.SerializerMethodField()
 
     class Meta:
         model = Recipe
-        fields = ("image",)
+        fields = (
+            "id",
+            "name",
+            "image_url",
+            "prep_time_minutes",
+            "diet",
+            "intolerances",
+            "equipment",
+            "meal_types",
+            "properties",
+            "nutrition_per_serving",
+            "is_own",
+            "status",
+            "has_pending_revision",
+            "is_saved",
+        )
+
+    def get_has_pending_revision(self, recipe):
+        if hasattr(recipe, "revision_pending"):
+            return recipe.revision_pending
+
+        return recipe.submissions.filter(
+            kind=RecipeSubmission.Kind.REVISION,
+            status=Recipe.Status.PENDING,
+        ).exists()
+
+
+class PendingRevisionSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    content = serializers.JSONField()
+
+    class Meta:
+        model = RecipeSubmission
+        fields = (
+            "id",
+            "status",
+            "submitted_at",
+            "rejection_reason",
+            "image_url",
+            "content",
+        )
+
+    def get_image_url(self, submission):
+        return absolute_url(self.context.get("request"), submission.effective_image)
+
+
+class RecipeDetailSerializer(RecipeOutputMixin, RecipeInputSerializer):
+    id = serializers.IntegerField(read_only=True)
+    image_url = serializers.SerializerMethodField()
+    properties = serializers.ListField(child=serializers.CharField(), read_only=True)
+    is_own = serializers.SerializerMethodField()
+    status = serializers.CharField(read_only=True)
+    rejection_reason = serializers.CharField(read_only=True)
+    pending_revision = serializers.SerializerMethodField()
+    is_saved = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+
+    def get_pending_revision(self, recipe):
+        """Latest revision unless approved; only author and staff see it."""
+        request = self.context.get("request")
+
+        if request is None or not can_see_drafts(request.user, recipe):
+            return None
+
+        revision = (
+            recipe.submissions.filter(kind=RecipeSubmission.Kind.REVISION)
+            .order_by("-submitted_at", "-id")
+            .first()
+        )
+
+        if revision is None or revision.status == Recipe.Status.APPROVED:
+            return None
+
+        return PendingRevisionSerializer(revision, context=self.context).data
+
+
+class RecipeImageSerializer(serializers.Serializer):
+    image = serializers.ImageField()
 
     def validate_image(self, image):
         # Pillow has already opened the file here, its format beats the file extension.
-        if (
-            getattr(image, "image", None) is None
-            or image.image.format not in IMAGE_FORMATS
-        ):
+        image_format = getattr(getattr(image, "image", None), "format", None)
+        image_format = SAVED_AS.get(image_format, image_format)
+
+        if image_format not in IMAGE_EXTENSIONS:
             raise serializers.ValidationError(
                 "Dieses Format wird nicht unterstützt. Verwende JPG, PNG oder WebP."
             )
@@ -272,4 +246,8 @@ class RecipeImageSerializer(serializers.ModelSerializer):
                 "Das Bild ist größer als 5 MB. Wähle eine kleinere Datei."
             )
 
-        return image
+        # Saved without EXIF, XMP and IPTC. The stored name comes from the recipe,
+        # only the extension is kept.
+        return without_metadata(
+            image, image_format, f"image{IMAGE_EXTENSIONS[image_format]}"
+        )

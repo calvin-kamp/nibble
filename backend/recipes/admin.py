@@ -1,35 +1,29 @@
 from django.contrib import admin
 
-from .models import CookingStep, Ingredient, Recipe, RecipeIngredient
+from .models import Recipe, RecipeIngredient, RecipeStep, RecipeSubmission
 
 
 class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
-    autocomplete_fields = ("ingredient",)
     extra = 0
 
 
-class CookingStepInline(admin.TabularInline):
-    model = CookingStep
+class RecipeStepInline(admin.TabularInline):
+    model = RecipeStep
     extra = 0
 
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
-    list_display = ("name", "owner", "kcal_per_serving", "created_at")
-    list_filter = ("meal_types", "diets")
+    list_display = ("name", "author", "status", "kcal", "created_at")
+    list_filter = ("status", "diet")
     search_fields = ("name",)
-    readonly_fields = ("kcal_per_serving", "created_at", "updated_at")
-    filter_horizontal = (
-        "diets",
-        "intolerances",
-        "meal_types",
-        "equipment",
-        "attributes",
-    )
-    inlines = (RecipeIngredientInline, CookingStepInline)
+    readonly_fields = ("properties", "created_at", "updated_at")
+    inlines = (RecipeIngredientInline, RecipeStepInline)
 
 
-@admin.register(Ingredient)
-class IngredientAdmin(admin.ModelAdmin):
-    search_fields = ("name",)
+@admin.register(RecipeSubmission)
+class RecipeSubmissionAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "kind", "status", "submitted_at", "reviewed_by")
+    list_filter = ("kind", "status")
+    readonly_fields = ("submitted_at", "reviewed_at")

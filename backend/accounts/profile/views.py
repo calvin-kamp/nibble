@@ -1,80 +1,59 @@
-from django.utils import timezone
-from rest_framework import generics, status
+from django.db import IntegrityError, transaction
+from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from accounts import consent
+from accounts.exceptions import UsernameTaken
 from accounts.models import Profile
-from accounts.signals import personal_data_export
+from accounts.services.onboarding import Step, advance
 
-from .serializers import ConsentStatusSerializer, ProfileSerializer
+from .serializers import ProfileSerializer, UsernameQuerySerializer
+from .throttles import UsernameAvailabilityThrottle
 
 
-class ProfileView(generics.RetrieveUpdateAPIView):
+def username_taken(username, profile):
+    """Case-insensitive; the user's own current name counts as free."""
+    return (
+        Profile.objects.filter(username__iexact=username).exclude(pk=profile.pk).exists()
+    )
+
+
+class ProfileView(generics.RetrieveAPIView):
     serializer_class = ProfileSerializer
-    http_method_names = ["get", "patch", "head", "options"]
 
     def get_object(self):
         return self.request.user.profile
 
+    def patch(self, request, *args, **kwargs):
+        profile = self.get_object()
+        serializer = self.get_serializer(profile, data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-class ConsentView(APIView):
-    """GET status and what a revocation deletes, POST grants, DELETE revokes.
+        if username_taken(serializer.validated_data["username"], profile):
+            raise UsernameTaken()
 
-    Revoking deletes body data, daily goals, diary and weight history at once;
-    account, recipes and own meals stay.
-    """
+        try:
+            with transaction.atomic():
+                serializer.save()
+        except IntegrityError as exc:
+            raise UsernameTaken() from exc
 
-    def status(self, profile):
-        profile.deletes = consent.summary(profile.user)
+        advance(profile, Step.USERNAME, Step.CONSENT)
 
-        return Response(ConsentStatusSerializer(profile).data)
-
-    def get(self, request):
-        return self.status(request.user.profile)
-
-    def post(self, request):
-        return self.status(consent.grant(request.user.profile))
-
-    def delete(self, request):
-        return self.status(consent.revoke(request.user.profile))
+        return Response(serializer.data)
 
 
-class ExportView(APIView):
-    """GET /profile/export/ – everything stored about the account, as a JSON file."""
+class UsernameAvailabilityView(APIView):
+    throttle_classes = [UsernameAvailabilityThrottle]
 
     def get(self, request):
-        user = request.user
-        profile = user.profile
-        data = {
-            "exported_at": timezone.now(),
-            "account": {
-                "email": user.email,
-                "date_joined": user.date_joined,
-                "tos_accepted_at": user.tos_accepted_date,
-                "tos_version": user.tos_version,
-            },
-            "profile": {
-                "name": profile.name,
-                "usage": profile.usage,
-                "diet": profile.diet,
-                "onboarding": profile.onboarding,
-                "health_data_consent": {
-                    "granted": profile.data_consent,
-                    "granted_at": profile.data_consent_date_granted,
-                    "revoked_at": profile.data_consent_date_revoked,
-                    "version": profile.data_consent_version,
-                },
-            },
-        }
-
-        for _receiver, response in personal_data_export.send(sender=Profile, user=user):
-            data.update(response or {})
-
-        filename = f"nibble-daten-{timezone.localdate().isoformat()}.json"
+        serializer = UsernameQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data["username"]
 
         return Response(
-            data,
-            status=status.HTTP_200_OK,
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+            {
+                "username": username,
+                "available": not username_taken(username, request.user.profile),
+            }
         )

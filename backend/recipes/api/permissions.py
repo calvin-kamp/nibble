@@ -1,14 +1,14 @@
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
-class IsOwnerOrReadOnly(BasePermission):
-    """Anyone may read, only the owner may change or delete.
+class IsAuthorOrReadOnly(BasePermission):
+    """Anyone who may see a recipe may read it, only the author may change it.
 
-    Recipes without owner (seeded ones) are therefore read-only in the API.
+    Recipes whose author deleted the account are read-only for good.
     """
 
     def has_object_permission(self, request, view, obj):
         if request.method in SAFE_METHODS:
             return True
 
-        return obj.owner_id is not None and obj.owner_id == request.user.id
+        return obj.author_id is not None and obj.author_id == request.user.profile.pk
