@@ -3,7 +3,8 @@
 Backend for Nibble, a web app for tracking nutrition and sharing recipes. Users
 log the food they eat, compare it with their daily targets, record their weight
 and publish recipes that a moderator approves. The project is a Django REST
-Framework API; the Vue frontend talks to it over HTTP.
+Framework API; the Vue frontend in [`../frontend`](../frontend/README.md) talks
+to it over HTTP.
 
 - **Framework:** Django 6.1 with Django REST Framework 3.18
 - **Authentication:** JWT (SimpleJWT) in `HttpOnly` cookies, CSRF check on every write
@@ -42,13 +43,6 @@ are German, field names and enum values are English.
 
 **Requirements:** [Docker](https://docs.docker.com/get-docker/) with Docker
 Compose v2. Nothing else has to be installed on your machine.
-
-Get the code:
-
-```bash
-git clone <repository-url> nibble-backend
-cd nibble-backend
-```
 
 Create the `.env` file from the template:
 
@@ -91,8 +85,8 @@ The migrations are part of the repository and are applied automatically when the
 `api` container starts. The food search stays empty until the products are
 imported once, see [Food data](#food-data).
 
-Every command of this README is run from the project root, the folder that
-contains `manage.py`.
+Every command of this README is run from the folder that contains `manage.py`
+(`backend/`).
 
 ---
 
@@ -338,8 +332,8 @@ Before deploying, set in `.env`:
 docker compose run --rm --no-deps --entrypoint python api -c "import secrets; print(secrets.token_urlsafe(50))"
 ```
 
-Django serves the recipe images only with `DEBUG=True`. In production the
-reverse proxy serves the `media` volume.
+Django serves the recipe images under `/media/` itself, also with `DEBUG=False`.
+They are stored in the `media_data` volume, so they survive a redeploy.
 
 ### Server logs (14 days at most)
 
@@ -366,42 +360,51 @@ development uses `LOG_DRIVER=json-file`.
 ## Project layout
 
 ```
-config/      Project configuration: settings, root URLs, Celery, error format,
-             base throttles, shared fields, serializers and validators
-accounts/    Users and profiles: registration, login, onboarding, consent,
-             account deletion and data export
-recipes/     Recipes, saved recipes and moderation
-foods/       Open Food Facts products, food search and import command
-tracking/    Goals, food entries, meals, daily summary, weight and weeks
-stats/       Public numbers for the landing page
+config/            Project configuration: settings, root URLs, Celery, error format,
+                   base throttles, shared fields, serializers and validators
+apps/accounts/     Users and profiles: registration, login, onboarding, consent,
+                   body data, account deletion and data export
+apps/recipes/      Recipes, saved recipes and moderation
+apps/foods/        Open Food Facts products, food search and import command
+apps/tracking/     Nutrition (goals, food entries, meals, daily summary) and weight
+apps/stats/        Public numbers for the landing page
 ```
 
-Every app keeps its API layer in subpackages holding the serializers, views,
-URLs and, where needed, permissions and `throttles.py`:
+An app with one area keeps its API layer in `api/`. An app with several areas
+has one package per area instead. Each package holds its `serializers.py`,
+`views.py` and `urls.py` and, where needed, `throttles.py`, `permissions.py`,
+`utils.py` or `exceptions.py`:
 
 ```
-accounts/    auth/  account/  onboarding/  profile/  privacy/
-recipes/     api/  moderation/
-foods/       api/
-tracking/    api/
-stats/       api/
+apps/accounts/     auth/  account/  onboarding/  profile/  privacy/
+apps/recipes/      catalog/  moderation/
+apps/tracking/     nutrition/  weight/
+apps/foods/        api/
+apps/stats/        api/
 ```
 
-Logic that is not tied to a request lives in a service layer: `services.py` when
-an app has one service, a `services/` package when it has several. The same rule
-applies to `utils`. Tests are always in a `tests/` package.
+What only one package uses lives in that package. What several packages of an
+app share lives in the app folder: `models.py`, `services.py` (logic that is not
+tied to a request) and files like `permissions.py` or `mixins.py`. Tests are in
+the app's `tests/` package; helpers shared by several test files are in
+`tests/test_utils.py`. The app labels stay `accounts`, `recipes` and so on, so
+table names and migrations are the same as without the `apps/` folder.
 
-| File or package                   | Content                                                                   |
-| --------------------------------- | ------------------------------------------------------------------------- |
-| `accounts/services/`              | `tokens.py` (links in e-mails), `emails.py`, `onboarding.py` (step rules), `deletion.py`, `export.py` |
-| `accounts/utils.py`               | Sets and deletes the auth cookies                                         |
-| `accounts/auth/authentication.py` | Reads the token from the cookie and enforces the CSRF check               |
-| `recipes/services/`               | `submissions.py` (moderation workflow), `emails.py` (notifications)       |
-| `recipes/utils.py`                | Removes metadata (location, camera) from uploaded images                  |
-| `tracking/services.py`            | Deletes all health data when the consent is revoked                       |
-| `tracking/utils/`                 | `nutrition.py` (values from amount and unit), `weeks.py` (weekly averages) |
-| `stats/services.py`               | Counts users, recipes, foods and entries                                  |
-| `*/tasks.py`                      | Background jobs, see [Background jobs](#background-jobs)                  |
+| File                               | Content                                                            |
+| ---------------------------------- | ------------------------------------------------------------------ |
+| `apps/accounts/services.py`        | Onboarding step rules, e-mails, account deletion, data export      |
+| `apps/accounts/tokens.py`          | Signed tokens for the links in e-mails, token blacklist            |
+| `apps/accounts/authentication.py`  | Reads the token from the cookie and enforces the CSRF check        |
+| `apps/accounts/auth/cookies.py`    | Sets and deletes the auth cookies                                  |
+| `apps/accounts/profile/`           | Username and body data (birth date, height, sex; `/tracking/body`) |
+| `apps/recipes/services.py`         | Moderation workflow and notifications                              |
+| `apps/recipes/utils.py`            | Removes metadata (location, camera) from uploaded images           |
+| `apps/tracking/mixins.py`          | Login and consent for every tracking endpoint                      |
+| `apps/tracking/services.py`        | Deletes all health data when the consent is revoked                |
+| `apps/tracking/nutrition/utils.py` | Values from amount and unit, daily totals                          |
+| `apps/tracking/weight/utils.py`    | Weekly averages and trend                                          |
+| `apps/stats/services.py`           | Counts users, recipes, foods and entries                           |
+| `apps/*/tasks.py`                  | Background jobs, see [Background jobs](#background-jobs)           |
 
 Other files in the root: `compose.yaml`, `Dockerfile`, `entrypoint.sh`
 (runs the migrations and `collectstatic` on start), `openapi.yaml` and
@@ -414,12 +417,12 @@ Other files in the root: `compose.yaml`, `Dockerfile`, `entrypoint.sh`
 Celery runs work outside the request. `redis` holds the queue, `worker` executes
 the jobs and `beat` adds the scheduled ones to the queue.
 
-| Job                                      | When                       | Content                                            |
-| ---------------------------------------- | -------------------------- | -------------------------------------------------- |
-| `config.tasks.send_email_task`           | after every e-mail trigger | Sends one e-mail; retries up to 5 times on failure |
-| `accounts.tasks.delete_expired_accounts` | daily, 03:00               | Deletes accounts whose 7-day period has ended      |
-| `accounts.tasks.flush_expired_tokens`    | daily, 03:30               | Removes expired tokens from the blacklist          |
-| `foods.tasks.import_off_products`        | Sundays, 04:00             | Full food import, see [Food data](#food-data)      |
+| Job                                           | When                       | Content                                            |
+| --------------------------------------------- | -------------------------- | -------------------------------------------------- |
+| `config.tasks.send_email_task`                | after every e-mail trigger | Sends one e-mail; retries up to 5 times on failure |
+| `apps.accounts.tasks.delete_expired_accounts` | daily, 03:00               | Deletes accounts whose 7-day period has ended      |
+| `apps.accounts.tasks.flush_expired_tokens`    | daily, 03:30               | Removes expired tokens from the blacklist          |
+| `apps.foods.tasks.import_off_products`        | Sundays, 04:00             | Full food import, see [Food data](#food-data)      |
 
 E-mails are queued only after the database transaction has been saved, so no
 e-mail goes out for a change that was rolled back. All times are `Europe/Berlin`.
@@ -634,28 +637,28 @@ To run only a part, pass a module or a single test:
 
 ```bash
 # One app
-docker compose exec api python manage.py test accounts
+docker compose exec api python manage.py test apps.accounts
 
 # One file
-docker compose exec api python manage.py test tracking.tests.test_weights
+docker compose exec api python manage.py test apps.tracking.tests.test_weights
 
 # One test
-docker compose exec api python manage.py test accounts.tests.test_auth.CookieAuthTests.test_writes_need_the_csrf_header
+docker compose exec api python manage.py test apps.accounts.tests.test_auth.CookieAuthTests.test_writes_need_the_csrf_header
 ```
 
-| File                                  | Covers                                                                                                       |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `accounts/tests/test_auth.py`         | CSRF header, registration, login, rate limit, refresh rotation, logout, verification, password change and reset |
-| `accounts/tests/test_email_change.py` | E-mail change: link and notice, change only after the click, taken addresses, expired and outdated links    |
-| `accounts/tests/test_onboarding.py`   | Onboarding steps and their order, unique usernames, consent history, deletion of tracking data on revocation |
-| `accounts/tests/test_account.py`      | Account deletion with grace period and daily job, data export with and without consent                       |
-| `recipes/tests/test_recipes.py`       | Creating, filtering and editing recipes, author check, images and their metadata, saved recipes              |
-| `recipes/tests/test_moderation.py`    | Staff-only access, approving and rejecting new recipes and revisions, staff notification                     |
-| `foods/tests/test_foods.py`           | Food search by text and barcode, import filters, `--scan-years` and `--limit`                                |
-| `tracking/tests/test_nutrition.py`    | Entries computed from amount and unit, future dates, meals with notes, daily summary and targets             |
-| `tracking/tests/test_body.py`         | Body data: single fields, limits, minimum age, consent, deletion with the account                            |
-| `tracking/tests/test_weights.py`      | One entry per day, ranges for the chart, weekly averages, paging and week detail                             |
-| `stats/tests/test_stats.py`           | Public numbers count only approved recipes and active users; an invalid cookie does not block them           |
+| File                                       | Covers                                                                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `apps/accounts/tests/test_auth.py`         | CSRF header, registration, login, rate limit, refresh rotation, logout, verification, password change and reset |
+| `apps/accounts/tests/test_email_change.py` | E-mail change: link and notice, change only after the click, taken addresses, expired and outdated links        |
+| `apps/accounts/tests/test_onboarding.py`   | Onboarding steps and their order, unique usernames, consent history, deletion of tracking data on revocation    |
+| `apps/accounts/tests/test_account.py`      | Account deletion with grace period and daily job, data export with and without consent                          |
+| `apps/accounts/tests/test_body.py`         | Body data: single fields, limits, minimum age, consent, deletion with the account                               |
+| `apps/recipes/tests/test_recipes.py`       | Creating, filtering and editing recipes, author check, images and their metadata, saved recipes                 |
+| `apps/recipes/tests/test_moderation.py`    | Staff-only access, approving and rejecting new recipes and revisions, staff notification                        |
+| `apps/foods/tests/test_foods.py`           | Food search by text and barcode, import filters, `--scan-years` and `--limit`                                   |
+| `apps/tracking/tests/test_nutrition.py`    | Entries computed from amount and unit, future dates, meals with notes, daily summary and targets                |
+| `apps/tracking/tests/test_weights.py`      | One entry per day, ranges for the chart, weekly averages, paging and week detail                                |
+| `apps/stats/tests/test_stats.py`           | Public numbers count only approved recipes and active users; an invalid cookie does not block them              |
 
 ---
 
@@ -718,5 +721,5 @@ that special characters in the password are URL-encoded. `sendtestemail` (see
 
 **`Bind for 0.0.0.0:8000 failed: port is already allocated`** — another program
 uses the port. Stop it or change the left side of the port mapping in
-`compose.yaml`, for example `"8001:8000"`. The same applies to `5432` and
+`docker-compose.yml`, for example `"8001:8000"`. The same applies to `5432` and
 `6379`.

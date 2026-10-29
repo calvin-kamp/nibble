@@ -64,11 +64,11 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
-    "accounts",
-    "recipes",
-    "foods",
-    "tracking",
-    "stats",
+    "apps.accounts",
+    "apps.recipes",
+    "apps.foods",
+    "apps.tracking",
+    "apps.stats",
 ]
 
 if DEBUG and find_spec("django_extensions") is not None:
@@ -224,7 +224,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "accounts.auth.authentication.CookieJWTAuthentication",
+        "apps.accounts.authentication.CookieJWTAuthentication",
     ],
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
     "DEFAULT_RENDERER_CLASSES": [
@@ -299,15 +299,15 @@ CELERY_TIMEZONE = TIME_ZONE
 
 CELERY_BEAT_SCHEDULE = {
     "delete-expired-accounts": {
-        "task": "accounts.tasks.delete_expired_accounts",
+        "task": "apps.accounts.tasks.delete_expired_accounts",
         "schedule": crontab(hour=3, minute=0),
     },
     "flush-expired-tokens": {
-        "task": "accounts.tasks.flush_expired_tokens",
+        "task": "apps.accounts.tasks.flush_expired_tokens",
         "schedule": crontab(hour=3, minute=30),
     },
     "import-off-products": {
-        "task": "foods.tasks.import_off_products",
+        "task": "apps.foods.tasks.import_off_products",
         "schedule": crontab(hour=4, minute=0, day_of_week="sunday"),
     },
 }

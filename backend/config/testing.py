@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APIClient, APITestCase
 
-from accounts.models import User
+from apps.accounts.models import User
 
 from .celery import app as celery_app
 
