@@ -1,0 +1,70 @@
+@layer components {
+	/* List of values, e.g. entries, ingredients or days. Label on the left and muted, value on
+     the right and bold. Lines only between rows: none below the heading, none after the
+     last row. */
+	/* No last: variant: on a selector list Tailwind would generate an invalid selector */
+	.data-list > li,
+	.data-list > div {
+		@apply border-b border-divider;
+	}
+
+	.data-list > li:last-child,
+	.data-list > div:last-child {
+		@apply border-b-0;
+	}
+
+	.data-list__row {
+		@apply flex items-center justify-between gap-4 py-3.5 tabular-nums;
+	}
+
+	/* The whole row is a link, e.g. to a day. -mx/px: the hover background gets some room while
+     the text stays aligned with the heading. */
+	.data-list__row--link {
+		@apply -mx-2 px-2 rounded-sm;
+		@apply transition-interactive;
+		@apply hover:bg-surface/70;
+		@apply focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand;
+	}
+
+	.data-list__label {
+		@apply flex flex-col flex-1 min-w-0 text-ink-soft;
+	}
+
+	/* Extra line below the label, e.g. brand and amount */
+	.data-list__meta {
+		@apply text-sm text-muted;
+	}
+
+	.data-list__value {
+		@apply font-bold whitespace-nowrap text-ink;
+	}
+
+	/* Extra text before the value, e.g. the change since the previous entry */
+	.data-list__aside {
+		@apply ml-auto text-sm whitespace-nowrap text-muted;
+	}
+
+	/* Smaller and without lines, e.g. the macros in a card */
+	.data-list--compact > li,
+	.data-list--compact > div {
+		@apply border-b-0;
+	}
+
+	.data-list--compact .data-list__row {
+		@apply py-1 text-sm;
+	}
+
+	/* On the dark card */
+	.data-list--inverse > li,
+	.data-list--inverse > div {
+		@apply border-white/15;
+	}
+
+	.data-list--inverse .data-list__label {
+		@apply text-on-forest-muted;
+	}
+
+	.data-list--inverse .data-list__value {
+		@apply text-white;
+	}
+}

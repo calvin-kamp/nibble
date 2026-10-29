@@ -1,0 +1,68 @@
+@layer components {
+	/* Options as cards: the actual radio button is invisible but focusable.
+     The card shows selection and focus. */
+	.radio-field {
+		@apply flex flex-col gap-1.5 min-w-0;
+	}
+
+	/* A rendered legend is no flex item, so the fieldset gap does not reach it: margin instead */
+	.radio-field__legend {
+		@apply mb-1.5 font-semibold text-md text-ink;
+	}
+
+	.radio-field__hint {
+		@apply text-sm text-muted;
+	}
+
+	/* Side by side from tablet up, all options equally wide */
+	.radio-field__options {
+		@apply flex flex-col gap-3;
+		@apply data-[orientation=horizontal]:md:flex-row;
+	}
+
+	.radio-field__option {
+		@apply flex items-center justify-center min-h-14 px-4 py-3;
+		@apply border-2 border-line-strong rounded-md bg-surface;
+		@apply text-center cursor-pointer;
+		@apply transition-interactive;
+		@apply hover:border-muted;
+		@apply has-[[data-state=checked]]:border-brand has-[[data-state=checked]]:bg-brand-soft has-[[data-state=checked]]:text-brand-ink;
+		@apply has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand;
+		@apply has-[[data-disabled]]:opacity-50 has-[[data-disabled]]:cursor-not-allowed;
+	}
+
+	/* Side by side, e.g. next to other fields: as tall as an input, so they line up */
+	.radio-field__options[data-orientation='horizontal'] .radio-field__option {
+		@apply min-h-12 py-2;
+		@apply md:flex-1 md:basis-0;
+	}
+
+	/* Stacked options are left-aligned */
+	.radio-field__options[data-orientation='vertical'] .radio-field__option {
+		@apply justify-start text-left;
+	}
+
+	.radio-field--invalid .radio-field__option {
+		@apply border-danger hover:border-danger;
+	}
+
+	.radio-field__radio {
+		@apply sr-only;
+	}
+
+	.radio-field__text {
+		@apply flex flex-col gap-0.5 font-semibold;
+	}
+
+	.radio-field__description {
+		@apply text-sm font-normal text-muted;
+	}
+
+	.radio-field__option:has([data-state='checked']) .radio-field__description {
+		@apply text-brand-ink;
+	}
+
+	.radio-field__error {
+		@apply text-sm font-semibold text-danger;
+	}
+}

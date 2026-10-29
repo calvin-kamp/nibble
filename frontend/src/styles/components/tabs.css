@@ -1,0 +1,39 @@
+@layer components {
+	/* Tabs, either as links for views of a list (the active one carries aria-current) or as
+     real tabs with tab panels (the active one carries aria-selected). */
+	/* The bottom line is a shadow instead of a border, so the active tab's marker sits on top of it
+     without overflowing the edge. Otherwise the bar could scroll one pixel vertically. */
+	/* Too many tabs for the width scroll sideways by swiping. Without a visible scrollbar: on
+     desktop systems it would sit as a thick bar right below the marker. */
+	.tabs {
+		@apply flex gap-1 overflow-x-auto overflow-y-hidden;
+		@apply shadow-[inset_0_-1px_0_var(--color-divider)];
+		scrollbar-width: none;
+	}
+
+	.tabs::-webkit-scrollbar {
+		@apply hidden;
+	}
+
+	.tabs__item {
+		@apply relative inline-flex items-center shrink-0 min-h-11 px-4;
+		@apply font-semibold text-muted;
+		@apply transition-interactive;
+		@apply hover:text-ink;
+		@apply focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand;
+		@apply after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full;
+		@apply aria-[current=page]:text-brand-ink aria-[current=page]:after:bg-brand;
+		@apply aria-selected:text-brand-ink aria-selected:after:bg-brand;
+	}
+
+	/* Fill the width, e.g. inside a dialog. Equal shares that may shrink, so both fit. */
+	.tabs--fill .tabs__item {
+		@apply flex-1 shrink basis-0 justify-center min-w-0 px-3;
+	}
+
+	/* Content of a tab. If nothing inside is focusable, the panel itself receives focus. */
+	.tabs__panel {
+		@apply rounded-sm;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand;
+	}
+}

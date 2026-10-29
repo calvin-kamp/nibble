@@ -1,0 +1,34 @@
+@layer components {
+	.field {
+		@apply flex flex-col gap-1.5;
+	}
+
+	.field__label {
+		@apply font-semibold text-md text-ink;
+	}
+
+	.field__hint {
+		@apply text-sm text-muted;
+	}
+
+	.field__error {
+		@apply text-sm font-semibold text-danger;
+	}
+
+	/* Shared look for every input, including select and date triggers */
+	.field__input {
+		@apply w-full min-h-12 px-4;
+		@apply border-2 border-line-strong rounded-md;
+		@apply bg-surface text-md text-ink;
+		@apply placeholder:text-muted;
+		@apply transition-interactive;
+		@apply hover:border-muted;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
+		@apply disabled:bg-surface-muted disabled:text-muted;
+		@apply aria-[invalid=true]:border-danger aria-[invalid=true]:hover:border-danger;
+	}
+
+	.field__input--textarea {
+		@apply py-3;
+	}
+}

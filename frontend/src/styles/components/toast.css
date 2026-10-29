@@ -1,0 +1,58 @@
+@layer components {
+	/* Above the bottom navigation, bottom right from tablet up */
+	.toast-viewport {
+		@apply fixed inset-x-4 bottom-22 z-[60];
+		@apply flex flex-col gap-2;
+		@apply md:left-auto md:right-6 md:w-96;
+		@apply xl:bottom-6;
+	}
+
+	/* Without navigation (sign-in, onboarding) at the very bottom */
+	#app:not(:has(> nav)) .toast-viewport {
+		@apply bottom-4;
+	}
+
+	.toast {
+		@apply flex items-start gap-3 py-3 pr-2 pl-4;
+		@apply rounded-md bg-forest text-white shadow-lg;
+		/* Light ring so it stands out over dark cards too */
+		@apply ring-1 ring-white/30;
+		@apply data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-2;
+		@apply data-[state=closed]:animate-out data-[state=closed]:fade-out-0;
+		@apply data-[swipe=move]:translate-x-(--reka-toast-swipe-move-x);
+		@apply data-[swipe=cancel]:translate-x-0 data-[swipe=cancel]:transition-transform;
+		@apply data-[swipe=end]:animate-out data-[swipe=end]:slide-out-to-right-full;
+	}
+
+	.toast__icon {
+		@apply mt-0.5;
+	}
+
+	.toast--success .toast__icon {
+		@apply text-lime;
+	}
+
+	.toast--info .toast__icon {
+		@apply text-macro-fat;
+	}
+
+	.toast--danger {
+		@apply bg-danger-strong;
+	}
+
+	.toast--danger .toast__icon {
+		@apply text-danger-soft;
+	}
+
+	.toast__title {
+		@apply flex-1 pt-0.5 font-semibold;
+	}
+
+	.toast__close {
+		@apply grid place-items-center shrink-0 size-8 -my-0.5;
+		@apply rounded-full text-on-forest-muted;
+		@apply transition-interactive;
+		@apply hover:bg-surface/10 hover:text-white;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime;
+	}
+}

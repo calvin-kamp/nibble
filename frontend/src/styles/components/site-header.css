@@ -1,0 +1,36 @@
+/* The header is fixed. Its height is a variable so the page can keep room for it, and sticky
+   elements and anchor jumps can stop below it. */
+:root {
+	--site-header-height: 0px;
+}
+
+:root:has(.site-header) {
+	--site-header-height: --spacing(17);
+}
+
+/* Next to the sidebar, guests do not get a header from desktop up */
+:root:has(.site-header--sidebar-guest) {
+	@variant xl {
+		--site-header-height: 0px;
+	}
+}
+
+@layer components {
+	.site-header {
+		@apply fixed inset-x-0 top-0 z-30 h-(--site-header-height);
+		@apply border-b border-line bg-canvas;
+	}
+
+	/* Beside the fixed sidebar */
+	.site-header--sidebar {
+		@apply xl:left-72;
+	}
+
+	.site-header--sidebar-guest {
+		@apply xl:hidden;
+	}
+
+	.site-header__inner {
+		@apply flex items-center justify-between gap-2 h-full py-3;
+	}
+}

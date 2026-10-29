@@ -10,16 +10,11 @@
   ],
   "compilerOptions": {
     "paths": {
-      "@api/*": ["./src/api/*"],
-      "@lib/*": ["./src/lib/*"],
-      "@data/*": ["./src/data/*"],
-      "@views/*": ["./src/views/*"],
-      "@stores/*": ["./src/stores/*"],
       "@assets/*": ["./src/assets/*"],
       "@features/*": ["./src/features/*"],
-      "@interfaces/*": ["./src/interfaces/*"],
-      "@components/*": ["./src/components/*"],
-      "@composables/*": ["./src/composables/*"]
+      "@layouts/*": ["./src/layouts/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@styles/*": ["./src/styles/*"]
     }
   }
 }

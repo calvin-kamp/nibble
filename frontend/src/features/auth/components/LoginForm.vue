@@ -1,98 +1,104 @@
 <script setup lang="ts">
-import type { LoginCredentials } from '@interfaces/auth.types'
-
 import { useForm } from 'vee-validate'
-import { ref, useTemplateRef } from 'vue'
+import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { FormPasswordField, FormTextField } from '@components/form'
-import { UiButton, UiCallout } from '@components/ui'
-import { HttpError } from '@lib/http'
-import { revealFirstInvalidField } from '@lib/scroll'
-import { useAuthStore } from '@stores/auth.store'
-import { authErrorMessages } from '../auth.data'
-import { loginSchema } from '../auth.schemas'
-import { getNoticeText, getRedirectTarget } from '../auth.utils'
 
-const auth = useAuthStore()
-const router = useRouter()
+import { BaseButton, BaseLink } from '@shared/ui'
+
+import { useToast } from '@shared/composables/toast'
+
+import { login } from '@features/auth/auth.api'
+import { loginSchema } from '@features/auth/auth.schema'
+import { useAuthStore } from '@features/auth/auth.store'
+import { redirectTarget } from '@features/auth/auth.utils'
+import { ApiError } from '@shared/api/client'
+import { focusFirstError, PasswordField, TextField } from '@shared/forms'
+import { formatLongDate } from '@shared/utils/date'
+
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+const toast = useToast()
 
-const formRef = useTemplateRef<HTMLFormElement>('form')
+const { handleSubmit, isSubmitting } = useForm({ validationSchema: loginSchema })
 
-const errorMessage = ref<string | null>(null)
-const noticeMessage = ref<string | null>(getNoticeText(route.query.notice))
-
-const { handleSubmit, isSubmitting } = useForm({
-  validationSchema: loginSchema,
-  initialValues: {
-    email: '',
-    password: '',
-  },
-})
+// API error, e.g. wrong password. Not tied to a single field.
+const submitError = ref<string | null>(null)
 
 const onSubmit = handleSubmit(
-  async (credentials: LoginCredentials) => {
-    errorMessage.value = null
-    noticeMessage.value = null
+	async (values) => {
+		submitError.value = null
 
-    try {
-      await auth.login(credentials)
-      await router.push(getRedirectTarget(route.query.redirect))
-    } catch (error) {
-      errorMessage.value =
-        error instanceof HttpError && error.status === 401
-          ? authErrorMessages.loginFailed
-          : authErrorMessages.unreachable
-    }
-  },
-  () => revealFirstInvalidField(formRef.value),
+		try {
+			const user = await login(values)
+
+			auth.signIn(user)
+
+			// A requested deletion does not block signing in; it can be cancelled from the account
+			if (user.deletionScheduledFor) {
+				toast.show(
+					`Dein Konto wird am ${formatLongDate(new Date(user.deletionScheduledFor))} gelöscht. Unter Konto › Konto löschen kannst du das abbrechen.`,
+					'info',
+				)
+			} else {
+				toast.show('Schön, dass du wieder da bist.')
+			}
+
+			// Back to the page the user came from, e.g. after the session expired
+			await router.push(redirectTarget(route.query) ?? { name: 'dashboard' })
+		} catch (error) {
+			submitError.value =
+				error instanceof ApiError && error.status === 429
+					? 'Zu viele Versuche. Warte bitte eine Minute und versuch es dann noch einmal.'
+					: 'E-Mail-Adresse oder Passwort stimmen nicht. Prüf deine Angaben.'
+		}
+	},
+	({ evt }) => focusFirstError(evt),
 )
 </script>
 
 <template>
-  <form
-    ref="form"
-    class="flex flex-col gap-6"
-    :novalidate="true"
-    @submit="onSubmit"
-  >
-    <UiCallout
-      v-if="errorMessage"
-      variant="warning"
-      role="alert"
-    >
-      {{ errorMessage }}
-    </UiCallout>
+	<form
+		class="flex flex-col gap-5"
+		novalidate
+		@submit="onSubmit"
+	>
+		<p
+			v-if="submitError"
+			class="notice notice--danger"
+			role="alert"
+		>
+			{{ submitError }}
+		</p>
 
-    <UiCallout
-      v-else-if="noticeMessage"
-      variant="info"
-      role="status"
-    >
-      {{ noticeMessage }}
-    </UiCallout>
+		<TextField
+			name="email"
+			label="E-Mail"
+			type="email"
+			autocomplete="email"
+			inputmode="email"
+		/>
 
-    <FormTextField
-      field-name="email"
-      label="E-Mail-Adresse"
-      type="email"
-      autocomplete="username"
-      required
-    />
+		<div class="flex flex-col gap-3">
+			<PasswordField
+				name="password"
+				label="Passwort"
+				autocomplete="current-password"
+			/>
 
-    <FormPasswordField
-      field-name="password"
-      label="Passwort"
-      autocomplete="current-password"
-      required
-    />
+			<BaseLink
+				route-name="auth-password-forgot"
+				class="self-start"
+				>Passwort vergessen?</BaseLink
+			>
+		</div>
 
-    <UiButton
-      type="submit"
-      class="w-full"
-      :loading="isSubmitting"
-    >
-      Anmelden
-    </UiButton>
-  </form>
+		<BaseButton
+			type="submit"
+			class="w-full"
+			:disabled="isSubmitting"
+		>
+			Anmelden
+		</BaseButton>
+	</form>
 </template>

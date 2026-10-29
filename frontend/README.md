@@ -1,48 +1,111 @@
-# nibble-frontend
+# Nibble Frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+Web app for Nibble: nutrition tracking, weight history and recipes. Vue 3 with
+TypeScript, built with Vite and served by nginx in production. It talks to the
+Nibble API over HTTP.
 
-## Recommended IDE Setup
+- **Framework:** Vue 3, Vue Router, Pinia
+- **Styling:** Tailwind CSS 4 with own design tokens (`src/styles/`)
+- **Components:** Reka UI, forms with vee-validate and Zod
+- **Runtime:** Node 22 for development, nginx in production
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+---
 
-## Recommended Browser Setup
+## Local development
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+**Requirements:** Node `^22.18.0` or `>=24.12.0` and the backend running on
+`http://localhost:8000` (see the backend README).
 
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
+```bash
 npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
+cp .env.template .env.local
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+The app is now available at `http://localhost:5173`.
 
-```sh
-npm run build
+`.env.local` holds the URL of the API:
+
+```env
+VITE_API_BASE_URL=http://localhost:8000
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+Use `localhost` in both places, not `127.0.0.1`. The browser treats
+`localhost` and `127.0.0.1` as different sites and then does not send the login
+cookies.
 
-```sh
-npm run lint
+The backend `.env` has to allow the app:
+
+```env
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+CSRF_TRUSTED_ORIGINS=http://localhost:5173
+FRONTEND_URL=http://localhost:5173
+AUTH_COOKIE_SECURE=False
+```
+
+---
+
+## Scripts
+
+| Command              | Purpose                                      |
+| -------------------- | -------------------------------------------- |
+| `npm run dev`        | Dev server with hot reload on port `5173`    |
+| `npm run build`      | Type check and production build into `dist/` |
+| `npm run build-only` | Production build without type check          |
+| `npm run preview`    | Serves the content of `dist/` locally        |
+| `npm run type-check` | Type check with `vue-tsc`                    |
+| `npm run lint`       | oxlint and ESLint, both fix what they can    |
+| `npm run format`     | Prettier on `src/`                           |
+
+---
+
+## Configuration
+
+| Variable            | Example                   | Purpose                                     |
+| ------------------- | ------------------------- | ------------------------------------------- |
+| `VITE_API_BASE_URL` | `https://api.example.com` | Base URL of the API, without trailing slash |
+
+Vite writes the value into the JavaScript at build time. Changing it later
+needs a new build.
+
+---
+
+## Deployment
+
+The `Dockerfile` builds the app with Node and serves `dist/` with nginx on port
+`80`. Pass the API URL as build argument:
+
+```bash
+docker build --build-arg VITE_API_BASE_URL=https://api.example.com -t nibble-frontend .
+```
+
+The build stops if `VITE_API_BASE_URL` is empty.
+
+`nginx.conf` answers every unknown path with `index.html`, so routes like
+`/rezepte` work on reload. Files under `/assets/` carry a content hash in
+their name and are cached for one year; `index.html` is never cached, so a new
+deploy is picked up on the next page load.
+
+Frontend and API have to run on subdomains of the same domain, for example
+`example.com` and `api.example.com`. The backend then needs:
+
+```env
+AUTH_COOKIE_DOMAIN=.example.com
+CORS_ALLOWED_ORIGINS=https://example.com
+CSRF_TRUSTED_ORIGINS=https://example.com
+FRONTEND_URL=https://example.com
+```
+
+---
+
+## Project layout
+
+```
+src/
+  features/    One folder per area: api, routes, schema, types, components, views
+  layouts/     App shell: header, sidebar, bottom navigation, mobile menu
+  shared/      API client, form fields, UI components, composables, utils
+  styles/      Design tokens, base styles and component styles
+  assets/      Fonts
+  router/      Router setup and navigation guards
 ```

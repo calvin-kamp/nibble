@@ -1,0 +1,43 @@
+@layer components {
+	.donut-chart {
+		--vis-color0: var(--color-brand); /* Progress */
+		--vis-donut-background-color: var(--color-track); /* Track underneath */
+		@apply relative;
+	}
+
+	.donut-chart--inverse {
+		--vis-color0: var(--color-lime);
+		--vis-donut-background-color: rgb(255 255 255 / 0.16);
+	}
+
+	.donut-chart__center {
+		@apply absolute inset-0;
+		@apply flex flex-col items-center justify-center;
+		@apply text-center;
+	}
+
+	.donut-chart__label {
+		@apply font-display font-extrabold text-[4.25rem] leading-none tracking-[-0.02em] tabular-nums;
+		@apply text-ink;
+	}
+
+	.donut-chart__sub-label {
+		@apply text-muted;
+	}
+
+	.donut-chart--sm .donut-chart__label {
+		@apply text-2xl tracking-tighter;
+	}
+
+	.donut-chart--sm .donut-chart__sub-label {
+		@apply text-sm;
+	}
+
+	.donut-chart--inverse .donut-chart__label {
+		@apply text-white;
+	}
+
+	.donut-chart--inverse .donut-chart__sub-label {
+		@apply text-on-forest-muted;
+	}
+}

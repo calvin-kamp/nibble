@@ -1,0 +1,20 @@
+@layer components {
+	/* Notice box for text, e.g. safety notes in the calculator or API errors */
+	.notice {
+		@apply px-4 py-3 md:px-5 md:py-4;
+		@apply border-2 rounded-md;
+		@apply text-md;
+	}
+
+	.notice--info {
+		@apply border-info bg-info-soft text-info-ink;
+	}
+
+	.notice--warning {
+		@apply border-warning bg-warning-soft text-warning-ink;
+	}
+
+	.notice--danger {
+		@apply border-danger-border bg-danger-soft text-danger-strong;
+	}
+}

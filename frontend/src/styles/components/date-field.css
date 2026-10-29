@@ -1,0 +1,66 @@
+@layer components {
+	.date__field {
+		@apply flex items-center gap-0.5 tabular-nums;
+		@apply focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand;
+	}
+
+	.date__segment {
+		@apply px-0.5 rounded-sm outline-hidden;
+		@apply focus:bg-brand-soft focus:text-brand-ink;
+		@apply data-placeholder:text-muted;
+	}
+
+	.date__literal {
+		@apply text-muted;
+	}
+
+	.date__trigger {
+		@apply grid place-items-center size-9 ml-auto -mr-2;
+		@apply rounded-md text-ink-soft;
+		@apply hover:bg-surface-muted;
+		@apply focus-visible:outline-2 focus-visible:outline-brand;
+	}
+
+	.date__content {
+		@apply z-50 p-4;
+		@apply border border-line rounded-lg bg-surface shadow-lg;
+	}
+
+	.calendar {
+		@apply flex flex-col gap-3;
+	}
+
+	.calendar__header {
+		@apply flex items-center justify-between gap-2;
+	}
+
+	.calendar__heading {
+		@apply font-semibold;
+	}
+
+	.calendar__nav {
+		@apply grid place-items-center size-9 rounded-md;
+		@apply hover:bg-surface-muted;
+		@apply focus-visible:outline-2 focus-visible:outline-brand;
+	}
+
+	.calendar__grid {
+		@apply w-full border-collapse;
+	}
+
+	.calendar__weekday {
+		@apply pb-2 text-sm font-semibold text-muted;
+	}
+
+	.calendar__day {
+		@apply grid place-items-center size-10 mx-auto;
+		@apply rounded-full tabular-nums outline-hidden cursor-pointer;
+		@apply hover:bg-surface-muted;
+		@apply focus-visible:outline-2 focus-visible:outline-brand;
+		@apply data-today:font-bold data-today:text-brand-ink;
+		@apply data-selected:bg-brand data-selected:text-on-brand;
+		@apply data-outside-view:text-line-strong;
+		@apply data-disabled:opacity-40 data-disabled:cursor-not-allowed;
+		@apply data-unavailable:line-through;
+	}
+}

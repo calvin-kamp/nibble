@@ -1,139 +1,110 @@
 <script setup lang="ts">
-import type { RegisterCredentials } from '@interfaces/auth.types'
-
 import { useForm } from 'vee-validate'
-import { ref, useTemplateRef } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { FormCheckboxField, FormPasswordField, FormTextField } from '@components/form'
-import { UiButton, UiCallout, UiLink } from '@components/ui'
-import { HttpError } from '@lib/http'
-import { revealFirstInvalidField } from '@lib/scroll'
-import { useAuthStore } from '@stores/auth.store'
-import { authErrorMessages } from '../auth.data'
-import { registerSchema } from '../auth.schemas'
 
-type RegisterField = keyof RegisterCredentials
+import { BaseButton, BaseLink } from '@shared/ui'
 
-const REGISTER_FIELDS: RegisterField[] = ['email', 'password', 'passwordConfirm', 'tosAccepted']
+import { useToast } from '@shared/composables/toast'
 
-const auth = useAuthStore()
+import { register } from '@features/auth/auth.api'
+import { registerSchema } from '@features/auth/auth.schema'
+import { useAuthStore } from '@features/auth/auth.store'
+import { ApiError } from '@shared/api/client'
+import { focusFirstError, PasswordField, TextField } from '@shared/forms'
+
 const router = useRouter()
+const auth = useAuthStore()
+const toast = useToast()
 
-const formRef = useTemplateRef<HTMLFormElement>('form')
+const { handleSubmit, isSubmitting } = useForm({ validationSchema: registerSchema })
 
-const errorMessage = ref<string | null>(null)
-
-const { handleSubmit, isSubmitting, setErrors } = useForm({
-  validationSchema: registerSchema,
-  initialValues: {
-    email: '',
-    password: '',
-    passwordConfirm: '',
-    tosAccepted: false,
-  },
-})
-
-function getFieldErrors(data: unknown): Partial<Record<RegisterField, string>> {
-  if (typeof data !== 'object' || data === null) return {}
-
-  const errors: Partial<Record<RegisterField, string>> = {}
-
-  for (const field of REGISTER_FIELDS) {
-    const messages = (data as Record<string, unknown>)[field]
-
-    if (Array.isArray(messages) && typeof messages[0] === 'string') {
-      errors[field] = field === 'email' ? authErrorMessages.emailTaken : messages[0]
-    }
-  }
-
-  return errors
-}
+// API error, e.g. email address already registered
+const submitError = ref<string | null>(null)
 
 const onSubmit = handleSubmit(
-  async (credentials: RegisterCredentials) => {
-    errorMessage.value = null
+	async ({ email, password }) => {
+		submitError.value = null
 
-    try {
-      await auth.register(credentials)
-      await router.push({ name: 'dashboard' })
-    } catch (error) {
-      const fieldErrors =
-        error instanceof HttpError && error.status === 400 ? getFieldErrors(error.data) : {}
-
-      if (Object.keys(fieldErrors).length === 0) {
-        errorMessage.value = authErrorMessages.unreachable
-
-        return
-      }
-
-      setErrors(fieldErrors)
-      await revealFirstInvalidField(formRef.value)
-    }
-  },
-  () => revealFirstInvalidField(formRef.value),
+		try {
+			auth.signIn(await register({ email, password }))
+			toast.show(
+				'Dein Konto ist erstellt. Wir haben dir eine E-Mail zum Bestätigen geschickt.',
+			)
+			await router.push({ name: 'onboarding' })
+		} catch (error) {
+			if (error instanceof ApiError && error.code === 'email_taken') {
+				submitError.value =
+					'Zu dieser E-Mail-Adresse gibt es schon ein Konto. Melde dich an.'
+			} else if (error instanceof ApiError && error.hasFieldError('password')) {
+				submitError.value =
+					'Dein Passwort ist zu leicht zu erraten. Wähl bitte ein anderes.'
+			} else {
+				submitError.value =
+					'Das Konto konnte nicht erstellt werden. Versuch es bitte noch einmal.'
+			}
+		}
+	},
+	({ evt }) => focusFirstError(evt),
 )
 </script>
 
 <template>
-  <form
-    ref="form"
-    class="flex flex-col gap-6"
-    :novalidate="true"
-    @submit="onSubmit"
-  >
-    <UiCallout
-      v-if="errorMessage"
-      variant="warning"
-      role="alert"
-    >
-      {{ errorMessage }}
-    </UiCallout>
+	<form
+		class="flex flex-col gap-5"
+		novalidate
+		@submit="onSubmit"
+	>
+		<p
+			v-if="submitError"
+			class="notice notice--danger"
+			role="alert"
+		>
+			{{ submitError }}
+		</p>
 
-    <FormTextField
-      field-name="email"
-      label="E-Mail-Adresse"
-      type="email"
-      autocomplete="email"
-      required
-    />
+		<TextField
+			name="email"
+			label="E-Mail"
+			type="email"
+			autocomplete="email"
+			inputmode="email"
+		/>
 
-    <FormPasswordField
-      field-name="password"
-      label="Passwort"
-      description="Mindestens 8 Zeichen."
-      autocomplete="new-password"
-      required
-    />
+		<PasswordField
+			name="password"
+			label="Passwort"
+			hint="Mindestens 8 Zeichen."
+			autocomplete="new-password"
+		/>
 
-    <FormPasswordField
-      field-name="passwordConfirm"
-      label="Passwort wiederholen"
-      autocomplete="new-password"
-      required
-    />
+		<PasswordField
+			name="passwordConfirmation"
+			label="Passwort wiederholen"
+			autocomplete="new-password"
+		/>
 
-    <FormCheckboxField
-      field-name="tosAccepted"
-      label="Ich akzeptiere die AGB"
-      required
-    >
-      <template #label>
-        Ich akzeptiere die
+		<p class="text-sm text-muted">
+			Mit dem Erstellen deines Kontos gelten unsere
+			<BaseLink
+				route-name="legal-tos"
+				variant="inline"
+				>AGB</BaseLink
+			>
+			. Wie wir mit deinen Daten umgehen, steht in der
+			<BaseLink
+				route-name="legal-privacy"
+				variant="inline"
+				>Datenschutzerklärung</BaseLink
+			>.
+		</p>
 
-        <UiLink
-          route-name="legal-tos"
-          new-tab
-          >AGB</UiLink
-        >
-      </template>
-    </FormCheckboxField>
-
-    <UiButton
-      type="submit"
-      class="w-full"
-      :loading="isSubmitting"
-    >
-      Konto erstellen
-    </UiButton>
-  </form>
+		<BaseButton
+			type="submit"
+			class="w-full"
+			:disabled="isSubmitting"
+		>
+			Konto erstellen
+		</BaseButton>
+	</form>
 </template>

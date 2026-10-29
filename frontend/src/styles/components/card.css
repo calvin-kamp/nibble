@@ -1,0 +1,35 @@
+@layer components {
+	.card {
+		@apply overflow-hidden rounded-lg;
+		@apply bg-surface text-ink;
+	}
+
+	.card--inverse {
+		@apply bg-forest text-on-forest;
+	}
+
+	/* The green focus outline is barely visible on dark green */
+	.card--inverse :focus-visible {
+		@apply outline-lime;
+	}
+
+	.card--stretch {
+		@apply flex flex-col h-full;
+	}
+
+	.card--stretch .card__body {
+		@apply flex flex-col flex-1;
+	}
+
+	.card--lg {
+		@apply rounded-xl;
+	}
+
+	.card__body {
+		@apply p-4 pb-5.5 md:px-5;
+	}
+
+	.card--lg .card__body {
+		@apply p-6 xl:p-9;
+	}
+}

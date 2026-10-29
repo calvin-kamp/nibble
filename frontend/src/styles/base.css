@@ -1,0 +1,66 @@
+@layer base {
+	html {
+		@apply scheme-light scroll-pt-(--site-header-height);
+		scrollbar-color: var(--color-line-strong) var(--color-canvas);
+	}
+
+	body {
+		@apply bg-canvas font-sans text-base text-ink;
+		@apply caret-brand accent-brand;
+	}
+
+	::selection {
+		@apply bg-lime text-ink;
+	}
+
+	/* Room for the fixed header, the fixed bottom navigation and, from desktop up, the sidebar,
+     only when they are present */
+	#app {
+		@apply min-h-svh pt-(--site-header-height) has-[>nav]:pb-18;
+		@apply xl:has-[>nav]:pb-0 xl:has-[>aside]:pl-72;
+	}
+
+	h1,
+	h2,
+	h3 {
+		@apply font-display font-extrabold tracking-tighter text-balance;
+	}
+
+	h1 {
+		@apply text-3xl leading-none;
+		@apply md:text-5xl;
+		@apply lg:text-6xl;
+	}
+
+	h2 {
+		@apply text-2xl leading-tight;
+		@apply md:text-3xl;
+		@apply lg:text-4xl;
+	}
+
+	h3 {
+		@apply text-xl leading-tight;
+		@apply lg:text-2xl;
+	}
+
+	/* Target of the skip link and of focus after navigation, the region itself needs no ring */
+	main:focus {
+		@apply outline-hidden;
+	}
+
+	textarea {
+		@apply min-h-36 py-3 resize-y;
+	}
+}
+
+/* Motion is decoration here: with reduced motion, drawers, dialogs and toasts appear instantly */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	::before,
+	::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}

@@ -1,0 +1,45 @@
+@layer components {
+	.choice-list {
+		@apply flex flex-col min-w-0;
+	}
+
+	/* A rendered legend is no flex item, so the fieldset gap does not reach it: margin instead */
+	.choice-list__legend {
+		@apply mb-1 font-semibold text-md text-ink;
+	}
+
+	/* The whole row is clickable and at least 48px tall */
+	.choice-list__option {
+		@apply flex items-center gap-3 min-h-12 py-2;
+		@apply cursor-pointer;
+	}
+
+	.choice-list__input {
+		@apply grid place-content-center shrink-0 size-6 m-0;
+		@apply appearance-none border-2 border-line-strong rounded-sm bg-surface;
+		@apply cursor-pointer;
+		@apply transition-interactive;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
+		@apply checked:border-brand checked:bg-brand;
+	}
+
+	.choice-list__option:hover .choice-list__input:not(:checked) {
+		@apply border-muted;
+	}
+
+	/* White check mark on green */
+	.choice-list__input[type='checkbox']:checked {
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+		@apply bg-center bg-no-repeat;
+		background-size: 1rem;
+	}
+
+	/* Round control with a white ring around the green dot */
+	.choice-list__input[type='radio'] {
+		@apply rounded-full;
+	}
+
+	.choice-list__input[type='radio']:checked {
+		@apply shadow-[inset_0_0_0_4px_var(--color-surface)];
+	}
+}

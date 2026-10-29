@@ -1,0 +1,17 @@
+@layer components {
+	.popover {
+		@apply z-50 w-72 max-w-(--reka-popover-content-available-width) max-h-(--reka-popover-content-available-height) p-4 overflow-y-auto;
+		@apply rounded-lg border border-line bg-surface shadow-lg;
+		@apply data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95;
+		@apply data-[state=closed]:animate-out data-[state=closed]:fade-out-0;
+	}
+
+	/* Item in a menu popover, e.g. in the account menu */
+	.popover__item {
+		@apply flex items-center justify-start gap-3 w-full min-h-11 px-3;
+		@apply rounded-md text-left font-semibold;
+		@apply transition-interactive;
+		@apply hover:bg-surface-muted;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
+	}
+}

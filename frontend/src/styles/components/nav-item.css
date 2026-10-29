@@ -1,0 +1,17 @@
+@layer components {
+	.nav-item {
+		@apply relative;
+		@apply flex flex-col items-center justify-center gap-1 w-full h-16;
+		@apply rounded-md;
+		@apply transition-interactive;
+		@apply hover:bg-brand/10;
+		@apply md:text-md;
+	}
+
+	.nav-item--active {
+		@apply text-brand font-medium;
+		@apply before:absolute before:-top-2 before:inset-x-2;
+		@apply before:max-w-15 before:h-0.5 before:mx-auto;
+		@apply before:rounded-full before:bg-brand;
+	}
+}

@@ -1,0 +1,122 @@
+@layer components {
+	/* Long legal texts such as the privacy policy: one readable column, calmer headings than on
+     the app pages, tables that still work on narrow phones */
+	/* About 70 characters per line. Not in ch: the wide zero of Plus Jakarta Sans would make
+     68ch almost 900 px. */
+	.legal {
+		@apply flex flex-col gap-10 max-w-2xl mx-auto;
+	}
+
+	/* "Datenschutzerklärung" is wider than a 320 px phone at heading size, so it may hyphenate */
+	.legal__header {
+		@apply flex flex-col gap-3 hyphens-auto break-words;
+	}
+
+	.legal__toc {
+		@apply flex flex-col gap-2 p-5 rounded-md bg-surface;
+		@apply md:p-6;
+	}
+
+	.legal__toc-title {
+		@apply font-sans text-md font-bold tracking-normal;
+	}
+
+	/* Each link keeps the 44 px touch height from .link */
+	.legal__toc-list {
+		@apply flex flex-col;
+	}
+
+	/* Titles that wrap get some air, so the entries stay apart */
+	.legal__toc-list .link {
+		@apply justify-start py-1.5 font-normal leading-snug text-left;
+	}
+
+	/* break-words: URLs such as https://world.openfoodfacts.org are wider than a 320 px phone */
+	.legal__section {
+		@apply flex flex-col gap-4 leading-relaxed break-words;
+	}
+
+	/* scroll-mt: after a jump the heading does not stick to the top edge */
+	.legal__heading {
+		@apply scroll-mt-6 text-xl leading-tight;
+		@apply md:text-2xl;
+		@apply focus:outline-hidden;
+	}
+
+	/* Subheading with its paragraphs, closer together than the rest of the section */
+	.legal__subsection {
+		@apply flex flex-col gap-2;
+	}
+
+	.legal__subheading {
+		@apply font-sans text-base font-bold tracking-normal;
+	}
+
+	.legal__list {
+		@apply flex flex-col gap-1.5 pl-6 list-disc marker:text-leaf;
+	}
+
+	/* Addresses: line breaks from the text, no italics from <address> */
+	.legal__address {
+		@apply not-italic;
+	}
+
+	/* Scrolls sideways only if a table does not fit even with wrapped cells */
+	.legal__table-wrapper {
+		@apply overflow-x-auto;
+	}
+
+	.legal__table {
+		@apply w-full border-collapse text-md text-left hyphens-auto;
+	}
+
+	.legal__table th,
+	.legal__table td {
+		@apply py-3 pr-3 align-top border-b border-divider last:pr-0;
+		@apply md:pr-4;
+	}
+
+	.legal__table thead th {
+		@apply py-2 font-bold text-ink-soft border-b-2 border-line-strong;
+	}
+
+	.legal__table tbody th {
+		@apply font-semibold;
+	}
+
+	/* Cookie names stay whole; on phones the rows are stacked and have room for them */
+	.legal__table code {
+		@apply text-sm whitespace-nowrap;
+	}
+
+	/* Three columns of running text do not fit on a phone: there each row becomes a block, the
+     cells labelled from data-label. The roles in the markup keep the table semantics, which
+     browsers drop once display changes. */
+	@media (width < 40rem) {
+		.legal__table--stacked,
+		.legal__table--stacked tbody,
+		.legal__table--stacked tr,
+		.legal__table--stacked th,
+		.legal__table--stacked td {
+			@apply block;
+		}
+
+		.legal__table--stacked thead {
+			@apply sr-only;
+		}
+
+		.legal__table--stacked tr {
+			@apply flex flex-col gap-1 py-3 border-b border-divider;
+		}
+
+		.legal__table--stacked tbody th,
+		.legal__table--stacked td {
+			@apply p-0 border-0;
+		}
+
+		.legal__table--stacked td::before {
+			@apply font-semibold text-ink-soft;
+			content: attr(data-label) ': ';
+		}
+	}
+}

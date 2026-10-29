@@ -1,80 +1,103 @@
 <script setup lang="ts">
-import type { RecipeIngredient } from '../recipes.types'
+import type { Recipe } from '@features/recipes/recipes.types'
 
-import { Label as RekaLabel } from 'reka-ui'
-import { ref, useId, watch } from 'vue'
-import { NumberInputControl } from '@components/form/controls'
-import { formatIngredientAmount } from '../recipes.utils'
+import { MinusIcon, PlusIcon } from '@lucide/vue'
+import { ref, watch } from 'vue'
+
+import { BaseButton, BaseCard, BaseIcon } from '@shared/ui'
+
+import { MAX_SERVINGS, MIN_SERVINGS } from '@features/recipes/recipes.constants'
+import { formatAmount } from '@features/recipes/recipes.utils'
 
 interface Props {
-  ingredients: RecipeIngredient[]
-  baseServings: number
+	recipe: Recipe
 }
 
 const props = defineProps<Props>()
 
-const servingsFieldId = useId()
-
-const servingsAmount = ref<number>(props.baseServings)
+// Scaling only affects the view, the recipe itself stays unchanged
+const servings = ref<number>(props.recipe.servings)
 
 watch(
-  () => props.baseServings,
-  (baseServings) => (servingsAmount.value = baseServings),
+	() => props.recipe.servings,
+	(value) => (servings.value = value),
 )
 </script>
 
 <template>
-  <section
-    aria-labelledby="ingredients-heading"
-    class="flex flex-col gap-4 min-w-0"
-  >
-    <h2
-      id="ingredients-heading"
-      class="pb-4 border-b"
-    >
-      Zutaten
-    </h2>
+	<BaseCard
+		as="section"
+		aria-labelledby="recipe-ingredients-title"
+	>
+		<div class="flex flex-col gap-4">
+			<h2
+				id="recipe-ingredients-title"
+				class="text-2xl"
+			>
+				Zutaten
+			</h2>
 
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <RekaLabel
-        :for="servingsFieldId"
-        class="text-sm text-muted-foreground"
-      >
-        Portionen
-      </RekaLabel>
+			<div class="flex flex-col gap-2">
+				<!-- Label on the left, stepper on the right. The gap grows with the width. -->
+				<div class="flex items-center justify-between gap-3">
+					<span
+						id="recipe-servings-label"
+						class="font-semibold"
+						>Portionen</span
+					>
 
-      <div class="w-36">
-        <NumberInputControl
-          :id="servingsFieldId"
-          v-model="servingsAmount"
-          :min="1"
-          :max="12"
-          stepper
-        />
-      </div>
-    </div>
+					<div class="flex items-center gap-3">
+						<BaseButton
+							variant="outline"
+							size="icon"
+							aria-label="Eine Portion weniger"
+							:disabled="servings <= MIN_SERVINGS"
+							@click="servings--"
+						>
+							<BaseIcon :icon="MinusIcon" />
+						</BaseButton>
 
-    <p
-      aria-live="polite"
-      class="sr-only"
-    >
-      Mengen für {{ servingsAmount }} {{ servingsAmount === 1 ? 'Portion' : 'Portionen' }}
-    </p>
+						<!-- output is a live region: screen readers announce the new number -->
+						<output
+							class="min-w-8 font-display text-2xl font-extrabold text-center tabular-nums"
+							aria-labelledby="recipe-servings-label"
+						>
+							{{ servings }}
+						</output>
 
-    <ul class="flex flex-col">
-      <li
-        v-for="ingredient in props.ingredients"
-        :key="ingredient.name"
-        class="flex items-baseline gap-3 py-3 border-b md:last:border-b-0"
-      >
-        <span class="w-20 shrink-0 text-right font-medium tabular-nums">
-          {{ formatIngredientAmount(ingredient, props.baseServings, servingsAmount) }}
-        </span>
+						<BaseButton
+							variant="outline"
+							size="icon"
+							aria-label="Eine Portion mehr"
+							:disabled="servings >= MAX_SERVINGS"
+							@click="servings++"
+						>
+							<BaseIcon :icon="PlusIcon" />
+						</BaseButton>
+					</div>
+				</div>
 
-        <span>
-          {{ ingredient.name }}
-        </span>
-      </li>
-    </ul>
-  </section>
+				<ul class="data-list">
+					<li
+						v-for="(ingredient, index) in props.recipe.ingredients"
+						:key="index"
+						class="data-list__row"
+					>
+						<span class="data-list__label">{{ ingredient.name }}</span>
+
+						<span class="data-list__value">
+							{{
+								formatAmount(
+									ingredient.amount,
+									ingredient.unit,
+									servings,
+									props.recipe.servings,
+								)
+							}}
+						</span>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</BaseCard>
 </template>

@@ -1,0 +1,38 @@
+@layer components {
+	.sidebar {
+		@apply fixed inset-y-0 left-0 z-30 hidden w-72;
+		@apply flex-col gap-8 px-4 pt-7 pb-5 overflow-y-auto;
+		@apply border-r border-line bg-surface;
+		@apply xl:flex;
+	}
+
+	.sidebar__heading {
+		@apply px-3;
+		@apply font-sans text-md font-normal tracking-normal text-muted;
+	}
+
+	.sidebar__link {
+		@apply flex items-center gap-3 min-h-12 px-3;
+		@apply rounded-md;
+		@apply text-base font-semibold text-muted;
+		@apply transition-interactive;
+		@apply hover:bg-surface-muted hover:text-ink;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
+	}
+
+	/* Legal links: small and quiet, but underlined so they read as links */
+	.sidebar__legal-link {
+		@apply inline-flex items-center min-h-9;
+		@apply rounded-sm text-sm text-ink-soft;
+		@apply underline decoration-line-subtle underline-offset-4;
+		@apply transition-interactive;
+		@apply hover:text-ink hover:decoration-current;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
+		@apply aria-[current=page]:font-semibold aria-[current=page]:text-brand-ink aria-[current=page]:decoration-current;
+	}
+
+	.sidebar__link--active {
+		@apply bg-brand-soft text-brand-ink;
+		@apply hover:bg-brand-soft hover:text-brand-ink;
+	}
+}

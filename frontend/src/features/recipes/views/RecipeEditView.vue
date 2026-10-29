@@ -1,133 +1,150 @@
 <script setup lang="ts">
-import { Trash2Icon } from '@lucide/vue'
-import { DialogClose } from 'reka-ui'
+import type { Recipe, RecipeFormValues } from '@features/recipes/recipes.types'
+
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { UiButton, UiCallout, UiDialog, UiIcon, UiLink } from '@components/ui'
-import { useRecipeStore } from '@stores/recipe.store'
-import RecipeForm from '../components/RecipeForm.vue'
-import { useRecipeDetail } from '../recipe-detail'
 
-const route = useRoute()
-const router = useRouter()
-const recipeStore = useRecipeStore()
+import RecipeForm from '@features/recipes/components/RecipeForm.vue'
+import RecipeNotFound from '@features/recipes/components/RecipeNotFound.vue'
+import { BaseAlertDialog, BaseBreadcrumb } from '@shared/ui'
 
-const recipeId = computed<number>(() => Number(route.params.id))
+import { useCanonicalRecipeRoute } from '@features/recipes/composables/canonical-recipe-route'
+import { useRecipeListLocation } from '@features/recipes/composables/recipe-filters'
+import { useLeaveConfirmation } from '@shared/composables/leave-confirmation'
+import { useToast } from '@shared/composables/toast'
 
-const { recipe, status, load } = useRecipeDetail(recipeId)
+import { fetchRecipe, updateRecipe } from '@features/recipes/recipes.api'
+import { recipeParams, toFormValues } from '@features/recipes/recipes.utils'
 
-const isNotFound = computed<boolean>(
-  () => status.value === 'not-found' || (status.value === 'loaded' && !recipe.value?.isOwner),
+interface Props {
+	id: string
+}
+
+const props = defineProps<Props>()
+
+const toast = useToast()
+const listLocation = useRecipeListLocation()
+
+const form = ref<InstanceType<typeof RecipeForm> | null>(null)
+
+// Confirm on "Abbrechen" and in the breadcrumbs once something has changed
+const {
+	open: leaveDialogOpen,
+	leave,
+	confirm: confirmLeave,
+	interceptLink,
+} = useLeaveConfirmation(computed(() => form.value?.isDirty ?? false))
+
+// Only own recipes can be edited. undefined: still loading, null: missing or someone else's.
+const recipe = ref<Recipe | null | undefined>(undefined)
+
+watch(
+	() => props.id,
+	async (id) => {
+		recipe.value = undefined
+
+		try {
+			const loaded = await fetchRecipe(id)
+
+			recipe.value = loaded.isOwn ? loaded : null
+		} catch {
+			recipe.value = null
+		}
+	},
+	{ immediate: true },
 )
 
-const isDeleting = ref<boolean>(false)
-const deleteFailed = ref<boolean>(false)
+useCanonicalRecipeRoute(recipe)
 
-watch(isNotFound, (notFound) => {
-  if (notFound) document.title = 'Rezept nicht gefunden – Nibble'
-})
+const submitting = ref<boolean>(false)
+const submitError = ref<string | null>(null)
 
-async function onDelete(): Promise<void> {
-  if (!recipe.value) return
+async function onSubmit(values: RecipeFormValues): Promise<void> {
+	submitting.value = true
+	submitError.value = null
 
-  isDeleting.value = true
-  deleteFailed.value = false
+	try {
+		const updated = await updateRecipe(props.id, values)
 
-  try {
-    await recipeStore.deleteRecipe(recipe.value.id)
-    await router.push({ name: 'recipe-list' })
-  } catch {
-    deleteFailed.value = true
-  } finally {
-    isDeleting.value = false
-  }
+		toast.show(
+			updated.status === 'approved'
+				? 'Änderungen eingereicht. Nach der Prüfung sehen sie alle.'
+				: 'Änderungen gespeichert. Das Rezept wird noch geprüft.',
+		)
+		await form.value?.finish({ name: 'recipe-detail', params: recipeParams(updated) })
+	} catch {
+		submitError.value =
+			'Die Änderungen konnten nicht gespeichert werden. Versuch es bitte noch einmal.'
+	} finally {
+		submitting.value = false
+	}
 }
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 w-full max-w-2xl mx-auto md:gap-8">
-    <div class="flex flex-col items-start gap-2">
-      <UiLink
-        route-name="recipe-list"
-        variant="standalone"
-      >
-        Zu den Rezepten
-      </UiLink>
+	<main
+		v-if="recipe"
+		class="content-wrapper pt-4 pb-10"
+	>
+		<!-- Form centered in the page, header and form at the same width -->
+		<div class="content-column content-column--form gap-6">
+			<BaseBreadcrumb
+				:items="[
+					{ label: 'Rezepte', routeName: 'recipe-list', query: listLocation.query },
+					{
+						label: recipe.title,
+						routeName: 'recipe-detail',
+						params: recipeParams(recipe),
+					},
+				]"
+				current="Bearbeiten"
+				@click.capture="interceptLink"
+			/>
 
-      <h1>{{ isNotFound ? 'Rezept nicht gefunden' : 'Rezept bearbeiten' }}</h1>
-    </div>
+			<h1>Rezept bearbeiten</h1>
 
-    <p
-      v-if="status === 'loading'"
-      role="status"
-      class="text-muted-foreground"
-    >
-      Rezept wird geladen …
-    </p>
+			<p
+				v-if="submitError"
+				class="notice notice--danger"
+				role="alert"
+			>
+				{{ submitError }}
+			</p>
 
-    <div
-      v-else-if="status === 'error'"
-      class="flex flex-col items-start gap-4"
-    >
-      <UiCallout
-        variant="warning"
-        title="Rezept konnte nicht geladen werden"
-        role="alert"
-      >
-        Die Verbindung wurde unterbrochen.
-      </UiCallout>
+			<!-- key: switching to another recipe restarts the form -->
+			<RecipeForm
+				:key="recipe.id"
+				ref="form"
+				:initial-values="toFormValues(recipe)"
+				submit-label="Änderungen speichern"
+				:submitting="submitting"
+				@cancel="leave({ name: 'recipe-detail', params: recipeParams(recipe) })"
+				@submit="onSubmit"
+			/>
 
-      <UiButton @click="load">Erneut versuchen</UiButton>
-    </div>
+			<BaseAlertDialog
+				v-model:open="leaveDialogOpen"
+				title="Änderungen verwerfen?"
+				description="Was du eingetragen hast, ist dann weg."
+				confirm-label="Verwerfen"
+				cancel-label="Weiter bearbeiten"
+				variant="danger"
+				@confirm="confirmLeave"
+			/>
+		</div>
+	</main>
 
-    <p
-      v-else-if="isNotFound"
-      class="max-w-prose text-muted-foreground"
-    >
-      Das Rezept wurde gelöscht oder der Link ist nicht mehr gültig.
-    </p>
+	<main
+		v-else-if="recipe === null"
+		class="content-wrapper"
+	>
+		<RecipeNotFound
+			message="Vielleicht wurde es gelöscht, oder es ist nicht deins. Bearbeiten kannst du nur eigene Rezepte."
+		/>
+	</main>
 
-    <template v-else-if="recipe !== null">
-      <RecipeForm :recipe="recipe" />
-
-      <div class="pt-6 border-t">
-        <UiDialog
-          title="Rezept wirklich löschen?"
-          :description="`„${recipe.name}“ wird dauerhaft entfernt.`"
-        >
-          <template #trigger>
-            <UiButton variant="destructive">
-              <UiIcon :icon="Trash2Icon" />
-              Rezept löschen
-            </UiButton>
-          </template>
-
-          <template #content>
-            <UiCallout
-              v-if="deleteFailed"
-              variant="warning"
-              title="Das Rezept wurde nicht gelöscht"
-              role="alert"
-            >
-              Die Verbindung wurde unterbrochen. Versuche es erneut.
-            </UiCallout>
-
-            <div class="flex flex-col-reverse gap-2 md:flex-row md:justify-end">
-              <DialogClose as-child>
-                <UiButton variant="ghost">Abbrechen</UiButton>
-              </DialogClose>
-
-              <UiButton
-                variant="destructive"
-                :loading="isDeleting"
-                @click="onDelete"
-              >
-                Löschen
-              </UiButton>
-            </div>
-          </template>
-        </UiDialog>
-      </div>
-    </template>
-  </div>
+	<main
+		v-else
+		class="content-wrapper"
+		aria-busy="true"
+	/>
 </template>

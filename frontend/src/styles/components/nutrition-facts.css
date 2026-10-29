@@ -1,0 +1,32 @@
+@layer components {
+	/* Calories and macros as key figures. Two columns on phones, four from sm. */
+	.nutrition-facts {
+		@apply grid grid-cols-12 gap-x-4 gap-y-3;
+	}
+
+	.nutrition-facts__item {
+		@apply flex flex-col gap-0.5 col-span-6;
+		@apply sm:col-span-3;
+	}
+
+	.nutrition-facts__label {
+		@apply flex items-center gap-1.5 text-sm text-muted;
+	}
+
+	.nutrition-facts__dot {
+		@apply size-2.5 shrink-0 rounded-full;
+	}
+
+	.nutrition-facts__value {
+		@apply text-lg font-bold tabular-nums text-ink;
+	}
+
+	/* Large, e.g. for the total of a meal */
+	.nutrition-facts--lg {
+		@apply gap-y-5;
+	}
+
+	.nutrition-facts--lg .nutrition-facts__value {
+		@apply font-display text-3xl font-extrabold tracking-tighter;
+	}
+}

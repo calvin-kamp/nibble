@@ -1,0 +1,32 @@
+@layer components {
+	/* Empty list or search without results. Actions after the text get some extra room. */
+	.empty-state {
+		@apply flex flex-col items-center gap-5 px-6 py-12;
+		@apply border-2 border-dashed border-line rounded-lg text-center;
+	}
+
+	/* Icon, title and text */
+	.empty-state__intro {
+		@apply flex flex-col items-center gap-2;
+	}
+
+	.empty-state--sm {
+		@apply py-8 rounded-md;
+	}
+
+	.empty-state__title {
+		@apply text-xl;
+	}
+
+	.empty-state--sm .empty-state__title {
+		@apply font-semibold text-lg;
+	}
+
+	.empty-state__text {
+		@apply max-w-md text-muted;
+	}
+
+	.empty-state--sm .empty-state__text {
+		@apply text-sm;
+	}
+}

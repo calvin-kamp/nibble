@@ -1,0 +1,89 @@
+/* Design tokens. Tailwind turns them into utilities, e.g. text-muted, bg-surface or border-line,
+   and every token is also available as a custom property, e.g. var(--color-brand). */
+
+@theme inline {
+	--font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+	/* Display face for headings, large numbers and the wordmark */
+	--font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+
+	--tracking-tight: -0.01em;
+	--tracking-tighter: -0.02em;
+
+	--leading-snug: 1.4;
+	--leading-tight: 1.2;
+	--leading-tighter: 1.1;
+
+	--text-6xl: 4rem;
+	--text-5xl: 3rem;
+	--text-4xl: 2.75rem;
+	--text-3xl: 2.125rem;
+	--text-2xl: 1.75rem;
+	--text-xl: 1.5rem;
+	--text-lg: 1.25rem;
+	--text-base: 1.125rem;
+	--text-md: 1rem;
+	--text-sm: 0.875rem;
+
+	--radius-sm: 0.5rem;
+	--radius-md: 0.75rem;
+	--radius-lg: 1.5rem;
+	--radius-xl: 2rem;
+}
+
+/* static, so the variables always end up in the CSS, also for var(--color-*) in props */
+@theme static {
+	/* Surfaces */
+	--color-canvas: #f3f6ec; /* Page background */
+	--color-surface: #fff; /* Cards, inputs, menus, navigation */
+	--color-surface-muted: #f4f0e8; /* Hover fills, read-only values, neutral tags */
+	--color-surface-muted-hover: #ebe4d8;
+	--color-track: #dde5d4; /* Unfilled part of bars and rings */
+
+	/* Text */
+	--color-ink: #112414; /* Body text and values */
+	--color-ink-soft: #3d5441; /* Lead text and secondary labels */
+	--color-muted: #625d54; /* Hints, meta data, inactive navigation */
+
+	/* Lines */
+	--color-divider: #cbd8c4; /* Between rows and sections */
+	--color-line: #cfcac0; /* Outlines of menus, popovers and navigation bars */
+	--color-line-strong: #857f75; /* Borders of form controls, at least 3:1 on surface */
+	--color-line-subtle: #a3aca0; /* Underlines of quiet links, secondary chart series */
+
+	/* Brand */
+	--color-brand: #008236; /* Primary actions, selection, focus */
+	--color-brand-hover: #006b2c;
+	--color-brand-ink: #17631c; /* Green text, e.g. links and selected options */
+	--color-brand-soft: #e3f5e6; /* Background of selected options */
+	--color-brand-soft-hover: #d3eed8;
+	--color-on-brand: #f0fdf4; /* Text on brand */
+	--color-leaf: #1c7d22; /* Charts, progress and card hover rings */
+
+	/* Inverse surface */
+	--color-forest: #113c14;
+	--color-on-forest: #eaf4e2;
+	--color-on-forest-muted: #cfe4c8;
+
+	/* Accent */
+	--color-lime: #d8f55e;
+	--color-lime-hover: #e6fa8f;
+
+	/* Feedback */
+	--color-danger: #852b23; /* Errors and destructive actions */
+	--color-danger-strong: #63221c;
+	--color-danger-border: #a9372d;
+	--color-danger-line: #e8b4ae;
+	--color-danger-soft: #f8e0de;
+	--color-danger-subtle: #fdf3f2;
+	--color-warning: #b07e11;
+	--color-warning-ink: #45330c;
+	--color-warning-soft: #fbefd5;
+	--color-info: #2962a3;
+	--color-info-ink: #1c3d63;
+	--color-info-soft: #dae7f6;
+
+	/* Macros, the same in rings, bars and lists */
+	--color-macro-protein: #d8f55e;
+	--color-macro-carbs: #ff7b5c;
+	--color-macro-fat: #bfe8c4;
+}

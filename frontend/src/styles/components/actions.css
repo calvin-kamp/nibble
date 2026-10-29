@@ -1,0 +1,12 @@
+@layer components {
+	/* From tablet up in one row with the primary action on the right. BaseActions reverses the order. */
+	.actions {
+		@apply flex flex-col gap-3;
+		@apply md:flex-row md:items-center md:justify-between;
+	}
+
+	/* Full width on phones so they are easy to hit */
+	.actions > * {
+		@apply w-full md:w-auto;
+	}
+}

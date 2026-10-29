@@ -3,6 +3,9 @@ FROM node:22-alpine AS build
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
+# Without the API URL the app would build but every request would fail
+RUN test -n "$VITE_API_BASE_URL"
+
 WORKDIR /app
 
 COPY package*.json ./

@@ -1,0 +1,27 @@
+@layer components {
+	.checkbox-field {
+		@apply flex flex-col gap-1.5;
+	}
+
+	.checkbox-field__label {
+		@apply flex items-start gap-3 cursor-pointer;
+	}
+
+	.checkbox-field__box {
+		@apply grid place-items-center shrink-0 size-6 mt-0.5;
+		@apply border-2 border-line-strong rounded-sm bg-surface text-on-brand;
+		@apply transition-interactive;
+		@apply hover:border-muted;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
+		@apply data-[state=checked]:border-brand data-[state=checked]:bg-brand;
+		@apply aria-[invalid=true]:border-danger aria-[invalid=true]:hover:border-danger;
+	}
+
+	.checkbox-field__hint {
+		@apply pl-9 text-sm text-muted;
+	}
+
+	.checkbox-field__error {
+		@apply pl-9 text-sm font-semibold text-danger;
+	}
+}

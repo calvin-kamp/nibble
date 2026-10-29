@@ -1,20 +1,26 @@
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
-import '@assets/styles/main.css'
-import { useAuthStore } from '@stores/auth.store'
+
 import App from './App.vue'
+
 import router from './router'
+import { useAuthStore } from '@features/auth/auth.store'
+import { expireSession } from '@features/auth/auth.utils'
+import { setSessionExpiredHandler } from '@shared/api/client'
 
-async function bootstrap(): Promise<void> {
-  const app = createApp(App)
-  const pinia = createPinia()
+import './main.css'
 
-  app.use(pinia)
+const app = createApp(App)
 
-  await useAuthStore(pinia).restoreSession()
+app.use(createPinia())
+app.use(router)
 
-  app.use(router)
-  app.mount('#app')
-}
+const auth = useAuthStore()
 
-bootstrap()
+// Only users who were signed in get the notice. Guests already end up here on app start.
+setSessionExpiredHandler(() => {
+	if (auth.isLoggedIn) void expireSession(router)
+})
+
+// Wait until it is known who is signed in, otherwise the guest view flashes briefly
+void auth.init().finally(() => app.mount('#app'))

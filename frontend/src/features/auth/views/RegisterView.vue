@@ -1,19 +1,29 @@
 <script setup lang="ts">
-import { UiLink } from '@components/ui'
-import AuthCard from '../components/AuthCard.vue'
-import RegisterForm from '../components/RegisterForm.vue'
+import RegisterForm from '@features/auth/components/RegisterForm.vue'
+import AuthLayout from '@layouts/AuthLayout.vue'
+import { BaseLink } from '@shared/ui'
 </script>
 
 <template>
-  <AuthCard
-    title="Konto erstellen"
-    description="Mit einem Konto erfasst du Kalorien und Gewicht und speicherst Rezepte."
-  >
-    <RegisterForm />
+	<AuthLayout
+		title="Konto erstellen"
+		lead="In einer Minute startklar."
+	>
+		<RegisterForm />
 
-    <template #footer>
-      Schon ein Konto?
-      <UiLink route-name="auth-login">Anmelden</UiLink>
-    </template>
-  </AuthCard>
+		<p class="pt-5 border-t border-divider text-ink-soft">
+			Schon ein Konto?
+			<BaseLink
+				route-name="auth-login"
+				variant="inline"
+				>Anmelden</BaseLink
+			>
+		</p>
+
+		<p>
+			<BaseLink route-name="calorie-calculator"
+				>Erst den Kalorienrechner ausprobieren</BaseLink
+			>
+		</p>
+	</AuthLayout>
 </template>

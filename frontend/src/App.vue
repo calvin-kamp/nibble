@@ -1,30 +1,61 @@
 <script setup lang="ts">
-import type { AuthNotice } from '@interfaces/auth.types'
+import { computed } from 'vue'
+import { RouterView, useRoute } from 'vue-router'
 
-import { watch } from 'vue'
-import { RouterView, useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '@stores/auth.store'
+import TrackingDialogs from '@features/tracking/components/TrackingDialogs.vue'
+import AppBottomNav from '@layouts/AppBottomNav.vue'
+import AppHeader from '@layouts/AppHeader.vue'
+import AppSideBar from '@layouts/AppSideBar.vue'
+import { BaseToaster } from '@shared/ui'
 
-const auth = useAuthStore()
+import { usePageAnnouncement } from '@shared/composables/page-title'
+
+import { useAuthStore } from '@features/auth/auth.store'
+
 const route = useRoute()
-const router = useRouter()
+const auth = useAuthStore()
+const announcement = usePageAnnouncement()
 
-watch(
-  () => auth.sessionExpired,
-  async (expired) => {
-    if (!expired) return
+const navigation = computed(() => route.meta.navigation ?? 'full')
 
-    auth.acknowledgeSessionExpired()
+// Every view renders exactly one main. It gets focus without becoming part of the tab order.
+function skipToContent(): void {
+	const main = document.querySelector<HTMLElement>('main')
 
-    if (!route.meta.requiresAuth) return
+	if (!main) return
 
-    const notice: AuthNotice = 'session-expired'
-
-    await router.push({ name: 'auth-login', query: { redirect: route.fullPath, notice } })
-  },
-)
+	main.tabIndex = -1
+	main.focus()
+}
 </script>
 
 <template>
-  <RouterView />
+	<a
+		href="#"
+		class="skip-link"
+		@click.prevent="skipToContent"
+		>Zum Inhalt springen</a
+	>
+
+	<AppSideBar v-if="navigation === 'full'" />
+
+	<AppHeader
+		v-if="navigation !== 'none'"
+		:standalone="navigation === 'header'"
+	/>
+
+	<RouterView />
+
+	<TrackingDialogs v-if="auth.isLoggedIn && auth.hasDataConsent" />
+
+	<BaseToaster />
+
+	<AppBottomNav v-if="navigation === 'full'" />
+
+	<p
+		class="sr-only"
+		aria-live="polite"
+	>
+		{{ announcement }}
+	</p>
 </template>

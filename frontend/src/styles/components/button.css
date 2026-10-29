@@ -1,0 +1,80 @@
+@layer components {
+	.button {
+		@apply relative inline-flex justify-center items-center gap-2 min-h-11 px-6;
+		@apply border-2 border-transparent rounded-md;
+		@apply font-semibold;
+		@apply transition-interactive;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
+		@apply disabled:opacity-50 disabled:cursor-not-allowed;
+	}
+
+	.button--primary {
+		@apply bg-brand;
+		@apply text-on-brand;
+		@apply hover:bg-brand-hover;
+	}
+
+	.button--secondary {
+		@apply bg-lime;
+		@apply text-ink;
+		@apply hover:bg-lime-hover;
+	}
+
+	.button--outline {
+		@apply border-current bg-transparent;
+		@apply hover:bg-current/10;
+	}
+
+	.button--ghost {
+		@apply bg-transparent;
+		@apply hover:bg-surface-muted;
+	}
+
+	.button--muted {
+		@apply bg-surface-muted;
+		@apply text-ink;
+		@apply hover:bg-surface-muted-hover;
+	}
+
+	.button--selected {
+		@apply border-brand bg-brand-soft;
+		@apply text-brand-ink;
+		@apply hover:bg-brand-soft-hover;
+	}
+
+	.button--danger {
+		@apply bg-danger;
+		@apply text-white;
+	}
+
+	.button--lg {
+		@apply gap-4 py-4;
+	}
+
+	/* Small, e.g. for inline row actions. Visually 32px tall; ::after enlarges the hit area to
+     44px so it is still easy to hit on phones. */
+	.button--sm {
+		@apply gap-1.5 min-h-8 px-3;
+		@apply rounded-sm text-sm;
+	}
+
+	.button--icon-sm {
+		@apply size-8 min-h-8 px-0;
+		@apply rounded-full;
+	}
+
+	.button--sm,
+	.button--icon-sm {
+		@apply after:absolute after:-inset-1.5;
+	}
+
+	.button--icon {
+		@apply size-11 px-0;
+		@apply rounded-full;
+	}
+
+	.button--icon-lg {
+		@apply size-13 px-0;
+		@apply rounded-full;
+	}
+}

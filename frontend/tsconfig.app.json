@@ -6,18 +6,16 @@
     // Extra safety for array and object lookups, but may have false positives.
     "noUncheckedIndexedAccess": true,
 
+    // ES2023 for toSorted() and toReversed(); every browser in Vite's default target has them.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+
     // Path mapping for cleaner imports.
     "paths": {
-      "@api/*": ["./src/api/*"],
-      "@lib/*": ["./src/lib/*"],
-      "@data/*": ["./src/data/*"],
-      "@views/*": ["./src/views/*"],
-      "@stores/*": ["./src/stores/*"],
       "@assets/*": ["./src/assets/*"],
       "@features/*": ["./src/features/*"],
-      "@interfaces/*": ["./src/interfaces/*"],
-      "@components/*": ["./src/components/*"],
-      "@composables/*": ["./src/composables/*"]
+      "@layouts/*": ["./src/layouts/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@styles/*": ["./src/styles/*"]
     },
 
     // `vue-tsc --build` produces a .tsbuildinfo file for incremental type-checking.

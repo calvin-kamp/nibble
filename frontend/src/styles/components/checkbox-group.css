@@ -1,0 +1,38 @@
+@layer components {
+	/* Several checkboxes under one shared question. The box itself comes from checkbox-field.css. */
+	.checkbox-group {
+		@apply flex flex-col gap-1.5 min-w-0;
+	}
+
+	/* A rendered legend is no flex item, so the fieldset gap does not reach it: margin instead */
+	.checkbox-group__legend {
+		@apply mb-1.5 font-semibold text-md text-ink;
+	}
+
+	.checkbox-group__hint {
+		@apply text-sm text-muted;
+	}
+
+	/* Stacked on phones, side by side from sm when there is room */
+	.checkbox-group__options {
+		@apply flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-8;
+	}
+
+	/* The whole row is clickable and at least 44px tall */
+	.checkbox-group__option {
+		@apply flex items-center gap-3 min-h-11 cursor-pointer;
+		@apply has-[[data-disabled]]:opacity-50 has-[[data-disabled]]:cursor-not-allowed;
+	}
+
+	.checkbox-group__option .checkbox-field__box {
+		@apply mt-0;
+	}
+
+	.checkbox-group--invalid .checkbox-field__box {
+		@apply border-danger hover:border-danger;
+	}
+
+	.checkbox-group__error {
+		@apply text-sm font-semibold text-danger;
+	}
+}

@@ -1,0 +1,27 @@
+@layer components {
+	.sheet {
+		@apply fixed inset-y-0 z-50 w-[min(20rem,85vw)];
+		@apply flex flex-col gap-8 px-4 pt-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] overflow-y-auto;
+		@apply bg-surface text-ink shadow-xl;
+		@apply data-[state=open]:animate-in data-[state=closed]:animate-out;
+		@apply data-[state=open]:duration-300 data-[state=closed]:duration-200;
+	}
+
+	.sheet--left {
+		@apply left-0;
+		@apply data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left;
+	}
+
+	.sheet--right {
+		@apply right-0;
+		@apply data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right;
+	}
+
+	.sheet__header {
+		@apply flex items-center gap-4;
+	}
+
+	.sheet__title {
+		@apply font-display text-2xl font-extrabold tracking-tighter;
+	}
+}

@@ -1,0 +1,9 @@
+@layer components {
+	/* First stop for keyboard users: hidden until focused, then above the header */
+	.skip-link {
+		@apply fixed top-3 left-3 z-[70] px-4 py-2.5;
+		@apply rounded-md bg-forest font-semibold text-white shadow-lg;
+		@apply -translate-y-[200%] focus-visible:translate-y-0;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime;
+	}
+}

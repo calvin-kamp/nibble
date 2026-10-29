@@ -1,0 +1,48 @@
+@layer components {
+	.drawer {
+		@apply fixed inset-x-0 bottom-0 z-50;
+		@apply flex flex-col gap-5 max-h-[60vh] pt-3;
+		@apply bg-surface rounded-t-lg;
+		@apply [transform:translate3d(0,var(--drawer-swipe-movement-y,0px),0)];
+		@apply transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] data-swiping:duration-0;
+		@apply data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom;
+		@apply data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom;
+	}
+
+	/* Without a footer the content needs room at the bottom edge itself */
+	.drawer:not(:has(> .drawer__footer)) {
+		@apply pb-5;
+	}
+
+	.drawer__handle {
+		@apply w-20 h-1.5 mx-auto;
+		@apply rounded-full bg-line-strong;
+	}
+
+	/* Scrolls when the content is taller than the drawer */
+	.drawer__content {
+		@apply flex flex-col gap-4 w-full max-w-lg min-h-0 px-4 mx-auto;
+		@apply overflow-y-auto;
+	}
+
+	.drawer__header {
+		@apply flex flex-col gap-2;
+	}
+
+	.drawer__title {
+		@apply text-2xl text-center text-balance;
+	}
+
+	.drawer__description {
+		@apply text-center text-ink-soft;
+	}
+
+	.drawer__body {
+		@apply flex flex-col gap-2;
+	}
+
+	.drawer__footer {
+		@apply w-full max-w-lg px-4 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] mx-auto;
+		@apply border-t border-divider;
+	}
+}

@@ -1,0 +1,50 @@
+@layer components {
+	.number-field {
+		@apply relative flex items-center;
+	}
+
+	.number-field__input {
+		@apply flex-1 min-w-0 tabular-nums;
+	}
+
+	/* Room for the unit on the right inside the field, depending on the unit's length */
+	.number-field:has(.number-field__unit) .number-field__input {
+		padding-right: calc(var(--number-field-unit-length) + 2.5rem);
+	}
+
+	.number-field__unit {
+		@apply absolute right-4 top-1/2 -translate-y-1/2;
+		@apply pointer-events-none;
+		@apply font-semibold text-ink-soft;
+	}
+
+	/* With stepper: minus and plus sit inside the field's border, left and right of the value */
+	.number-field--stepper .number-field__input {
+		@apply px-14 text-center;
+	}
+
+	.number-field--stepper:has(.number-field__unit) .number-field__input {
+		padding-right: calc(var(--number-field-unit-length) + 5.5rem);
+	}
+
+	.number-field--stepper .number-field__unit {
+		@apply right-14;
+	}
+
+	.number-field__button {
+		@apply absolute top-1/2 -translate-y-1/2 grid place-items-center size-10;
+		@apply rounded-sm text-ink;
+		@apply transition-interactive;
+		@apply hover:bg-surface-muted;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand;
+		@apply disabled:opacity-40 disabled:cursor-not-allowed;
+	}
+
+	.number-field__button:first-child {
+		@apply left-1;
+	}
+
+	.number-field__button:last-child {
+		@apply right-1;
+	}
+}

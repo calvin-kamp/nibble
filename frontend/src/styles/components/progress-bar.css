@@ -1,0 +1,15 @@
+@layer components {
+	.progress-bar {
+		@apply h-2.5 overflow-hidden rounded-full;
+		@apply bg-track;
+	}
+
+	.progress-bar--inverse {
+		@apply bg-surface/15;
+	}
+
+	.progress-bar__fill {
+		@apply h-full rounded-full;
+		background-color: var(--progress-bar-color, var(--color-leaf));
+	}
+}

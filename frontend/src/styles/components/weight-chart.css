@@ -1,0 +1,23 @@
+@layer components {
+	.weight-chart {
+		@apply flex flex-col gap-3;
+		--vis-color0: var(--color-leaf); /* Weight */
+		--vis-color1: var(--color-line-subtle); /* Weekly average */
+		--weight-chart-last-point: var(--color-lime);
+
+		--vis-font-family: var(--font-sans);
+		--vis-axis-grid-color: var(--color-divider);
+		--vis-axis-grid-line-dasharray: 2 4;
+		--vis-axis-tick-label-color: var(--color-ink-soft);
+		--vis-axis-tick-label-font-size: 12px;
+		--vis-legend-label-color: var(--color-ink-soft);
+	}
+
+	.weight-chart__legend {
+		@apply text-sm;
+	}
+
+	.weight-chart__empty {
+		@apply text-ink-soft;
+	}
+}

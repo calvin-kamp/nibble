@@ -1,88 +1,84 @@
 <script setup lang="ts">
-import type { RecipeBadgeSummary, RecipeListItem } from '../recipes.types'
+import type { RecipeSummary } from '@features/recipes/recipes.types'
 
-import { getRecipeBadgeSummary } from '../recipes.utils'
-import { UiBadge, UiCard, UiIcon } from '@components/ui'
-import { ClockIcon, FlameIcon, ImageIcon } from '@lucide/vue'
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import RecipeMedia from '@features/recipes/components/RecipeMedia.vue'
+import { BaseCard } from '@shared/ui'
+
+import { DIET_LABELS } from '@features/recipes/recipes.constants'
+import { recipeParams } from '@features/recipes/recipes.utils'
+import { formatNumber } from '@shared/utils/number'
+
 interface Props {
-  recipe: RecipeListItem
+	recipe: RecipeSummary
+	/** Position in the list, determines the image's background color */
+	index?: number
+	/** 2 directly below the page title, 3 inside a section with its own heading */
+	headingLevel?: 2 | 3
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+	index: 0,
+	headingLevel: 3,
+})
 
-const badgeSummary = computed<RecipeBadgeSummary>(() => getRecipeBadgeSummary(props.recipe))
+const MEDIA_COLORS = ['bg-[#ffdcab]', 'bg-[#bfecce]', 'bg-[#ffd6c0]', 'bg-[#fff0b0]']
+
+const mediaColor = computed<string>(() => MEDIA_COLORS[props.index % MEDIA_COLORS.length]!)
+
+const dietLabel = computed<string | null>(() => DIET_LABELS[props.recipe.diet])
 </script>
 
 <template>
-  <UiCard
-    as="article"
-    size="sm"
-    title-as="h3"
-    class="relative h-full hover:ring-ring has-[a:focus-visible]:focus-ring transition-interactive hover:-translate-y-0.5 active:translate-y-0"
-    media-class="aspect-4/3 overflow-hidden"
-  >
-    <template #media>
-      <img
-        v-if="props.recipe.image"
-        :src="props.recipe.image"
-        alt=""
-        class="size-full object-cover"
-      />
+	<BaseCard
+		as="article"
+		class="relative hover:ring-2 hover:ring-leaf has-[a:focus-visible]:ring-3 has-[a:focus-visible]:ring-brand-ink"
+	>
+		<template #media>
+			<RecipeMedia
+				class="aspect-4/3"
+				:class="mediaColor"
+				:image-url="props.recipe.imageUrl"
+			/>
+		</template>
 
-      <div
-        v-else
-        role="img"
-        aria-label="Kein Bild vorhanden"
-        class="grid size-full place-items-center bg-muted text-muted-foreground"
-      >
-        <UiIcon
-          :icon="ImageIcon"
-          :size="32"
-        />
-      </div>
-    </template>
+		<div class="flex flex-col gap-2.5">
+			<ul class="flex flex-wrap gap-2 text-sm font-bold">
+				<li
+					v-if="dietLabel"
+					class="px-3 py-0.5 rounded-full bg-brand-soft text-brand-ink"
+				>
+					{{ dietLabel }}
+				</li>
 
-    <template #title>
-      <RouterLink
-        :to="'/rezepte/' + props.recipe.slug"
-        class="after:absolute after:inset-0 focus-visible:outline-hidden"
-      >
-        {{ props.recipe.name }}
-      </RouterLink>
-    </template>
+				<li class="px-3 py-0.5 rounded-full bg-surface-muted text-ink">
+					{{ props.recipe.durationMinutes }} Min.
+				</li>
+			</ul>
 
-    <ul class="flex flex-wrap gap-2">
-      <li
-        v-for="badge in badgeSummary.badges"
-        :key="badge.label"
-      >
-        <UiBadge :variant="badge.variant">
-          {{ badge.label }}
-        </UiBadge>
-      </li>
+			<div class="flex flex-col gap-1.5">
+				<component
+					:is="`h${props.headingLevel}`"
+					class="text-xl"
+				>
+					<!-- after:inset-0 makes the whole card clickable -->
+					<RouterLink
+						:to="{ name: 'recipe-detail', params: recipeParams(props.recipe) }"
+						class="after:absolute after:inset-0 focus-visible:outline-none"
+					>
+						{{ props.recipe.title }}
+					</RouterLink>
+				</component>
 
-      <li v-if="badgeSummary.hiddenCount > 0">
-        <UiBadge variant="outline">+{{ badgeSummary.hiddenCount }}</UiBadge>
-      </li>
-    </ul>
-
-    <template #footer>
-      <ul class="flex flex-wrap gap-x-6 gap-y-1">
-        <li class="flex items-center gap-1.5 text-muted-foreground text-sm">
-          <UiIcon :icon="ClockIcon" />
-
-          {{ props.recipe.durationMinutes }} Min
-        </li>
-
-        <li class="flex items-center gap-1.5 text-muted-foreground text-sm">
-          <UiIcon :icon="FlameIcon" />
-
-          {{ props.recipe.kcalPerServing }} kcal / Portion
-        </li>
-      </ul>
-    </template>
-  </UiCard>
+				<p class="text-sm text-ink-soft">
+					<strong class="font-display text-lg font-extrabold tabular-nums text-ink">
+						{{ formatNumber(props.recipe.kcalPerServing) }}
+					</strong>
+					kcal pro Portion
+				</p>
+			</div>
+		</div>
+	</BaseCard>
 </template>

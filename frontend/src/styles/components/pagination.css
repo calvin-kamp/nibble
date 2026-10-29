@@ -1,0 +1,21 @@
+@layer components {
+	.pagination__list {
+		@apply flex flex-wrap items-center justify-center gap-2;
+	}
+
+	.pagination__link {
+		@apply inline-flex items-center justify-center gap-1.5 min-w-11 min-h-11 px-3;
+		@apply border-2 border-line-strong rounded-full;
+		@apply font-bold tabular-nums text-ink;
+		@apply transition-interactive;
+		@apply hover:border-muted hover:bg-surface-muted;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
+		@apply aria-[current=page]:border-brand aria-[current=page]:bg-brand aria-[current=page]:text-on-brand;
+		@apply aria-[current=page]:hover:border-brand-hover aria-[current=page]:hover:bg-brand-hover;
+		@apply disabled:opacity-40 disabled:cursor-not-allowed;
+	}
+
+	.pagination__gap {
+		@apply inline-block min-w-6 text-center text-muted;
+	}
+}

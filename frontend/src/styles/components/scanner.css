@@ -1,0 +1,80 @@
+@layer components {
+	/* Full screen camera. Everything except the window is dimmed by the window's own shadow, so
+     the clear area always lines up exactly with the frame. */
+	.scanner {
+		@apply fixed inset-0 z-[60] overflow-hidden;
+		@apply flex flex-col items-center justify-center gap-8 px-6;
+		@apply bg-black text-white;
+		@apply data-[state=open]:animate-in data-[state=open]:fade-in-0;
+		@apply data-[state=closed]:animate-out data-[state=closed]:fade-out-0;
+	}
+
+	.scanner__video {
+		@apply absolute inset-0 size-full object-cover;
+	}
+
+	.scanner__window {
+		@apply relative w-full max-w-sm aspect-[16/10] rounded-lg;
+		box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.65);
+	}
+
+	/* Corner brackets instead of a full outline, so the barcode stays the focus */
+	.scanner__corner {
+		@apply absolute size-8 border-white;
+	}
+
+	.scanner__corner--tl {
+		@apply -top-1 -left-1 border-t-4 border-l-4 rounded-tl-lg;
+	}
+
+	.scanner__corner--tr {
+		@apply -top-1 -right-1 border-t-4 border-r-4 rounded-tr-lg;
+	}
+
+	.scanner__corner--bl {
+		@apply -bottom-1 -left-1 border-b-4 border-l-4 rounded-bl-lg;
+	}
+
+	.scanner__corner--br {
+		@apply -bottom-1 -right-1 border-b-4 border-r-4 rounded-br-lg;
+	}
+
+	.scanner__line {
+		@apply absolute inset-x-4 top-1/2 h-0.5 rounded-full bg-lime;
+		box-shadow: 0 0 12px var(--color-lime);
+		animation: scanner-sweep 2.2s ease-in-out infinite alternate;
+	}
+
+	/* Text and controls sit on top of the dimmed area */
+	.scanner__text {
+		@apply relative z-10 flex flex-col gap-2 max-w-sm text-center;
+		/* Stays readable over a busy camera picture */
+		text-shadow: 0 1px 12px rgb(0 0 0 / 0.7);
+	}
+
+	.scanner__title {
+		@apply font-display text-3xl font-extrabold leading-tight tracking-tighter;
+	}
+
+	.scanner__description {
+		@apply text-white/85;
+	}
+
+	.scanner__close {
+		@apply absolute top-4 right-4 z-10 grid place-items-center size-12;
+		@apply rounded-full bg-black/40 text-white;
+		@apply transition-interactive;
+		@apply hover:bg-black/60;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white;
+	}
+
+	@keyframes scanner-sweep {
+		from {
+			translate: 0 -2.5rem;
+		}
+
+		to {
+			translate: 0 2.5rem;
+		}
+	}
+}
