@@ -1,0 +1,5 @@
+{% autoescape off %}Hallo,
+
+für dein Konto wurde gerade die neue E-Mail-Adresse {{ new_email }} angegeben. Sie gilt erst, wenn der Link in der Bestätigungs-E-Mail an diese Adresse geöffnet wird.
+
+Wenn du das nicht warst, ändere bitte sofort dein Passwort.{% endautoescape %}

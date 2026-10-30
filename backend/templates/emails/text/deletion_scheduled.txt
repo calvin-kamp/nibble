@@ -1,0 +1,5 @@
+{% autoescape off %}Hallo,
+
+du hast die Löschung deines Kontos beantragt. Am {{ deletion_date }} Uhr wird es endgültig gelöscht.
+
+Bis dahin kannst du die Löschung zurücknehmen, indem du dich anmeldest und sie abbrichst.{% endautoescape %}

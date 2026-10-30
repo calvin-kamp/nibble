@@ -1,0 +1,6 @@
+{% autoescape off %}Hallo,
+
+bitte bestätige deine E-Mail-Adresse über diesen Link:
+{{ link }}
+
+Der Link ist 3 Tage gültig.{% endautoescape %}

@@ -1,0 +1,6 @@
+{% autoescape off %}Hallo,
+
+{{ kind }} „{{ name }}“ wurde leider abgelehnt.
+
+Begründung:
+{{ reason }}{% endautoescape %}

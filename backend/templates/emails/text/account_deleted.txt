@@ -1,0 +1,5 @@
+{% autoescape off %}Hallo,
+
+dein Nibble-Konto und alle dazugehörigen Daten wurden endgültig gelöscht. Freigegebene Rezepte bleiben ohne Angabe eines Autors sichtbar.
+
+Danke, dass du Nibble genutzt hast.{% endautoescape %}
