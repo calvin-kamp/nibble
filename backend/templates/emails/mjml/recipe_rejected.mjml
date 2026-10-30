@@ -1,0 +1,19 @@
+<mjml>
+  <mj-head>
+    <mj-title>Dein Rezept wurde abgelehnt</mj-title>
+    <mj-include path="./layouts/head.mjml" />
+  </mj-head>
+  <mj-body>
+    <mj-include path="./layouts/header.mjml" />
+
+    <mj-section>
+      <mj-column>
+        <mj-text>Hallo,</mj-text>
+        <mj-text>{{ kind }} „{{ name }}“ wurde leider abgelehnt.</mj-text>
+        <mj-text>Begründung:<br />{{ reason|linebreaksbr }}</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="./layouts/footer.mjml" />
+  </mj-body>
+</mjml>

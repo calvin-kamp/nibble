@@ -1,0 +1,18 @@
+<mjml>
+  <mj-head>
+    <mj-title>Neue Einreichung zur Moderation</mj-title>
+    <mj-include path="./layouts/head.mjml" />
+  </mj-head>
+  <mj-body>
+    <mj-include path="./layouts/header.mjml" />
+
+    <mj-section>
+      <mj-column>
+        <mj-text>Es gibt eine neue Einreichung zur Moderation.</mj-text>
+        <mj-text>{{ kind }} „{{ name }}“ (Einreichung {{ submission_id }})</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="./layouts/footer.mjml" />
+  </mj-body>
+</mjml>

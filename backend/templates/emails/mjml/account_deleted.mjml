@@ -1,0 +1,19 @@
+<mjml>
+  <mj-head>
+    <mj-title>Dein Konto wurde gelöscht</mj-title>
+    <mj-include path="./layouts/head.mjml" />
+  </mj-head>
+  <mj-body>
+    <mj-include path="./layouts/header.mjml" />
+
+    <mj-section>
+      <mj-column>
+        <mj-text>Hallo,</mj-text>
+        <mj-text>dein Nibble-Konto und alle dazugehörigen Daten wurden endgültig gelöscht. Freigegebene Rezepte bleiben ohne Angabe eines Autors sichtbar.</mj-text>
+        <mj-text>Danke, dass du Nibble genutzt hast.</mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-include path="./layouts/footer.mjml" />
+  </mj-body>
+</mjml>
