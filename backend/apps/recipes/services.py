@@ -10,7 +10,7 @@ from apps.accounts.models import User
 from apps.recipes.catalog.serializers import RecipeInputSerializer
 from apps.recipes.exceptions import SubmissionNotPending
 from apps.recipes.models import Recipe, RecipeIngredient, RecipeStep, RecipeSubmission
-from config.emails import send_email
+from config.emails import send_template_email
 
 
 def notify_staff(submission):
@@ -25,11 +25,15 @@ def notify_staff(submission):
         else "Änderungsvorschlag"
     )
 
-    send_email(
+    send_template_email(
         recipients,
         f"{kind}: {submission.content['name']}",
-        f"Es gibt eine neue Einreichung zur Moderation ({kind}, "
-        f"Einreichung {submission.pk}): {submission.content['name']}",
+        "recipe_submitted",
+        {
+            "kind": kind,
+            "name": submission.content["name"],
+            "submission_id": submission.pk,
+        },
     )
 
 
@@ -40,26 +44,31 @@ def notify_author(submission):
     if author is None or not author.user.email_verified:
         return
 
-    name = submission.content["name"]
-    kind = (
-        "Dein Rezept"
-        if submission.kind == RecipeSubmission.Kind.NEW
-        else "Deine Änderung am Rezept"
-    )
+    context = {
+        "name": submission.content["name"],
+        "kind": (
+            "Dein Rezept"
+            if submission.kind == RecipeSubmission.Kind.NEW
+            else "Deine Änderung am Rezept"
+        ),
+    }
 
     if submission.status == Recipe.Status.APPROVED:
-        send_email(
+        send_template_email(
             author.user.email,
             "Dein Rezept wurde freigegeben",
-            f"{kind} „{name}“ wurde freigegeben und ist jetzt für alle sichtbar.",
+            "recipe_approved",
+            context,
         )
         return
 
-    send_email(
+    context["reason"] = submission.rejection_reason
+
+    send_template_email(
         author.user.email,
         "Dein Rezept wurde abgelehnt",
-        f"{kind} „{name}“ wurde leider abgelehnt.\n\n"
-        f"Begründung:\n{submission.rejection_reason}",
+        "recipe_rejected",
+        context,
     )
 
 
