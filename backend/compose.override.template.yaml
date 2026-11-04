@@ -7,7 +7,7 @@ x-local-backend: &local-backend
   depends_on:
     db:
       condition: service_healthy
-    redis:
+    nibble-redis:
       condition: service_healthy
 
 services:
@@ -29,7 +29,7 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
+  nibble-redis:
     container_name: nibble-redis
     ports:
       - "6379:6379"

@@ -35,19 +35,20 @@ x-backend: &backend
     DB_CONN_MAX_AGE: ${DB_CONN_MAX_AGE:-60}
     NUM_PROXIES: ${NUM_PROXIES:-0}
     DATABASE_URL: ${DATABASE_URL:?}
-    REDIS_URL: redis://redis:6379/0
-    CELERY_BROKER_URL: redis://redis:6379/1
+    REDIS_URL: redis://nibble-redis:6379/0
+    CELERY_BROKER_URL: redis://nibble-redis:6379/1
   volumes:
     - media_data:/app/media
   networks:
     - default
     - coolify
   depends_on:
-    redis:
+    nibble-redis:
       condition: service_healthy
 
 services:
-  redis:
+  # Not just "redis": Coolify's own Redis has that name in the network "coolify"
+  nibble-redis:
     image: redis:8
     restart: unless-stopped
     logging: *logging
