@@ -1,10 +1,6 @@
-# In production a separate Postgres resource can replace the db service. Then
-# point DATABASE_URL in x-backend to it and remove db from depends_on.
-# No ports are published here; compose.override.yaml publishes them for local
-# development only.
+# Production stack (Coolify). The database is a separate resource, reached via
+# DATABASE_URL. compose.override.yaml adds a local database and publishes the ports.
 
-# Logs go to the host's journald, which deletes them after 14 days (see README).
-# Docker Desktop has no journald: local development sets LOG_DRIVER=json-file in .env.
 x-logging: &logging
   driver: ${LOG_DRIVER:-journald}
 
@@ -12,44 +8,43 @@ x-backend: &backend
   build: .
   restart: unless-stopped
   logging: *logging
-  # Locally from .env; on a hosting platform such as Coolify the variables come from its
-  # settings instead, so the file may be missing.
-  env_file:
-    - path: .env
-      required: false
+  # ${VAR:?} is required, ${VAR:-value} has a default
   environment:
-    DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    SECRET_KEY: ${SECRET_KEY:?}
+    JWT_SIGNING_KEY: ${JWT_SIGNING_KEY:?}
+    DEBUG: ${DEBUG:-False}
+    ALLOWED_HOSTS: ${ALLOWED_HOSTS:?}
+    CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:?}
+    CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?}
+    FRONTEND_URL: ${FRONTEND_URL:?}
+    AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-True}
+    AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+    AUTH_COOKIE_REFRESH_PATH: ${AUTH_COOKIE_REFRESH_PATH:-/auth/}
+    SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT:-True}
+    SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS:-31536000}
+    SECURE_HSTS_INCLUDE_SUBDOMAINS: ${SECURE_HSTS_INCLUDE_SUBDOMAINS:-False}
+    SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-True}
+    EMAIL_URL: ${EMAIL_URL:?}
+    DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:?}
+    SUPPORT_EMAIL: ${SUPPORT_EMAIL:-support@nibble-tracking.de}
+    DELETION_LOG_RECIPIENTS: ${DELETION_LOG_RECIPIENTS:-}
+    WEB_CONCURRENCY: ${WEB_CONCURRENCY:-3}
+    GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-30}
+    CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-2}
+    DB_CONN_MAX_AGE: ${DB_CONN_MAX_AGE:-60}
+    NUM_PROXIES: ${NUM_PROXIES:-0}
+    DATABASE_URL: ${DATABASE_URL:?}
     REDIS_URL: redis://redis:6379/0
     CELERY_BROKER_URL: redis://redis:6379/1
   volumes:
     - media_data:/app/media
   depends_on:
-    db:
-      condition: service_healthy
     redis:
       condition: service_healthy
 
 services:
-  db:
-    image: postgres:17
-    container_name: nibble-db
-    restart: unless-stopped
-    logging: *logging
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   redis:
     image: redis:8
-    container_name: nibble-redis
     restart: unless-stopped
     logging: *logging
     volumes:
@@ -62,7 +57,6 @@ services:
 
   api:
     <<: *backend
-    container_name: nibble-api
     expose:
       - "8000"
     volumes:
@@ -71,16 +65,13 @@ services:
 
   worker:
     <<: *backend
-    container_name: nibble-worker
     command: celery -A config worker --loglevel=info
 
   beat:
     <<: *backend
-    container_name: nibble-beat
     command: celery -A config beat --loglevel=info --schedule /tmp/celerybeat-schedule
 
 volumes:
-  postgres_data:
   redis_data:
   media_data:
   static_data:

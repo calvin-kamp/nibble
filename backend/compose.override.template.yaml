@@ -1,0 +1,52 @@
+# Local development: own database, fixed container names and ports on the host.
+# Docker Compose reads this file automatically next to compose.yaml.
+
+x-local-backend: &local-backend
+  environment:
+    DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:17
+    container_name: nibble-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    container_name: nibble-redis
+    ports:
+      - "6379:6379"
+
+  api:
+    <<: *local-backend
+    container_name: nibble-api
+    ports:
+      - "8000:8000"
+
+  worker:
+    <<: *local-backend
+    container_name: nibble-worker
+
+  beat:
+    <<: *local-backend
+    container_name: nibble-beat
+
+volumes:
+  postgres_data:

@@ -63,24 +63,17 @@ Open `.env` and replace `YOUR_SECRET_KEY`, `YOUR_JWT_SIGNING_KEY` and
 the template work for local development as they are, see
 [Configuration](#configuration).
 
-`compose.yaml` publishes no ports, the containers reach each other over the
-Compose network. For local development, create `compose.override.yaml` next to
-it. Docker Compose reads it automatically, and git ignores it, so it never
-reaches production:
+`compose.yaml` is the production stack: no database of its own and no published
+ports. For local development, copy the override next to it. Docker Compose reads
+it automatically and git ignores it. It adds the PostgreSQL container `db`, fixed
+container names and the ports `5432`, `6379` and `8000` on the host:
 
-```yaml
-services:
-  db:
-    ports:
-      - "5432:5432"
+```powershell
+Copy-Item compose.override.template.yaml compose.override.yaml
+```
 
-  redis:
-    ports:
-      - "6379:6379"
-
-  api:
-    ports:
-      - "8000:8000"
+```bash
+cp compose.override.template.yaml compose.override.yaml
 ```
 
 Build and start the containers:
@@ -95,7 +88,7 @@ The API is now available at `http://localhost:8000/`.
 
 | Service  | Purpose                                                                         |
 | -------- | ------------------------------------------------------------------------------- |
-| `db`     | PostgreSQL 17, port `5432`                                                      |
+| `db`     | PostgreSQL 17, port `5432` (local only, from the override)                      |
 | `redis`  | Cache (rate limits, stats) and queue for the background jobs, port `6379`       |
 | `api`    | gunicorn on port `8000`, every endpoint at the root                              |
 | `worker` | Celery worker: sends e-mails, deletes accounts, imports foods                   |
@@ -273,11 +266,13 @@ docker compose down -v
 
 ## Configuration
 
-All settings are environment variables. They are set in the `.env` file, which
-is created from `.env.template` (see [Quick start](#quick-start)).
-`compose.yaml` overrides `DATABASE_URL`, `REDIS_URL` and
-`CELERY_BROKER_URL` for the containers, so the values in `.env` are only used
-when Django runs outside Docker.
+All settings are environment variables. Locally they are set in the `.env` file,
+which is created from `.env.template` (see [Quick start](#quick-start)).
+`compose.yaml` passes every variable to the containers explicitly, so a new
+setting needs a line there too. It sets `REDIS_URL` and `CELERY_BROKER_URL` for
+the containers, and the override points `DATABASE_URL` to the local `db`
+container, so these values in `.env` are only used when Django runs outside
+Docker.
 
 | Variable                         | Required | Example                                      | Purpose                                                                                   |
 | -------------------------------- | -------- | -------------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -298,11 +293,17 @@ when Django runs outside Docker.
 | `LOG_DRIVER`                     | no       | `json-file`                                  | Docker log driver. Defaults to `journald`, see [Running in production](#running-in-production). |
 | `FRONTEND_URL`                   | no       | `http://localhost:5173`                      | Base of the links in e-mails.                                                             |
 | `EMAIL_URL`                      | no       | `consolemail://`                             | Mail server as URL. Defaults to `consolemail://`, which prints the e-mails to the log.    |
-| `DEFAULT_FROM_EMAIL`             | no       | `Nibble <noreply@example.com>`               | Sender of all e-mails.                                                                    |
-| `POSTGRES_DB`                    | yes      | `nibble`                                     | Name of the database the `db` container creates.                                          |
-| `POSTGRES_USER`                  | yes      | `nibble`                                     | Database user.                                                                            |
-| `POSTGRES_PASSWORD`              | yes      | `choose-a-password`                          | Database password.                                                                        |
-| `DATABASE_URL`                   | yes      | `postgres://nibble:pw@localhost:5432/nibble` | Connection string outside Docker.                                                         |
+| `DEFAULT_FROM_EMAIL`             | yes      | `nibble <noreply@example.com>`               | Sender of all e-mails.                                                                    |
+| `SUPPORT_EMAIL`                  | no       | `support@example.com`                        | Address for questions in the footer of every e-mail.                                      |
+| `DELETION_LOG_RECIPIENTS`        | no       | `datenschutz@example.com`                    | Who gets the daily deletion log mail. Empty: every staff account.                         |
+| `WEB_CONCURRENCY`                | no       | `9`                                          | gunicorn workers, (2 x CPU cores) + 1. Defaults to `3`.                                   |
+| `GUNICORN_TIMEOUT`               | no       | `30`                                         | Seconds a request may take. Defaults to `30`.                                             |
+| `CELERY_CONCURRENCY`             | no       | `2`                                          | Celery worker processes. Defaults to `2`.                                                 |
+| `DB_CONN_MAX_AGE`                | no       | `60`                                         | Seconds a database connection stays open. Defaults to `60`.                               |
+| `POSTGRES_DB`                    | local    | `nibble`                                     | Name of the database the local `db` container creates.                                    |
+| `POSTGRES_USER`                  | local    | `nibble`                                     | Database user of the local `db` container.                                                |
+| `POSTGRES_PASSWORD`              | local    | `choose-a-password`                          | Database password of the local `db` container.                                            |
+| `DATABASE_URL`                   | yes      | `postgres://nibble:pw@localhost:5432/nibble` | Connection string. In production the one of the database resource.                        |
 | `REDIS_URL`                      | yes      | `redis://localhost:6379/0`                   | Cache outside Docker.                                                                     |
 | `CELERY_BROKER_URL`              | no       | `redis://localhost:6379/1`                   | Queue of the background jobs outside Docker. Falls back to `REDIS_URL`.                   |
 | `OFF_DUMP_URL`                   | no       | `https://static.openfoodfacts.org/...`       | Source of the food import. Defaults to the official export.                               |
@@ -327,34 +328,30 @@ The server will not start without `SECRET_KEY` and `REDIS_URL`.
 
 ## Running in production
 
-```bash
-docker compose up -d --build
-```
+The stack runs on Coolify with `compose.yaml` alone, without the override:
 
-The server has no `compose.override.yaml`, so no port is published. The reverse
-proxy (Coolify) reaches the `api` container on port `8000` over the Compose
-network.
-
-Before deploying, set in `.env`:
-
-- `DEBUG=False`
-- `AUTH_COOKIE_SECURE=True` and serve the API over HTTPS
-- `AUTH_COOKIE_DOMAIN=.example.com` when frontend and API run on subdomains of
-  the same domain
-- `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` to the real
-  domains
-- `NUM_PROXIES=1` behind the Coolify proxy. Without it the API sees the proxy's
-  IP for every request, so all users share the rate limits.
-- `EMAIL_URL` and `DEFAULT_FROM_EMAIL` for the real mail server
-- delete the four lines `SECURE_SSL_REDIRECT`, `SECURE_HSTS_SECONDS`,
-  `SECURE_HSTS_INCLUDE_SUBDOMAINS` and `SESSION_COOKIE_SECURE`; without them the
-  safe defaults apply
-- delete `LOG_DRIVER`, so the containers log to journald (see below)
-- new random values for `SECRET_KEY` and `JWT_SIGNING_KEY`. Generate a random
-  value, once per key, with (no local Python needed):
+1. **Database:** a PostgreSQL 17 resource with daily scheduled backups, kept for 7
+   days (the privacy policy promises this). Its internal URL is `DATABASE_URL`.
+2. **Backend:** a Docker Compose resource from this repository, build pack Docker
+   Compose, file `/compose.yaml`. Only the `api` service gets a domain, with the
+   container port: `https://api.example.com:8000`. Enable "Connect to Predefined
+   Network", so the containers reach the database resource.
+3. **Variables:** Coolify lists every variable of `compose.yaml` under
+   Environment Variables, the required ones (`${VAR:?}`) first. In production:
+   - `DEBUG=False`, `AUTH_COOKIE_SECURE=True`
+   - `AUTH_COOKIE_DOMAIN=.example.com`, the parent domain of frontend and API
+   - `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS` and
+     `FRONTEND_URL` to the real domains
+   - `NUM_PROXIES=1` behind the Coolify proxy. Without it the API sees the
+     proxy's IP for every request, so all users share the rate limits.
+   - `EMAIL_URL`, `DEFAULT_FROM_EMAIL`, `SUPPORT_EMAIL` and
+     `DELETION_LOG_RECIPIENTS`
+   - leave `SECURE_SSL_REDIRECT`, `SECURE_HSTS_*`, `SESSION_COOKIE_SECURE` and
+     `LOG_DRIVER` unset, so the safe defaults and journald apply
+   - new random values for `SECRET_KEY` and `JWT_SIGNING_KEY`, once per key:
 
 ```bash
-docker compose run --rm --no-deps --entrypoint python api -c "import secrets; print(secrets.token_urlsafe(50))"
+python -c "import secrets; print(secrets.token_urlsafe(50))"
 ```
 
 Django serves the recipe images under `/media/` itself, also with `DEBUG=False`.

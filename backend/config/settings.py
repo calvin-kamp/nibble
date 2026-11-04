@@ -283,7 +283,8 @@ AUTH_COOKIE = {
     "ACCESS_PATH": "/",
     "REFRESH_NAME": "refresh_token",
     "REFRESH_PATH": env("AUTH_COOKIE_REFRESH_PATH", default="/auth/"),
-    "DOMAIN": env("AUTH_COOKIE_DOMAIN", default=None),
+    # Compose passes an unset variable as an empty string, which means no domain too
+    "DOMAIN": env("AUTH_COOKIE_DOMAIN", default="") or None,
     "SAMESITE": "Lax",
     "SECURE": env.bool("AUTH_COOKIE_SECURE", default=True),
 }
@@ -338,7 +339,9 @@ ACCOUNT_DELETION_GRACE_PERIOD = timedelta(days=7)
 # two weekly server backups of the host plus the 7 daily database backups.
 DELETION_LOG_RETENTION = timedelta(days=30)
 # Who gets the daily copy of new entries; empty: every active staff account
-DELETION_LOG_RECIPIENTS = env.list("DELETION_LOG_RECIPIENTS", default=[])
+DELETION_LOG_RECIPIENTS = [
+    address for address in env.list("DELETION_LOG_RECIPIENTS", default=[]) if address
+]
 
 # Current revisions of the legal texts (date of the "Stand" on /agb and /datenschutz).
 # Stored on every new profile. Change together with the texts and legal.constants.ts
