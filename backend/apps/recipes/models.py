@@ -118,7 +118,7 @@ class Recipe(models.Model):
     )
 
     name = models.CharField(max_length=120)
-    description = models.TextField(max_length=2000)
+    description = models.TextField(max_length=2000, blank=True)
     prep_time_minutes = models.PositiveIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(10080)],
     )

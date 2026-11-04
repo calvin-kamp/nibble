@@ -3,7 +3,6 @@ from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
-from django.db.models.functions import Lower
 from django.utils import timezone
 
 
@@ -23,7 +22,11 @@ class UserManager(BaseUserManager):
         # Every user needs a profile, also the ones from createsuperuser.
         with transaction.atomic(using=self._db):
             user.save(using=self._db)
-            Profile.objects.create(user=user)
+            Profile.objects.create(
+                user=user,
+                terms_version=settings.TERMS_VERSION,
+                privacy_policy_version=settings.PRIVACY_POLICY_VERSION,
+            )
 
         return user
 
@@ -112,15 +115,27 @@ class Profile(models.Model):
         null=True,
     )
 
+    # Terms and minimum age, confirmed at registration. None for older accounts.
+    terms_accepted_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+    # Revisions in force when the profile was created (settings.TERMS_VERSION and
+    # settings.PRIVACY_POLICY_VERSION). None for older accounts.
+    terms_version = models.CharField(
+        max_length=32,
+        blank=True,
+        null=True,
+    )
+    privacy_policy_version = models.CharField(
+        max_length=32,
+        blank=True,
+        null=True,
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                Lower("username"),
-                name="unique_username_ignoring_case",
-            ),
-        ]
+    # Not unique: several people may simply go by their first name.
 
     def __str__(self):
         if self.username:
@@ -190,3 +205,34 @@ class BodyProfile(models.Model):
 
     def __str__(self):
         return f"Körperdaten von {self.profile}"
+
+
+class DeletionLog(models.Model):
+    """Deletion requests, cancellations and deletions, to repeat them after a restore.
+
+    A restored backup brings back every account deleted since, and loses deletion
+    requests made since. reapply_deletions repeats them from this log or from the
+    daily mail with the same lines. Only the account ID and timestamps, nothing that
+    names the person; date_joined guards against an ID that was given out again.
+    """
+
+    class Event(models.TextChoices):
+        REQUESTED = "requested", "Löschung beantragt"
+        CANCELLED = "cancelled", "Löschung abgebrochen"
+        DELETED = "deleted", "Konto gelöscht"
+
+    user_id = models.PositiveBigIntegerField()
+    joined_at = models.DateTimeField()
+    event = models.CharField(choices=Event, max_length=9)
+    occurred_at = models.DateTimeField(default=timezone.now)
+    # The date the account is to be deleted on, for requests only
+    scheduled_for = models.DateTimeField(blank=True, null=True)
+    # When the entry went out in the daily mail, see send_deletion_log
+    reported_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["occurred_at", "pk"]
+        indexes = [models.Index(fields=["occurred_at"])]
+
+    def __str__(self):
+        return f"{self.get_event_display()}: {self.user_id}"

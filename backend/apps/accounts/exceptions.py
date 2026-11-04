@@ -8,11 +8,6 @@ class EmailTaken(Conflict):
     default_detail = "Diese E-Mail-Adresse ist bereits registriert."
 
 
-class UsernameTaken(Conflict):
-    default_code = "username_taken"
-    default_detail = "Dieser Username ist bereits vergeben."
-
-
 class InvalidCredentials(ApiError):
     status_code = status.HTTP_401_UNAUTHORIZED
     default_code = "invalid_credentials"

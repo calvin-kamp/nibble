@@ -1,8 +1,9 @@
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.middleware.csrf import get_token
+from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.exceptions import NotAuthenticated
 from rest_framework.permissions import AllowAny
@@ -78,9 +79,14 @@ class RegisterView(APIView):
             raise EmailTaken()
 
         try:
-            user = User.objects.create_user(
-                email, serializer.validated_data["password"]
-            )
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    email, serializer.validated_data["password"]
+                )
+                profile = user.profile
+                # The versions come from the settings, set when the profile is created.
+                profile.terms_accepted_at = timezone.now()
+                profile.save(update_fields=["terms_accepted_at"])
         except IntegrityError as exc:
             raise EmailTaken() from exc
 

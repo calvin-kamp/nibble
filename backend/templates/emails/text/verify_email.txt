@@ -3,4 +3,14 @@
 bitte bestätige deine E-Mail-Adresse über diesen Link:
 {{ link }}
 
-Der Link ist 3 Tage gültig.{% endautoescape %}
+Der Link ist 3 Tage gültig.
+
+--
+nibble – Iss gut. Wir rechnen mit.
+Hilfe: {{ frontend_url }}/hilfe
+Einstellungen: {{ frontend_url }}/einstellungen
+Datenschutz: {{ frontend_url }}/datenschutz
+Impressum: {{ frontend_url }}/impressum
+
+Fragen? Schreib uns an {{ support_email }}.
+Du bekommst diese E-Mail, weil es zu dieser Adresse ein Konto bei nibble gibt. Sie wurde automatisch versendet, Antworten darauf lesen wir nicht.{% endautoescape %}

@@ -1,4 +1,5 @@
 from django.core import mail
+from django.urls import reverse
 from rest_framework import status
 
 from apps.recipes.models import Recipe, RecipeSubmission
@@ -9,7 +10,9 @@ from .test_utils import RecipeTestCase, image_file, recipe_payload
 class ModerationTests(RecipeTestCase):
     def setUp(self):
         super().setUp()
-        self.staff = self.create_user("staff@example.com", username="mod", is_staff=True)
+        self.staff = self.create_user(
+            "staff@example.com", username="mod", is_staff=True
+        )
         self.author.email_verified = True
         self.author.save()
 
@@ -18,7 +21,7 @@ class ModerationTests(RecipeTestCase):
 
         with self.captureOnCommitCallbacks(execute=True):
             return self.client.post(
-                f"/moderation/submissions/{submission_id}/{verb}", data
+                reverse(f"submission-{verb}", kwargs={"pk": submission_id}), data
             )
 
     def test_new_recipe_notifies_staff(self):
@@ -30,7 +33,7 @@ class ModerationTests(RecipeTestCase):
     def test_only_staff_may_moderate(self):
         self.create_recipe()
 
-        response = self.client.get("/moderation/submissions")
+        response = self.client.get(reverse("submission-list"))
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -39,17 +42,17 @@ class ModerationTests(RecipeTestCase):
         submission = RecipeSubmission.objects.get()
         self.login(self.staff)
 
-        listing = self.client.get("/moderation/submissions").json()
+        listing = self.client.get(reverse("submission-list")).data
         response = self.moderate(submission.pk, "approve")
         again = self.moderate(submission.pk, "approve")
 
         self.assertEqual(listing["results"][0]["kind"], "new")
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-        self.assertEqual(response.json()["reviewed_by"], "mod")
-        self.assertIsNone(response.json()["current"])
+        self.assertEqual(response.data["reviewed_by"], "mod")
+        self.assertIsNone(response.data["current"])
         self.assertEqual(Recipe.objects.get(pk=data["id"]).status, "approved")
         self.assertEqual(again.status_code, status.HTTP_409_CONFLICT)
-        self.assertEqual(again.json()["code"], "submission_not_pending")
+        self.assertEqual(again.data["code"], "submission_not_pending")
         self.assertIn("freigegeben", mail.outbox[-1].subject)
 
     def test_reject_needs_a_reason(self):
@@ -59,8 +62,8 @@ class ModerationTests(RecipeTestCase):
         missing = self.moderate(submission.pk, "reject")
         response = self.moderate(submission.pk, "reject", reason="Zu wenig Schritte.")
 
-        self.assertIn("reason", missing.json()["errors"])
-        self.assertEqual(response.json()["status"], "rejected")
+        self.assertIn("reason", missing.data["errors"])
+        self.assertEqual(response.data["status"], "rejected")
         recipe = Recipe.objects.get()
         self.assertEqual(recipe.status, "rejected")
         self.assertEqual(recipe.rejection_reason, "Zu wenig Schritte.")
@@ -68,21 +71,25 @@ class ModerationTests(RecipeTestCase):
     def test_approving_a_revision_replaces_the_live_version(self):
         data = self.create_recipe(approve=True)
         self.client.put(
-            f"/recipes/{data['id']}",
+            reverse("recipe-detail", kwargs={"pk": data["id"]}),
             recipe_payload(name="Bessere Linsensuppe", prep_time_minutes=45),
         )
         self.client.put(
-            f"/recipes/{data['id']}/image",
+            reverse("recipe-image", kwargs={"pk": data["id"]}),
             {"image": image_file()},
             format="multipart",
         )
         revision = RecipeSubmission.objects.get(kind="revision")
 
         self.login(self.staff)
-        detail = self.client.get(f"/moderation/submissions/{revision.pk}").json()
+        detail = self.client.get(
+            reverse("submission-detail", kwargs={"pk": revision.pk})
+        ).data
         self.moderate(revision.pk, "approve")
         self.login(self.author)
-        recipe = self.client.get(f"/recipes/{data['id']}").json()
+        recipe = self.client.get(
+            reverse("recipe-detail", kwargs={"pk": data["id"]})
+        ).data
 
         self.assertEqual(detail["current"]["name"], "Rote Linsensuppe")
         self.assertEqual(detail["content"]["name"], "Bessere Linsensuppe")
@@ -93,12 +100,17 @@ class ModerationTests(RecipeTestCase):
 
     def test_rejected_revision_keeps_the_live_version(self):
         data = self.create_recipe(approve=True)
-        self.client.put(f"/recipes/{data['id']}", recipe_payload(name="Anders"))
+        self.client.put(
+            reverse("recipe-detail", kwargs={"pk": data["id"]}),
+            recipe_payload(name="Anders"),
+        )
         revision = RecipeSubmission.objects.get(kind="revision")
 
         self.moderate(revision.pk, "reject", reason="Bitte nicht.")
         self.login(self.author)
-        recipe = self.client.get(f"/recipes/{data['id']}").json()
+        recipe = self.client.get(
+            reverse("recipe-detail", kwargs={"pk": data["id"]})
+        ).data
 
         self.assertEqual(recipe["name"], "Rote Linsensuppe")
         self.assertEqual(recipe["status"], "approved")
@@ -109,7 +121,7 @@ class ModerationTests(RecipeTestCase):
         self.create_recipe()
         self.login(self.staff)
 
-        listing = self.client.get("/moderation/submissions").json()
+        listing = self.client.get(reverse("submission-list")).data
         submission = listing["results"][0] if "results" in listing else listing[0]
 
         self.assertEqual(submission["author"], {"username": "koch"})

@@ -1,5 +1,18 @@
+<!-- Shared head: brand colours of the app (forest, primary green, sand background) and
+     web-safe fonts, since most mail clients ignore web fonts. -->
 <mj-attributes>
   <mj-all font-family="Arial, Helvetica, sans-serif" />
-  <mj-text font-size="16px" line-height="24px" color="#1f1f1f" />
-  <mj-button font-size="16px" line-height="24px" />
+  <mj-body background-color="#f3f6ec" width="600px" />
+  <mj-section padding="0" />
+  <mj-text font-size="16px" line-height="24px" color="#14201a" padding="0 0 16px" />
+  <mj-button background-color="#0d5c36" color="#ffffff" font-size="16px" font-weight="700" line-height="24px" border-radius="12px" inner-padding="14px 28px" align="left" padding="8px 0 24px" />
+  <mj-image padding="0" />
+  <mj-class name="content" padding="0 24px 24px" />
+  <mj-class name="title" font-family="Arial, Helvetica, sans-serif" font-size="24px" line-height="30px" font-weight="700" color="#052b19" padding="0 0 16px" />
+  <mj-class name="muted" font-size="14px" line-height="21px" color="#5e5a52" />
+  <mj-class name="footer" font-size="13px" line-height="20px" color="#a9dcb2" align="center" padding="0 0 12px" />
 </mj-attributes>
+<mj-style inline="inline">
+  .link-inverse a { color: #c7f04a; text-decoration: underline; }
+</mj-style>
+<mj-breakpoint width="480px" />

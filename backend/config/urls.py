@@ -4,10 +4,10 @@ URL configuration for config project.
 Every endpoint of the OpenAPI spec lives at the root, without trailing slash.
 """
 
-from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
-from django.views.static import serve
+
+from apps.recipes.media import recipe_media
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -22,8 +22,8 @@ urlpatterns = [
     path("foods/", include("apps.foods.api.urls")),
     path("tracking/", include("apps.tracking.nutrition.urls")),
     path("tracking/", include("apps.tracking.weight.urls")),
-    # Recipe images. No separate web server serves the media volume, so Django does.
-    re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
+    # Recipe images. Django serves them, recipes under review only to author and staff.
+    re_path(r"^media/(?P<path>recipes/.+)$", recipe_media, name="recipe_media"),
 ]
 
 handler404 = "config.views.not_found"

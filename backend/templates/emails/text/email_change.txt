@@ -1,6 +1,16 @@
 {% autoescape off %}Hallo,
 
-du möchtest diese Adresse für dein Nibble-Konto verwenden. Bestätige sie über diesen Link:
+du möchtest diese Adresse für dein nibble-Konto verwenden. Bestätige sie über diesen Link:
 {{ link }}
 
-Der Link ist 24 Stunden gültig. Bis dahin bleibt deine bisherige Adresse bestehen. Wenn du das nicht angefordert hast, kannst du diese E-Mail ignorieren.{% endautoescape %}
+Der Link ist 24 Stunden gültig. Bis dahin bleibt deine bisherige Adresse bestehen. Wenn du das nicht angefordert hast, kannst du diese E-Mail ignorieren.
+
+--
+nibble – Iss gut. Wir rechnen mit.
+Hilfe: {{ frontend_url }}/hilfe
+Einstellungen: {{ frontend_url }}/einstellungen
+Datenschutz: {{ frontend_url }}/datenschutz
+Impressum: {{ frontend_url }}/impressum
+
+Fragen? Schreib uns an {{ support_email }}.
+Du bekommst diese E-Mail, weil es zu dieser Adresse ein Konto bei nibble gibt. Sie wurde automatisch versendet, Antworten darauf lesen wir nicht.{% endautoescape %}

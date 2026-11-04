@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework import routers
 
 from .views import (
+    DayRangeView,
     DaySummaryView,
     EntryCreateView,
     EntryDetailView,
@@ -18,6 +19,7 @@ urlpatterns = [
     path("entries", EntryCreateView.as_view(), name="entry_create"),
     path("entries/from-meal", EntryFromMealView.as_view(), name="entry_from_meal"),
     path("entries/<int:pk>", EntryDetailView.as_view(), name="entry_detail"),
+    path("days", DayRangeView.as_view(), name="day_range"),
     path("days/<str:date>", DaySummaryView.as_view(), name="day_summary"),
     *router.urls,
 ]

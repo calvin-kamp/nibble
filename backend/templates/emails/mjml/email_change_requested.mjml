@@ -1,13 +1,15 @@
-<mjml>
+<mjml lang="de">
   <mj-head>
     <mj-title>Deine E-Mail-Adresse soll geändert werden</mj-title>
+    <mj-preview>Deine E-Mail-Adresse soll geändert werden</mj-preview>
     <mj-include path="./layouts/head.mjml" />
   </mj-head>
-  <mj-body>
+  <mj-body background-color="#f3f6ec" width="600px">
     <mj-include path="./layouts/header.mjml" />
 
-    <mj-section>
+    <mj-section mj-class="content">
       <mj-column>
+        <mj-text mj-class="title">Deine E-Mail-Adresse soll geändert werden</mj-text>
         <mj-text>Hallo,</mj-text>
         <mj-text>für dein Konto wurde gerade die neue E-Mail-Adresse {{ new_email }} angegeben. Sie gilt erst, wenn der Link in der Bestätigungs-E-Mail an diese Adresse geöffnet wird.</mj-text>
         <mj-text>Wenn du das nicht warst, ändere bitte sofort dein Passwort.</mj-text>

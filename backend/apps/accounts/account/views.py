@@ -1,11 +1,9 @@
-from django.conf import settings
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.services import build_export, send_deletion_scheduled_email
+from apps.accounts.services import build_export, cancel_deletion, schedule_deletion
 
 from .serializers import DeletionRequestSerializer, DeletionStatusSerializer
 from .throttles import AccountDeletionThrottle, AccountExportThrottle
@@ -25,17 +23,9 @@ class AccountDeletionView(APIView):
             data=request.data, context={"request": request}
         )
         serializer.is_valid(raise_exception=True)
-        user = request.user
+        schedule_deletion(request.user)
 
-        # Asking again keeps the date, the period doesn't start over.
-        if user.deletion_scheduled_for is None:
-            user.deletion_scheduled_for = (
-                timezone.now() + settings.ACCOUNT_DELETION_GRACE_PERIOD
-            )
-            user.save(update_fields=["deletion_scheduled_for"])
-            send_deletion_scheduled_email(user)
-
-        return Response(DeletionStatusSerializer(user).data)
+        return Response(DeletionStatusSerializer(request.user).data)
 
     def delete(self, request):
         user = request.user
@@ -43,8 +33,7 @@ class AccountDeletionView(APIView):
         if user.deletion_scheduled_for is None:
             raise NotFound("Es ist keine Löschung geplant.")
 
-        user.deletion_scheduled_for = None
-        user.save(update_fields=["deletion_scheduled_for"])
+        cancel_deletion(user)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

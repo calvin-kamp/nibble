@@ -47,11 +47,6 @@ def product_for(off_code):
     return product
 
 
-# ------------------------------------------------------------------------------
-# Goal
-# ------------------------------------------------------------------------------
-
-
 class TargetsSerializer(serializers.Serializer):
     kcal = RoundedDecimalField(decimal_places=1, min_value=500, max_value=10000)
     protein = RoundedDecimalField(decimal_places=1, min_value=0, max_value=1000)
@@ -82,11 +77,6 @@ class GoalUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError("Gib ein Ziel oder Zielwerte an.")
 
         return attrs
-
-
-# ------------------------------------------------------------------------------
-# Entries
-# ------------------------------------------------------------------------------
 
 
 class TrackingEntrySerializer(serializers.ModelSerializer):
@@ -166,7 +156,9 @@ class EntryPatchSerializer(serializers.Serializer):
 
             # Recalculated from the values stored in the entry, not from OFF.
             snapshot = {
-                **{f"{key}_per_100": getattr(entry, f"{key}_per_100") for key in MACROS},
+                **{
+                    f"{key}_per_100": getattr(entry, f"{key}_per_100") for key in MACROS
+                },
                 "serving_quantity": entry.serving_quantity,
                 "amount": attrs.get("amount", entry.amount),
                 "unit": unit,
@@ -184,11 +176,6 @@ class EntryPatchSerializer(serializers.Serializer):
         return entry
 
 
-# ------------------------------------------------------------------------------
-# Meals
-# ------------------------------------------------------------------------------
-
-
 class MealItemInputSerializer(serializers.Serializer):
     off_code = serializers.RegexField(BARCODE_PATTERN)
     amount = AmountField()
@@ -203,7 +190,6 @@ class MealItemInputSerializer(serializers.Serializer):
 
 class MealInputSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
-    note = serializers.CharField(max_length=300, required=False, allow_blank=True)
     items = MealItemInputSerializer(many=True, min_length=1, max_length=50)
 
 
@@ -230,4 +216,4 @@ class MealSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Meal
-        fields = ("id", "name", "note", "items", "totals")
+        fields = ("id", "name", "items", "totals")

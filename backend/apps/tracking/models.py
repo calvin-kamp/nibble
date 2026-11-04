@@ -171,7 +171,6 @@ class Meal(models.Model):
         on_delete=models.CASCADE,
     )
     name = models.CharField(max_length=100)
-    note = models.CharField(max_length=300, blank=True, default="")
 
     kcal = macro_field()
     protein = macro_field()

@@ -1,16 +1,18 @@
-<mjml>
+<mjml lang="de">
   <mj-head>
     <mj-title>Dein Konto wurde gelöscht</mj-title>
+    <mj-preview>Dein Konto wurde gelöscht</mj-preview>
     <mj-include path="./layouts/head.mjml" />
   </mj-head>
-  <mj-body>
+  <mj-body background-color="#f3f6ec" width="600px">
     <mj-include path="./layouts/header.mjml" />
 
-    <mj-section>
+    <mj-section mj-class="content">
       <mj-column>
+        <mj-text mj-class="title">Dein Konto wurde gelöscht</mj-text>
         <mj-text>Hallo,</mj-text>
-        <mj-text>dein Nibble-Konto und alle dazugehörigen Daten wurden endgültig gelöscht. Freigegebene Rezepte bleiben ohne Angabe eines Autors sichtbar.</mj-text>
-        <mj-text>Danke, dass du Nibble genutzt hast.</mj-text>
+        <mj-text>dein nibble-Konto und alle dazugehörigen Daten wurden endgültig gelöscht. Freigegebene Rezepte bleiben ohne Angabe eines Autors sichtbar.</mj-text>
+        <mj-text>Danke, dass du nibble genutzt hast.</mj-text>
       </mj-column>
     </mj-section>
 

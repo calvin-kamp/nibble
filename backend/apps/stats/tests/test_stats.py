@@ -1,3 +1,4 @@
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
@@ -14,19 +15,25 @@ class PublicStatsTests(ApiTestCase):
 
         self.login(author)
         for name in ("Linsensuppe", "Porridge"):
-            response = self.client.post("/recipes", recipe_payload(name=name))
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+            response = self.client.post(
+                reverse("recipe-list"), recipe_payload(name=name)
+            )
+            self.assertEqual(
+                response.status_code, status.HTTP_201_CREATED, response.data
+            )
         Recipe.objects.filter(name="Porridge").update(status=Recipe.Status.APPROVED)
 
         self.client.force_authenticate(None)
-        response = self.client.get("/stats")
+        response = self.client.get(reverse("public_stats"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {"users": 1, "recipes": 1, "foods": 0, "entries": 0})
+        self.assertEqual(
+            response.data, {"users": 1, "recipes": 1, "foods": 0, "entries": 0}
+        )
 
     def test_invalid_cookie_does_not_block_the_public_numbers(self):
         self.client.cookies["access_token"] = "kaputt"
 
-        response = self.client.get("/stats")
+        response = self.client.get(reverse("public_stats"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

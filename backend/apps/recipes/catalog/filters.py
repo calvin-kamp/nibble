@@ -1,7 +1,9 @@
+from django.db.models import Count, IntegerField, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce
 from django_filters import rest_framework as filters
 from rest_framework.exceptions import NotAuthenticated
 
-from apps.recipes.models import Recipe
+from apps.recipes.models import Recipe, SavedRecipe
 
 # A diet filter also shows the stricter diets.
 DIET_HIERARCHY = {
@@ -43,6 +45,11 @@ class RecipeFilter(filters.FilterSet):
     )
     mine = filters.BooleanFilter(method="filter_mine")
     saved = filters.BooleanFilter(method="filter_saved")
+    # Last on purpose: sorting runs after every filter.
+    sort = filters.ChoiceFilter(
+        choices=(("newest", "newest"), ("popular", "popular")),
+        method="filter_sort",
+    )
 
     class Meta:
         model = Recipe
@@ -55,6 +62,7 @@ class RecipeFilter(filters.FilterSet):
             "equipment",
             "mine",
             "saved",
+            "sort",
         )
 
     def filter_queryset(self, queryset):
@@ -88,6 +96,24 @@ class RecipeFilter(filters.FilterSet):
             return queryset
 
         return queryset.filter(saved_by__profile=self.profile())
+
+    def filter_sort(self, queryset, name, value):
+        """newest is the view's default order; popular sorts by the number of saves."""
+        if value != "popular":
+            return queryset
+
+        # A subquery instead of Count("saved_by"): saved=true already joins saved_by
+        # and would count only the user's own bookmark.
+        saves = (
+            SavedRecipe.objects.filter(recipe=OuterRef("pk"))
+            .values("recipe")
+            .annotate(total=Count("id"))
+            .values("total")
+        )
+
+        return queryset.annotate(
+            save_count=Coalesce(Subquery(saves, output_field=IntegerField()), Value(0))
+        ).order_by("-save_count", "-created_at", "-id")
 
     def profile(self):
         user = self.request.user

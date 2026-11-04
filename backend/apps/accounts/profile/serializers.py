@@ -28,11 +28,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ("created_at",)
 
 
-class UsernameQuerySerializer(serializers.Serializer):
-    username = UsernameField()
-
-
-# Nibble is for people aged 16 and up (privacy policy, section 20)
+# Nibble is for people aged 16 and up (privacy policy, section 21)
 MIN_AGE = 16
 
 

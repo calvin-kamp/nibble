@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.core import mail
 from django.test import override_settings
+from django.urls import reverse
 from rest_framework import status
 
 from apps.accounts.models import User
@@ -19,11 +20,11 @@ class EmailChangeTests(ApiTestCase):
     def request_change(self, email="Neu@Example.com", password=PASSWORD):
         with self.captureOnCommitCallbacks(execute=True):
             return self.client.post(
-                "/auth/email/change", {"email": email, "password": password}
+                reverse("email_change"), {"email": email, "password": password}
             )
 
     def confirm(self, token):
-        return self.client.post("/auth/email/change/confirm", {"token": token})
+        return self.client.post(reverse("email_change_confirm"), {"token": token})
 
     def test_link_goes_to_the_new_address_notice_to_the_old_one(self):
         response = self.request_change()
@@ -66,7 +67,7 @@ class EmailChangeTests(ApiTestCase):
         response = self.request_change(password="falsch")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("password", response.json()["errors"])
+        self.assertIn("password", response.data["errors"])
         self.assertEqual(mail.outbox, [])
 
     def test_rejects_taken_and_unchanged_addresses(self):
@@ -75,8 +76,8 @@ class EmailChangeTests(ApiTestCase):
         taken = self.request_change("Vergeben@example.com")
         same = self.request_change("ALT@example.com")
 
-        self.assertIn("email", taken.json()["errors"])
-        self.assertIn("email", same.json()["errors"])
+        self.assertIn("email", taken.data["errors"])
+        self.assertIn("email", same.data["errors"])
         self.assertEqual(mail.outbox, [])
 
     def test_address_taken_before_the_click(self):
@@ -87,7 +88,7 @@ class EmailChangeTests(ApiTestCase):
         self.user.refresh_from_db()
 
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertEqual(response.json()["code"], "email_taken")
+        self.assertEqual(response.data["code"], "email_taken")
         self.assertEqual(self.user.email, "alt@example.com")
 
     def test_link_dies_when_the_address_changed_otherwise(self):
@@ -97,23 +98,23 @@ class EmailChangeTests(ApiTestCase):
         self.assertEqual(self.confirm(second).status_code, 204)
         response = self.confirm(first)
 
-        self.assertEqual(response.json()["code"], "invalid_token")
+        self.assertEqual(response.data["code"], "invalid_token")
         self.assertEqual(User.objects.get(pk=self.user.pk).email, "zwei@example.com")
 
     def test_old_verification_link_dies_with_the_old_address(self):
         verification = make_verification_token(self.user)
 
         self.confirm(make_email_change_token(self.user, "neu@example.com"))
-        response = self.client.post("/auth/email/verify", {"token": verification})
+        response = self.client.post(reverse("email_verify"), {"token": verification})
 
-        self.assertEqual(response.json()["code"], "invalid_token")
+        self.assertEqual(response.data["code"], "invalid_token")
 
     @override_settings(EMAIL_CHANGE_MAX_AGE=timedelta(seconds=-1))
     def test_expired_link(self):
         response = self.confirm(make_email_change_token(self.user, "neu@example.com"))
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["code"], "invalid_token")
+        self.assertEqual(response.data["code"], "invalid_token")
 
     def test_needs_login(self):
         self.client.logout()
@@ -129,4 +130,4 @@ class EmailChangeTests(ApiTestCase):
         response = self.request_change("neu9@example.com")
 
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
-        self.assertEqual(response.json()["code"], "throttled")
+        self.assertEqual(response.data["code"], "throttled")

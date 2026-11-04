@@ -1,3 +1,8 @@
+# In production a separate Postgres resource can replace the db service. Then
+# point DATABASE_URL in x-backend to it and remove db from depends_on.
+# No ports are published here; compose.override.yaml publishes them for local
+# development only.
+
 # Logs go to the host's journald, which deletes them after 14 days (see README).
 # Docker Desktop has no journald: local development sets LOG_DRIVER=json-file in .env.
 x-logging: &logging
@@ -7,7 +12,11 @@ x-backend: &backend
   build: .
   restart: unless-stopped
   logging: *logging
-  env_file: .env
+  # Locally from .env; on a hosting platform such as Coolify the variables come from its
+  # settings instead, so the file may be missing.
+  env_file:
+    - path: .env
+      required: false
   environment:
     DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     REDIS_URL: redis://redis:6379/0
@@ -30,8 +39,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -45,8 +52,6 @@ services:
     container_name: nibble-redis
     restart: unless-stopped
     logging: *logging
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -58,8 +63,8 @@ services:
   api:
     <<: *backend
     container_name: nibble-api
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     volumes:
       - media_data:/app/media
       - static_data:/app/staticfiles

@@ -76,7 +76,10 @@ class RecipeInputSerializer(serializers.Serializer):
     """
 
     name = serializers.CharField(min_length=3, max_length=120)
-    description = serializers.CharField(max_length=2000)
+    # Optional in the form; missing or empty is stored as an empty description
+    description = serializers.CharField(
+        max_length=2000, required=False, allow_blank=True, default=""
+    )
     prep_time_minutes = serializers.IntegerField(min_value=1, max_value=10080)
     diet = serializers.ChoiceField(
         choices=Recipe.Diet,

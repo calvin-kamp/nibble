@@ -1,13 +1,15 @@
-<mjml>
+<mjml lang="de">
   <mj-head>
     <mj-title>Dein Rezept wurde freigegeben</mj-title>
+    <mj-preview>Dein Rezept wurde freigegeben</mj-preview>
     <mj-include path="./layouts/head.mjml" />
   </mj-head>
-  <mj-body>
+  <mj-body background-color="#f3f6ec" width="600px">
     <mj-include path="./layouts/header.mjml" />
 
-    <mj-section>
+    <mj-section mj-class="content">
       <mj-column>
+        <mj-text mj-class="title">Dein Rezept wurde freigegeben</mj-text>
         <mj-text>Hallo,</mj-text>
         <mj-text>{{ kind }} „{{ name }}“ wurde freigegeben und ist jetzt für alle sichtbar.</mj-text>
       </mj-column>

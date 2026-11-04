@@ -1,6 +1,7 @@
 from io import StringIO
 
 from django.core.management import call_command
+from django.urls import reverse
 from PIL import Image
 from rest_framework import status
 
@@ -29,36 +30,34 @@ class RecipeApiTests(RecipeTestCase):
             ["protein_rich", "low_calorie", "few_ingredients", "under_30_min"],
         )
         self.assertFalse(data["is_saved"])
-        self.assertEqual(
-            RecipeSubmission.objects.get().kind, RecipeSubmission.Kind.NEW
-        )
+        self.assertEqual(RecipeSubmission.objects.get().kind, RecipeSubmission.Kind.NEW)
 
     def test_pending_recipes_are_hidden_from_others(self):
         data = self.create_recipe()
         self.login(self.other)
 
-        detail = self.client.get(f"/recipes/{data['id']}")
-        listing = self.client.get("/recipes")
+        detail = self.client.get(reverse("recipe-detail", kwargs={"pk": data["id"]}))
+        listing = self.client.get(reverse("recipe-list"))
 
         self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(listing.json()["count"], 0)
+        self.assertEqual(listing.data["count"], 0)
 
     def test_mine_shows_own_recipes_in_any_status(self):
         self.create_recipe()
 
-        listing = self.client.get("/recipes", {"mine": "true"})
+        listing = self.client.get(reverse("recipe-list"), {"mine": "true"})
         self.client.force_authenticate(None)
-        anonymous = self.client.get("/recipes", {"mine": "true"})
+        anonymous = self.client.get(reverse("recipe-list"), {"mine": "true"})
 
-        self.assertEqual(listing.json()["count"], 1)
-        self.assertEqual(listing.json()["results"][0]["status"], "pending")
+        self.assertEqual(listing.data["count"], 1)
+        self.assertEqual(listing.data["results"][0]["status"], "pending")
         self.assertEqual(anonymous.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_validation_errors_use_dot_notation(self):
         self.login(self.author)
 
         response = self.client.post(
-            "/recipes",
+            reverse("recipe-list"),
             recipe_payload(
                 ingredients=[{"name": "Salz", "amount": 0, "unit": "spoon"}],
                 steps=[{"step_number": 2, "text": "Kochen."}],
@@ -67,7 +66,7 @@ class RecipeApiTests(RecipeTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        errors = response.json()["errors"]
+        errors = response.data["errors"]
         self.assertIn("ingredients.0.amount", errors)
         self.assertIn("ingredients.0.unit", errors)
         self.assertIn("steps", errors)
@@ -82,10 +81,10 @@ class RecipeApiTests(RecipeTestCase):
         self.client.force_authenticate(None)
 
         def names(**params):
-            response = self.client.get("/recipes", params)
+            response = self.client.get(reverse("recipe-list"), params)
             self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
 
-            return sorted(item["name"] for item in response.json()["results"])
+            return sorted(item["name"] for item in response.data["results"])
 
         self.assertEqual(names(diet="vegan"), ["Ofen-Gemüse", "Overnight Oats"])
         self.assertEqual(len(names(diet="pescetarian")), 3)
@@ -96,21 +95,65 @@ class RecipeApiTests(RecipeTestCase):
         self.assertEqual(names(meal_types=["breakfast", "snack"]), ["Overnight Oats"])
         self.assertEqual(names(q="CURRY"), ["Fischcurry"])
         self.assertEqual(
-            self.client.get("/recipes", {"diet": "keto"}).json()["code"],
+            self.client.get(reverse("recipe-list"), {"diet": "keto"}).data["code"],
             "validation_error",
+        )
+
+    def test_sort_by_popularity(self):
+        quiet = self.create_recipe(approve=True, name="Linsensuppe")
+        popular = self.create_recipe(approve=True, name="Ofen-Gemüse")
+        newest = self.create_recipe(approve=True, name="Overnight Oats")
+
+        for user in (self.author, self.other):
+            self.login(user)
+            self.client.put(reverse("recipe-saved", kwargs={"pk": popular["id"]}))
+
+        self.login(self.other)
+        self.client.put(reverse("recipe-saved", kwargs={"pk": quiet["id"]}))
+        self.client.force_authenticate(None)
+
+        def names(**params):
+            response = self.client.get(reverse("recipe-list"), params)
+            self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+            return [item["name"] for item in response.data["results"]]
+
+        self.assertEqual(names(), ["Overnight Oats", "Ofen-Gemüse", "Linsensuppe"])
+        self.assertEqual(names(sort="newest"), names())
+        self.assertEqual(
+            names(sort="popular"), ["Ofen-Gemüse", "Linsensuppe", "Overnight Oats"]
+        )
+        self.assertEqual(newest["name"], "Overnight Oats")
+        self.assertEqual(
+            self.client.get(reverse("recipe-list"), {"sort": "random"}).data["code"],
+            "validation_error",
+        )
+
+        # Among the user's saved recipes the order still counts every user's bookmarks
+        self.login(self.other)
+        saved = self.client.get(
+            reverse("recipe-list"), {"saved": "true", "sort": "popular"}
+        ).data
+        self.assertEqual(
+            [item["name"] for item in saved["results"]],
+            ["Ofen-Gemüse", "Linsensuppe"],
         )
 
     def test_only_the_author_may_edit(self):
         data = self.create_recipe(approve=True)
         self.login(self.other)
 
-        update = self.client.put(f"/recipes/{data['id']}", recipe_payload())
-        delete = self.client.delete(f"/recipes/{data['id']}")
+        update = self.client.put(
+            reverse("recipe-detail", kwargs={"pk": data["id"]}), recipe_payload()
+        )
+        delete = self.client.delete(reverse("recipe-detail", kwargs={"pk": data["id"]}))
         self.client.force_authenticate(None)
-        anonymous = self.client.delete(f"/recipes/{data['id']}")
+        anonymous = self.client.delete(
+            reverse("recipe-detail", kwargs={"pk": data["id"]})
+        )
 
         self.assertEqual(update.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(update.json()["code"], "forbidden")
+        self.assertEqual(update.data["code"], "forbidden")
         self.assertEqual(delete.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(anonymous.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -122,29 +165,37 @@ class RecipeApiTests(RecipeTestCase):
         RecipeSubmission.objects.update(status=Recipe.Status.REJECTED)
 
         response = self.client.put(
-            f"/recipes/{data['id']}", recipe_payload(name="Linsensuppe")
+            reverse("recipe-detail", kwargs={"pk": data["id"]}),
+            recipe_payload(name="Linsensuppe"),
         )
 
-        self.assertEqual(response.json()["status"], "pending")
-        self.assertIsNone(response.json()["rejection_reason"])
-        self.assertEqual(response.json()["name"], "Linsensuppe")
+        self.assertEqual(response.data["status"], "pending")
+        self.assertIsNone(response.data["rejection_reason"])
+        self.assertEqual(response.data["name"], "Linsensuppe")
         self.assertEqual(RecipeSubmission.objects.filter(status="pending").count(), 1)
 
     def test_editing_an_approved_recipe_creates_one_revision(self):
         data = self.create_recipe(approve=True)
 
-        self.client.put(f"/recipes/{data['id']}", recipe_payload(name="Neu 1"))
+        self.client.put(
+            reverse("recipe-detail", kwargs={"pk": data["id"]}),
+            recipe_payload(name="Neu 1"),
+        )
         response = self.client.put(
-            f"/recipes/{data['id']}", recipe_payload(name="Neu 2")
+            reverse("recipe-detail", kwargs={"pk": data["id"]}),
+            recipe_payload(name="Neu 2"),
         )
         self.login(self.other)
-        public = self.client.get(f"/recipes/{data['id']}").json()
+        public = self.client.get(
+            reverse("recipe-detail", kwargs={"pk": data["id"]})
+        ).data
 
-        body = response.json()
+        body = response.data
         self.assertEqual(body["name"], "Rote Linsensuppe")
         self.assertEqual(body["pending_revision"]["content"]["name"], "Neu 2")
         self.assertEqual(
-            RecipeSubmission.objects.filter(kind="revision", status="pending").count(), 1
+            RecipeSubmission.objects.filter(kind="revision", status="pending").count(),
+            1,
         )
         self.assertEqual(public["name"], "Rote Linsensuppe")
         self.assertIsNone(public["pending_revision"])
@@ -154,36 +205,42 @@ class RecipeApiTests(RecipeTestCase):
         approved = self.create_recipe(approve=True, name="Freigegeben")
 
         direct = self.client.put(
-            f"/recipes/{pending['id']}/image",
+            reverse("recipe-image", kwargs={"pk": pending["id"]}),
             {"image": image_file()},
             format="multipart",
         )
         revision = self.client.put(
-            f"/recipes/{approved['id']}/image",
+            reverse("recipe-image", kwargs={"pk": approved["id"]}),
             {"image": image_file("x.webp", "WEBP")},
             format="multipart",
         )
         wrong = self.client.put(
-            f"/recipes/{pending['id']}/image",
+            reverse("recipe-image", kwargs={"pk": pending["id"]}),
             {"image": image_file("x.gif", "GIF")},
             format="multipart",
         )
 
         self.assertEqual(direct.status_code, status.HTTP_200_OK, direct.data)
-        self.assertRegex(direct.json()["image_url"], r"/recipes/\d+-rote-linsensuppe")
-        self.assertIsNone(revision.json()["image_url"])
-        self.assertTrue(revision.json()["pending_revision"]["image_url"].endswith(".webp"))
-        self.assertIn("image", wrong.json()["errors"])
+        self.assertRegex(direct.data["image_url"], r"/recipes/\d+-rote-linsensuppe")
+        self.assertIsNone(revision.data["image_url"])
+        self.assertTrue(
+            revision.data["pending_revision"]["image_url"].endswith(".webp")
+        )
+        self.assertIn("image", wrong.data["errors"])
 
     def test_public_responses_never_contain_the_username(self):
         data = self.create_recipe(approve=True)
         responses = {}
 
-        for name, user in (("guest", None), ("other", self.other), ("author", self.author)):
+        for name, user in (
+            ("guest", None),
+            ("other", self.other),
+            ("author", self.author),
+        ):
             self.client.force_authenticate(user)
             responses[name] = (
-                self.client.get("/recipes"),
-                self.client.get(f"/recipes/{data['id']}"),
+                self.client.get(reverse("recipe-list")),
+                self.client.get(reverse("recipe-detail", kwargs={"pk": data["id"]})),
             )
 
         for listing, detail in responses.values():
@@ -191,20 +248,20 @@ class RecipeApiTests(RecipeTestCase):
             self.assertEqual(detail.status_code, status.HTTP_200_OK)
             self.assertNotIn('"koch"', listing.content.decode())
             self.assertNotIn('"koch"', detail.content.decode())
-            self.assertNotIn("author", listing.json()["results"][0])
-            self.assertNotIn("author", detail.json())
+            self.assertNotIn("author", listing.data["results"][0])
+            self.assertNotIn("author", detail.data)
 
-        self.assertIsNone(responses["guest"][1].json()["is_own"])
-        self.assertFalse(responses["other"][1].json()["is_own"])
-        self.assertFalse(responses["other"][0].json()["results"][0]["is_own"])
-        self.assertTrue(responses["author"][1].json()["is_own"])
-        self.assertTrue(responses["author"][0].json()["results"][0]["is_own"])
+        self.assertIsNone(responses["guest"][1].data["is_own"])
+        self.assertFalse(responses["other"][1].data["is_own"])
+        self.assertFalse(responses["other"][0].data["results"][0]["is_own"])
+        self.assertTrue(responses["author"][1].data["is_own"])
+        self.assertTrue(responses["author"][0].data["results"][0]["is_own"])
 
     def test_uploaded_images_lose_their_metadata(self):
         recipe = self.create_recipe()
 
         response = self.client.put(
-            f"/recipes/{recipe['id']}/image",
+            reverse("recipe-image", kwargs={"pk": recipe["id"]}),
             {"image": photo_with_metadata()},
             format="multipart",
         )
@@ -226,7 +283,7 @@ class RecipeApiTests(RecipeTestCase):
         recipe = self.create_recipe()
 
         response = self.client.put(
-            f"/recipes/{recipe['id']}/image",
+            reverse("recipe-image", kwargs={"pk": recipe["id"]}),
             {"image": mpo_photo()},
             format="multipart",
         )
@@ -248,7 +305,7 @@ class RecipeApiTests(RecipeTestCase):
         recipe = self.create_recipe(approve=True)
 
         self.client.put(
-            f"/recipes/{recipe['id']}/image",
+            reverse("recipe-image", kwargs={"pk": recipe["id"]}),
             {"image": photo_with_metadata()},
             format="multipart",
         )
@@ -265,7 +322,7 @@ class RecipeApiTests(RecipeTestCase):
         stored.image.save("image.jpg", photo_with_metadata())
         other = self.create_recipe(name="Sauber")
         self.client.put(
-            f"/recipes/{other['id']}/image",
+            reverse("recipe-image", kwargs={"pk": other["id"]}),
             {"image": image_file()},
             format="multipart",
         )
@@ -293,19 +350,23 @@ class RecipeApiTests(RecipeTestCase):
         data = self.create_recipe(approve=True)
         self.login(self.other)
 
-        saved = self.client.put(f"/recipes/{data['id']}/saved")
-        listing = self.client.get("/recipes", {"saved": "true"}).json()
-        removed = self.client.delete(f"/recipes/{data['id']}/saved")
+        saved = self.client.put(reverse("recipe-saved", kwargs={"pk": data["id"]}))
+        listing = self.client.get(reverse("recipe-list"), {"saved": "true"}).data
+        removed = self.client.delete(reverse("recipe-saved", kwargs={"pk": data["id"]}))
 
         self.assertEqual(saved.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(listing["count"], 1)
         self.assertTrue(listing["results"][0]["is_saved"])
         self.assertEqual(removed.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(self.client.get(f"/recipes/{data['id']}").json()["is_saved"])
+        self.assertFalse(
+            self.client.get(reverse("recipe-detail", kwargs={"pk": data["id"]})).data[
+                "is_saved"
+            ]
+        )
 
     def test_pending_recipes_cannot_be_saved(self):
         data = self.create_recipe()
 
-        response = self.client.put(f"/recipes/{data['id']}/saved")
+        response = self.client.put(reverse("recipe-saved", kwargs={"pk": data["id"]}))
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

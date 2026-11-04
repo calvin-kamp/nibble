@@ -103,7 +103,9 @@ def compute_properties(content):
     """See RecipeProperty in the API spec."""
     properties = []
 
-    if content["protein"] > 0 and content["protein"] >= content["kcal"] * Decimal("0.1"):
+    if content["protein"] > 0 and content["protein"] >= content["kcal"] * Decimal(
+        "0.1"
+    ):
         properties.append(Recipe.Property.PROTEIN_RICH)
 
     if content["kcal"] <= 450:
@@ -120,9 +122,7 @@ def compute_properties(content):
 
 def content_json(content):
     """RecipeInput JSON of a Recipe or of validated data, as stored in submissions."""
-    return json.loads(
-        json.dumps(RecipeInputSerializer(content).data, cls=JSONEncoder)
-    )
+    return json.loads(json.dumps(RecipeInputSerializer(content).data, cls=JSONEncoder))
 
 
 def apply_content(recipe, content):
@@ -160,11 +160,6 @@ def open_submission(recipe, kind):
         .filter(kind=kind, status=Status.PENDING)
         .first()
     )
-
-
-# ------------------------------------------------------------------------------
-# Author actions
-# ------------------------------------------------------------------------------
 
 
 @transaction.atomic
@@ -277,11 +272,6 @@ def submit_revision(recipe, content=None, image=None, remove_image=False):
         notify_staff(submission)
 
     return submission
-
-
-# ------------------------------------------------------------------------------
-# Moderator actions
-# ------------------------------------------------------------------------------
 
 
 def locked_pending(submission):

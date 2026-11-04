@@ -63,6 +63,26 @@ Open `.env` and replace `YOUR_SECRET_KEY`, `YOUR_JWT_SIGNING_KEY` and
 the template work for local development as they are, see
 [Configuration](#configuration).
 
+`compose.yaml` publishes no ports, the containers reach each other over the
+Compose network. For local development, create `compose.override.yaml` next to
+it. Docker Compose reads it automatically, and git ignores it, so it never
+reaches production:
+
+```yaml
+services:
+  db:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  api:
+    ports:
+      - "8000:8000"
+```
+
 Build and start the containers:
 
 ```bash
@@ -111,7 +131,7 @@ $csrf = (Invoke-RestMethod -Uri "$api/auth/csrf" -SessionVariable session).csrf_
 $headers = @{ "X-CSRFToken" = $csrf }
 
 # 2. Register (logs in right away)
-$register = @{ email = "demo@example.com"; password = "S3cure-Passw0rd!" } | ConvertTo-Json
+$register = @{ email = "demo@example.com"; password = "S3cure-Passw0rd!"; terms_accepted = $true; terms_version = "1" } | ConvertTo-Json
 
 Invoke-RestMethod -Uri "$api/auth/register" -Method Post -ContentType "application/json" -Body $register -Headers $headers -WebSession $session
 
@@ -135,7 +155,7 @@ CSRF=$(curl -s -c cookies.txt $API/auth/csrf | sed -E 's/.*"csrf_token":"([^"]+)
 # 2. Register (logs in right away)
 curl -b cookies.txt -c cookies.txt -X POST $API/auth/register \
   -H "Content-Type: application/json" -H "X-CSRFToken: $CSRF" \
-  -d '{"email": "demo@example.com", "password": "S3cure-Passw0rd!"}'
+  -d '{"email": "demo@example.com", "password": "S3cure-Passw0rd!", "terms_accepted": true, "terms_version": "1"}'
 
 # 3. Choose a username and give the privacy consent
 curl -b cookies.txt -X PATCH $API/profile \
@@ -311,6 +331,10 @@ The server will not start without `SECRET_KEY` and `REDIS_URL`.
 docker compose up -d --build
 ```
 
+The server has no `compose.override.yaml`, so no port is published. The reverse
+proxy (Coolify) reaches the `api` container on port `8000` over the Compose
+network.
+
 Before deploying, set in `.env`:
 
 - `DEBUG=False`
@@ -319,7 +343,8 @@ Before deploying, set in `.env`:
   the same domain
 - `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` to the real
   domains
-- `NUM_PROXIES=1` behind a reverse proxy
+- `NUM_PROXIES=1` behind the Coolify proxy. Without it the API sees the proxy's
+  IP for every request, so all users share the rate limits.
 - `EMAIL_URL` and `DEFAULT_FROM_EMAIL` for the real mail server
 - delete the four lines `SECURE_SSL_REDIRECT`, `SECURE_HSTS_SECONDS`,
   `SECURE_HSTS_INCLUDE_SUBDOMAINS` and `SESSION_COOKIE_SECURE`; without them the
@@ -334,6 +359,41 @@ docker compose run --rm --no-deps --entrypoint python api -c "import secrets; pr
 
 Django serves the recipe images under `/media/` itself, also with `DEBUG=False`.
 They are stored in the `media_data` volume, so they survive a redeploy.
+
+### After the first start
+
+Create the account for the admin panel:
+
+```bash
+docker compose exec api python manage.py createsuperuser
+```
+
+Start the food import once by hand. The weekly job only runs on Sundays, so the
+food search stays empty until then:
+
+```bash
+docker compose exec api python manage.py import_off_products
+```
+
+### Restoring a backup
+
+A restored database brings back every account deleted since the backup was made and
+loses every deletion request made since. The privacy policy promises to repeat them, so
+after every restore, before the site is reachable again:
+
+1. Collect the daily mails "Löschprotokoll: … neue Einträge" since the backup was made
+   (to `DELETION_LOG_RECIPIENTS`, otherwise to every staff account) and copy them into
+   one text file. Everything except the entry lines is ignored.
+2. Check what would happen, then run it:
+
+```bash
+docker compose exec api python manage.py reapply_deletions --file deletions.txt --dry-run
+docker compose exec api python manage.py reapply_deletions --file deletions.txt
+```
+
+The command also reads the log in the restored database. It only touches an account whose
+ID and registration time both match, and sends no e-mails. The log keeps account IDs and
+timestamps only, for 30 days (`DELETION_LOG_RETENTION`).
 
 ### Server logs (14 days at most)
 
@@ -421,11 +481,27 @@ the jobs and `beat` adds the scheduled ones to the queue.
 | --------------------------------------------- | -------------------------- | -------------------------------------------------- |
 | `config.tasks.send_email_task`                | after every e-mail trigger | Sends one e-mail; retries up to 5 times on failure |
 | `apps.accounts.tasks.delete_expired_accounts` | daily, 03:00               | Deletes accounts whose 7-day period has ended      |
+| `apps.accounts.tasks.send_deletion_log`       | daily, 03:15               | Mails new deletion log entries, drops old ones     |
 | `apps.accounts.tasks.flush_expired_tokens`    | daily, 03:30               | Removes expired tokens from the blacklist          |
 | `apps.foods.tasks.import_off_products`        | Sundays, 04:00             | Full food import, see [Food data](#food-data)      |
 
 E-mails are queued only after the database transaction has been saved, so no
 e-mail goes out for a change that was rolled back. All times are `Europe/Berlin`.
+
+### E-mail templates
+
+Each e-mail has a text version in `templates/emails/text/` and an HTML version
+built from MJML. Edit the `.mjml` files in `templates/emails/mjml/` (shared head,
+header and footer in `layouts/`), then rebuild the HTML files. Logo and footer
+links point to `FRONTEND_URL`, the logos are PNGs in the frontend's `public/brand/`.
+
+```bash
+cd templates/emails/mjml
+for f in *.mjml; do
+  npx mjml@4.15.3 "$f" --config.validationLevel=strict --config.keepComments=false \
+    --config.filePath=. -o "../html/${f%.mjml}.html"
+done
+```
 
 ---
 
@@ -520,7 +596,6 @@ counters are stored in Redis.
 | `POST /auth/email/verification/resend`              | 3 per hour per user                                        |
 | `POST /auth/password/change`                        | 5 per 15 minutes per user                                  |
 | `POST /auth/email/change`                           | 3 per hour per user                                        |
-| `GET /profile/username-availability`                | 60 per minute per user                                     |
 | `POST /account/deletion`, `GET /account/export` | 3 per hour per user each                                   |
 | all other endpoints                                     | 120 per minute per user, 60 per minute per IP without login |
 
@@ -544,7 +619,7 @@ account.
 | Method | Path                              | Access | Purpose                                                   |
 | ------ | --------------------------------- | ------ | --------------------------------------------------------- |
 | GET    | `/auth/csrf`                      | public | Sets the `csrftoken` cookie and returns its value         |
-| POST   | `/auth/register`                  | public | `{ email, password }`; creates the account and logs in    |
+| POST   | `/auth/register`                  | public | `{ email, password, terms_accepted, terms_version }`; creates the account and logs in |
 | POST   | `/auth/login`                     | public | `{ email, password }`; sets the auth cookies              |
 | POST   | `/auth/refresh`                   | public | Uses the refresh cookie; renews both cookies              |
 | POST   | `/auth/logout`                    | public | Blocks the refresh token and deletes the cookies          |
@@ -569,7 +644,6 @@ account.
 | POST   | `/onboarding/complete`           | login  | Finishes the onboarding                                |
 | GET    | `/profile`                       | login  | Username and creation date                             |
 | PATCH  | `/profile`                       | login  | `{ username }`; sets or changes the username           |
-| GET    | `/profile/username-availability` | login  | `?username=...`; checks whether a username is free     |
 | GET    | `/privacy/consent`               | login  | Current consent                                        |
 | PUT    | `/privacy/consent`               | login  | `{ accepted, policy_version }`; gives or revokes it    |
 
@@ -650,13 +724,13 @@ docker compose exec api python manage.py test apps.accounts.tests.test_auth.Cook
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | `apps/accounts/tests/test_auth.py`         | CSRF header, registration, login, rate limit, refresh rotation, logout, verification, password change and reset |
 | `apps/accounts/tests/test_email_change.py` | E-mail change: link and notice, change only after the click, taken addresses, expired and outdated links        |
-| `apps/accounts/tests/test_onboarding.py`   | Onboarding steps and their order, unique usernames, consent history, deletion of tracking data on revocation    |
+| `apps/accounts/tests/test_onboarding.py`   | Onboarding steps and their order, shared usernames, consent history, deletion of tracking data on revocation    |
 | `apps/accounts/tests/test_account.py`      | Account deletion with grace period and daily job, data export with and without consent                          |
 | `apps/accounts/tests/test_body.py`         | Body data: single fields, limits, minimum age, consent, deletion with the account                               |
 | `apps/recipes/tests/test_recipes.py`       | Creating, filtering and editing recipes, author check, images and their metadata, saved recipes                 |
 | `apps/recipes/tests/test_moderation.py`    | Staff-only access, approving and rejecting new recipes and revisions, staff notification                        |
 | `apps/foods/tests/test_foods.py`           | Food search by text and barcode, import filters, `--scan-years` and `--limit`                                   |
-| `apps/tracking/tests/test_nutrition.py`    | Entries computed from amount and unit, future dates, meals with notes, daily summary and targets                |
+| `apps/tracking/tests/test_nutrition.py`    | Entries computed from amount and unit, future dates, meals, daily summary and targets                           |
 | `apps/tracking/tests/test_weights.py`      | One entry per day, ranges for the chart, weekly averages, paging and week detail                                |
 | `apps/stats/tests/test_stats.py`           | Public numbers count only approved recipes and active users; an invalid cookie does not block them              |
 
@@ -721,5 +795,5 @@ that special characters in the password are URL-encoded. `sendtestemail` (see
 
 **`Bind for 0.0.0.0:8000 failed: port is already allocated`** — another program
 uses the port. Stop it or change the left side of the port mapping in
-`docker-compose.yml`, for example `"8001:8000"`. The same applies to `5432` and
+`compose.override.yaml`, for example `"8001:8000"`. The same applies to `5432` and
 `6379`.

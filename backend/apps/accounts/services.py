@@ -21,6 +21,7 @@ from apps.tracking.nutrition.serializers import (
 from apps.tracking.weight.serializers import WeightEntrySerializer
 from config.emails import send_template_email
 
+from . import deletion_log
 from .tokens import (
     make_email_change_token,
     make_password_reset_token,
@@ -170,7 +171,30 @@ def send_account_deleted_email(user):
 
 
 @transaction.atomic
-def delete_account(user):
+def schedule_deletion(user):
+    """Starts the grace period. Asking again keeps the date, it doesn't start over."""
+    if user.deletion_scheduled_for is not None:
+        return
+
+    user.deletion_scheduled_for = (
+        timezone.now() + settings.ACCOUNT_DELETION_GRACE_PERIOD
+    )
+    user.save(update_fields=["deletion_scheduled_for"])
+    deletion_log.record(
+        user, deletion_log.Event.REQUESTED, scheduled_for=user.deletion_scheduled_for
+    )
+    send_deletion_scheduled_email(user)
+
+
+@transaction.atomic
+def cancel_deletion(user):
+    user.deletion_scheduled_for = None
+    user.save(update_fields=["deletion_scheduled_for"])
+    deletion_log.record(user, deletion_log.Event.CANCELLED)
+
+
+@transaction.atomic
+def delete_account(user, notify=True):
     """Deletes the user and everything attached; approved recipes stay without author.
 
     Profile, consent, goals, tracking data, meals and saved recipes go with the
@@ -190,7 +214,10 @@ def delete_account(user):
     ).exclude(status=Recipe.Status.APPROVED):
         delete_submission(submission)
 
-    send_account_deleted_email(user)
+    if notify:
+        send_account_deleted_email(user)
+
+    # The deletion log entry is written by the post_delete signal, see apps.py
     user.delete()
 
 
@@ -207,6 +234,9 @@ def build_export(request):
             "created_at": user.date_joined,
             "last_login": user.last_login,
             "deletion_scheduled_for": user.deletion_scheduled_for,
+            "terms_accepted_at": profile.terms_accepted_at,
+            "terms_version": profile.terms_version,
+            "privacy_policy_version": profile.privacy_policy_version,
         },
         "profile": ProfileSerializer(profile).data,
         "onboarding": OnboardingStateSerializer(profile).data,

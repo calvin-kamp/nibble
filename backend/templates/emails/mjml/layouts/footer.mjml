@@ -1,5 +1,17 @@
-<mj-section>
+<!-- Forest footer across the whole width, like in the app: mark, the most important links and
+     why the mail came. full-width needs the section directly in mj-body. -->
+<mj-section full-width="full-width" background-color="#052b19" padding="36px 24px 24px">
   <mj-column>
-    <mj-text>Diese E-Mail wurde automatisch versendet.</mj-text>
+    <mj-image src="{{ frontend_url }}/brand/logomark-dark.png" alt="" width="32px" align="center" padding="0 0 12px" />
+    <mj-text mj-class="footer" color="#ffffff" font-weight="700" font-size="15px">Iss gut. Wir rechnen mit.</mj-text>
+    <mj-navbar align="center" hamburger="">
+      <mj-navbar-link href="{{ frontend_url }}/hilfe" color="#c7f04a" font-size="14px" font-weight="700" text-transform="none" padding="6px 8px">Hilfe</mj-navbar-link>
+      <mj-navbar-link href="{{ frontend_url }}/einstellungen" color="#c7f04a" font-size="14px" font-weight="700" text-transform="none" padding="6px 8px">Einstellungen</mj-navbar-link>
+      <mj-navbar-link href="{{ frontend_url }}/datenschutz" color="#c7f04a" font-size="14px" font-weight="700" text-transform="none" padding="6px 8px">Datenschutz</mj-navbar-link>
+      <mj-navbar-link href="{{ frontend_url }}/impressum" color="#c7f04a" font-size="14px" font-weight="700" text-transform="none" padding="6px 8px">Impressum</mj-navbar-link>
+    </mj-navbar>
+    <mj-divider border-color="#2c8450" border-width="1px" padding="12px 0 16px" />
+    <mj-text mj-class="footer" css-class="link-inverse">Fragen? Schreib uns an <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</mj-text>
+    <mj-text mj-class="footer">Du bekommst diese E-Mail, weil es zu dieser Adresse ein Konto bei nibble gibt. Sie wurde automatisch versendet, Antworten darauf lesen wir nicht.</mj-text>
   </mj-column>
 </mj-section>

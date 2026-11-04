@@ -1,3 +1,4 @@
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
@@ -17,70 +18,60 @@ class OnboardingTests(ApiTestCase):
         self.login(self.user)
 
     def step(self):
-        return self.client.get("/onboarding").json()["current_step"]
+        return self.client.get(reverse("onboarding")).data["current_step"]
 
     def test_full_onboarding_with_consent(self):
-        self.client.patch("/profile", {"username": "gurke_42"})
+        self.client.patch(reverse("profile"), {"username": "gurke_42"})
         self.assertEqual(self.step(), "consent")
 
         self.client.put(
-            "/privacy/consent", {"accepted": True, "policy_version": "2026-10-27"}
+            reverse("privacy_consent"),
+            {"accepted": True, "policy_version": "2026-10-27"},
         )
         self.assertEqual(self.step(), "goal")
 
-        self.client.patch("/tracking/goal", {"goal": "lose"})
+        self.client.patch(reverse("goal"), {"goal": "lose"})
         self.assertEqual(self.step(), "targets")
 
         self.client.patch(
-            "/tracking/goal",
+            reverse("goal"),
             {"targets": {"kcal": 2000, "protein": 120, "carbs": 220, "fat": 70}},
         )
         self.assertEqual(self.step(), "summary")
 
-        response = self.client.post("/onboarding/complete")
+        response = self.client.post(reverse("onboarding_complete"))
 
-        self.assertEqual(response.json(), {"completed": True, "current_step": "summary"})
+        self.assertEqual(response.data, {"completed": True, "current_step": "summary"})
 
     def test_declining_consent_skips_goal_and_targets(self):
-        self.client.patch("/profile", {"username": "gurke"})
-        self.client.put("/privacy/consent", REVOKE)
+        self.client.patch(reverse("profile"), {"username": "gurke"})
+        self.client.put(reverse("privacy_consent"), REVOKE)
 
         self.assertEqual(self.step(), "summary")
         self.assertEqual(
-            self.client.patch("/onboarding", {"current_step": "goal"}).json()["code"],
+            self.client.patch(reverse("onboarding"), {"current_step": "goal"}).data[
+                "code"
+            ],
             "onboarding_step_not_allowed",
         )
 
     def test_steps_need_their_preconditions(self):
-        response = self.client.patch("/onboarding", {"current_step": "consent"})
-        complete = self.client.post("/onboarding/complete")
+        response = self.client.patch(reverse("onboarding"), {"current_step": "consent"})
+        complete = self.client.post(reverse("onboarding_complete"))
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json()["code"], "onboarding_step_not_allowed")
+        self.assertEqual(response.data["code"], "onboarding_step_not_allowed")
         self.assertEqual(complete.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_username_is_unique_ignoring_case(self):
+    def test_username_may_be_shared(self):
         self.create_user("other@example.com", username="Gurke")
 
-        taken = self.client.patch("/profile", {"username": "gurke"})
-        invalid = self.client.patch("/profile", {"username": "a b"})
-        available = self.client.get(
-            "/profile/username-availability", {"username": "GURKE"}
-        )
+        shared = self.client.patch(reverse("profile"), {"username": "gurke"})
+        invalid = self.client.patch(reverse("profile"), {"username": "a b"})
 
-        self.assertEqual(taken.status_code, status.HTTP_409_CONFLICT)
-        self.assertEqual(taken.json()["code"], "username_taken")
-        self.assertIn("username", invalid.json()["errors"])
-        self.assertEqual(available.json(), {"username": "GURKE", "available": False})
-
-    def test_own_username_counts_as_available(self):
-        self.client.patch("/profile", {"username": "Gurke"})
-
-        response = self.client.get(
-            "/profile/username-availability", {"username": "gurke"}
-        )
-
-        self.assertTrue(response.json()["available"])
+        self.assertEqual(shared.status_code, status.HTTP_200_OK)
+        self.assertEqual(shared.data["username"], "gurke")
+        self.assertIn("username", invalid.data["errors"])
 
 
 class ConsentTests(ApiTestCase):
@@ -90,47 +81,50 @@ class ConsentTests(ApiTestCase):
         self.login(self.user)
 
     def test_tracking_needs_consent(self):
-        self.client.put("/privacy/consent", REVOKE)
+        self.client.put(reverse("privacy_consent"), REVOKE)
 
-        response = self.client.get("/tracking/goal")
+        response = self.client.get(reverse("goal"))
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.json()["code"], "consent_required")
+        self.assertEqual(response.data["code"], "consent_required")
 
     def test_every_decision_needs_the_policy_version(self):
-        accept = self.client.put("/privacy/consent", {"accepted": True})
-        revoke = self.client.put("/privacy/consent", {"accepted": False})
+        accept = self.client.put(reverse("privacy_consent"), {"accepted": True})
+        revoke = self.client.put(reverse("privacy_consent"), {"accepted": False})
 
-        self.assertIn("policy_version", accept.json()["errors"])
-        self.assertIn("policy_version", revoke.json()["errors"])
+        self.assertIn("policy_version", accept.data["errors"])
+        self.assertIn("policy_version", revoke.data["errors"])
         self.assertFalse(ConsentRecord.objects.exists())
 
     def test_history_records_consent_and_revocation_with_version(self):
-        self.client.put("/privacy/consent", {"accepted": True, "policy_version": "v1"})
-        self.client.put("/privacy/consent", {"accepted": False, "policy_version": "v1"})
+        self.client.put(
+            reverse("privacy_consent"), {"accepted": True, "policy_version": "v1"}
+        )
+        self.client.put(
+            reverse("privacy_consent"), {"accepted": False, "policy_version": "v1"}
+        )
         response = self.client.put(
-            "/privacy/consent", {"accepted": True, "policy_version": "v2"}
+            reverse("privacy_consent"), {"accepted": True, "policy_version": "v2"}
         )
 
-        history = list(
-            ConsentRecord.objects.values_list("accepted", "policy_version")
-        )
+        history = list(ConsentRecord.objects.values_list("accepted", "policy_version"))
         self.assertEqual(history, [(True, "v1"), (False, "v1"), (True, "v2")])
-        self.assertEqual(response.json()["policy_version"], "v2")
+        self.assertEqual(response.data["policy_version"], "v2")
         self.user.profile.refresh_from_db()
         self.assertEqual(
-            ConsentRecord.objects.last().decided_at, self.user.profile.consent_decided_at
+            ConsentRecord.objects.last().decided_at,
+            self.user.profile.consent_decided_at,
         )
 
     def test_revocation_keeps_its_version_on_the_profile(self):
-        self.client.put("/privacy/consent", REVOKE)
+        self.client.put(reverse("privacy_consent"), REVOKE)
 
         self.user.profile.refresh_from_db()
         self.assertEqual(self.user.profile.consent_policy_version, "2026-10-27")
         self.assertEqual(ConsentRecord.objects.get().accepted, False)
 
     def test_history_is_deleted_with_the_account(self):
-        self.client.put("/privacy/consent", ACCEPT)
+        self.client.put(reverse("privacy_consent"), ACCEPT)
 
         self.user.delete()
 
@@ -138,18 +132,18 @@ class ConsentTests(ApiTestCase):
 
     def test_revoking_deletes_tracking_data(self):
         self.client.post(
-            "/tracking/weights", {"weight_kg": 80.5, "measured_on": "2026-01-05"}
+            reverse("weights"), {"weight_kg": 80.5, "measured_on": "2026-01-05"}
         )
-        self.client.patch("/tracking/goal", {"goal": "gain"})
+        self.client.patch(reverse("goal"), {"goal": "gain"})
 
-        response = self.client.put("/privacy/consent", REVOKE)
+        response = self.client.put(reverse("privacy_consent"), REVOKE)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(response.json()["accepted"])
+        self.assertFalse(response.data["accepted"])
         self.assertFalse(WeightEntry.objects.exists())
         self.assertFalse(GoalSetting.objects.exists())
 
-    def test_revoking_deletes_body_data_and_meals_with_notes(self):
+    def test_revoking_deletes_body_data_and_meals(self):
         FoodProduct.objects.create(
             code="4000000000001",
             name="Haferflocken",
@@ -159,19 +153,18 @@ class ConsentTests(ApiTestCase):
             fat_per_100=7,
             imported_at=timezone.now(),
         )
-        self.client.patch("/tracking/body", {"height_cm": 180, "sex": "female"})
+        self.client.patch(reverse("body"), {"height_cm": 180, "sex": "female"})
         self.client.post(
-            "/tracking/meals",
+            reverse("meal-list"),
             {
                 "name": "Porridge",
-                "note": "Mit Zimt",
                 "items": [{"off_code": "4000000000001", "amount": 60, "unit": "g"}],
             },
         )
         self.assertTrue(BodyProfile.objects.exists())
-        self.assertTrue(Meal.objects.filter(note="Mit Zimt").exists())
+        self.assertTrue(Meal.objects.exists())
 
-        self.client.put("/privacy/consent", REVOKE)
+        self.client.put(reverse("privacy_consent"), REVOKE)
 
         self.assertFalse(BodyProfile.objects.exists())
         self.assertFalse(Meal.objects.exists())

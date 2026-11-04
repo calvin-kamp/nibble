@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import User
 from apps.accounts.onboarding.serializers import OnboardingStateSerializer
+from apps.accounts.profile.serializers import MIN_AGE
 
 
 def validate_new_password(password, user):
@@ -49,12 +50,27 @@ class AccountStateSerializer(serializers.ModelSerializer):
         )
 
 
+TERMS_MESSAGE = (
+    f"Stimme den AGB zu und bestätige, dass du mindestens {MIN_AGE} Jahre alt bist."
+)
+
+
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=254)
     password = NewPasswordField()
+    # One checkbox: terms accepted and at least MIN_AGE years old.
+    terms_accepted = serializers.BooleanField(
+        error_messages={"required": TERMS_MESSAGE},
+    )
 
     def validate_email(self, value):
         return User.objects.normalize_email(value)
+
+    def validate_terms_accepted(self, value):
+        if not value:
+            raise serializers.ValidationError(TERMS_MESSAGE)
+
+        return value
 
     def validate(self, attrs):
         try:

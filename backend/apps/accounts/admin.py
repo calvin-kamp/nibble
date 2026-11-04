@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ConsentRecord, Profile, User
+from .models import ConsentRecord, DeletionLog, Profile, User
 
 
 class ConsentRecordInline(admin.TabularInline):
@@ -37,3 +37,21 @@ class ProfileAdmin(admin.ModelAdmin):
     list_display = ("__str__", "user", "consent_accepted", "onboarding_completed")
     readonly_fields = ("user", "created_at")
     inlines = (ConsentRecordInline,)
+
+
+@admin.register(DeletionLog)
+class DeletionLogAdmin(admin.ModelAdmin):
+    """Read-only: entries come from the deletion flow and are needed after a restore."""
+
+    list_display = ("occurred_at", "event", "user_id", "scheduled_for", "reported_at")
+    list_filter = ("event",)
+    search_fields = ("user_id",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

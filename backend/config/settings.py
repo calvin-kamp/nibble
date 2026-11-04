@@ -11,7 +11,6 @@ from pathlib import Path
 import environ
 from celery.schedules import crontab
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -123,6 +122,10 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": env.db("DATABASE_URL"),
 }
+# Keeps a connection per worker open for a minute instead of one per request; the health
+# check replaces one that the database has closed in the meantime.
+DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=60)
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
 
 # ------------------------------------------------------------------------------
@@ -205,7 +208,9 @@ STORAGES = {
 
 vars().update(env.email("EMAIL_URL", default="consolemail://"))
 
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Nibble <noreply@example.com>")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="nibble <noreply@example.com>")
+# Shown in the footer of every e-mail, as the address for questions
+SUPPORT_EMAIL = env("SUPPORT_EMAIL", default="support@nibble-tracking.de")
 
 
 # ------------------------------------------------------------------------------
@@ -215,9 +220,9 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Nibble <noreply@example.
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
 CORS_ALLOW_CREDENTIALS = True
 
-# ==============================================================================
+# ------------------------------------------------------------------------------
 # Django REST Framework
-# ==============================================================================
+# ------------------------------------------------------------------------------
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
@@ -248,7 +253,6 @@ REST_FRAMEWORK = {
         "verification_resend": "3/hour",
         "password_change": "5/15min",
         "email_change": "3/hour",
-        "username_availability": "60/min",
         "account_deletion": "3/hour",
         "account_export": "3/hour",
     },
@@ -259,9 +263,9 @@ REST_FRAMEWORK = {
 }
 
 
-# ==============================================================================
+# ------------------------------------------------------------------------------
 # SimpleJWT
-# ==============================================================================
+# ------------------------------------------------------------------------------
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
@@ -270,9 +274,9 @@ SIMPLE_JWT = {
 }
 
 
-# ==============================================================================
+# ------------------------------------------------------------------------------
 # AUTH_COOKIE
-# ==============================================================================
+# ------------------------------------------------------------------------------
 
 AUTH_COOKIE = {
     "ACCESS_NAME": "access_token",
@@ -289,18 +293,28 @@ CSRF_COOKIE_SECURE = AUTH_COOKIE["SECURE"]
 CSRF_COOKIE_SAMESITE = AUTH_COOKIE["SAMESITE"]
 
 
-# ==============================================================================
+# ------------------------------------------------------------------------------
 # Celery
-# ==============================================================================
+# ------------------------------------------------------------------------------
 
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL)
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
 CELERY_TIMEZONE = TIME_ZONE
+# Without a value Celery starts one process per CPU core, more than e-mails and the nightly
+# jobs need. One task at a time per process, so the long weekly food import does not hold
+# back e-mails that are waiting.
+CELERY_WORKER_CONCURRENCY = env.int("CELERY_CONCURRENCY", default=2)
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 100
 
 CELERY_BEAT_SCHEDULE = {
     "delete-expired-accounts": {
         "task": "apps.accounts.tasks.delete_expired_accounts",
         "schedule": crontab(hour=3, minute=0),
+    },
+    "send-deletion-log": {
+        "task": "apps.accounts.tasks.send_deletion_log",
+        "schedule": crontab(hour=3, minute=15),
     },
     "flush-expired-tokens": {
         "task": "apps.accounts.tasks.flush_expired_tokens",
@@ -313,13 +327,24 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 
-# ==============================================================================
+# ------------------------------------------------------------------------------
 # Nibble
-# ==============================================================================
+# ------------------------------------------------------------------------------
 
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
 
 ACCOUNT_DELETION_GRACE_PERIOD = timedelta(days=7)
+# Deletion log (accounts.deletion_log): kept longer than any backup can be old, i.e. the
+# two weekly server backups of the host plus the 7 daily database backups.
+DELETION_LOG_RETENTION = timedelta(days=30)
+# Who gets the daily copy of new entries; empty: every active staff account
+DELETION_LOG_RECIPIENTS = env.list("DELETION_LOG_RECIPIENTS", default=[])
+
+# Current revisions of the legal texts (date of the "Stand" on /agb and /datenschutz).
+# Stored on every new profile. Change together with the texts and legal.constants.ts
+# in the frontend.
+TERMS_VERSION = "2026-10-28"
+PRIVACY_POLICY_VERSION = "2026-11-04"
 
 OFF_DUMP_URL = env(
     "OFF_DUMP_URL",

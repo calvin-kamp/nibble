@@ -1,3 +1,4 @@
+from django.urls import reverse
 from django.utils import timezone
 
 from apps.foods.models import FoodProduct
@@ -39,7 +40,7 @@ class TrackingTestCase(ApiTestCase):
 
     def track(self, code=OATS, amount=50, unit="g", **extra):
         return self.client.post(
-            "/tracking/entries",
+            reverse("entry_create"),
             {
                 "off_code": code,
                 "amount": amount,

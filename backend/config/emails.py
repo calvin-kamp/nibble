@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import transaction
 from django.template.loader import render_to_string
 
@@ -18,7 +19,16 @@ def send_email(recipients, subject, body, html=None):
 
 
 def send_template_email(recipients, subject, template, context):
-    """Renders emails/<template>.txt and .html and queues both."""
+    """Renders emails/<template>.txt and .html and queues both.
+
+    Every template gets the frontend address for logo and footer links, and the support
+    address for questions.
+    """
+    context = {
+        "frontend_url": settings.FRONTEND_URL.rstrip("/"),
+        "support_email": settings.SUPPORT_EMAIL,
+        **context,
+    }
     body = render_to_string(f"emails/text/{template}.txt", context)
     html = render_to_string(f"emails/html/{template}.html", context)
 

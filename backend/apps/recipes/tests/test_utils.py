@@ -1,6 +1,7 @@
 from io import BytesIO
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.urls import reverse
 from PIL import Image, ImageCms
 from rest_framework import status
 
@@ -61,12 +62,17 @@ def photo_with_metadata():
     data = buffer.getvalue()
 
     # IPTC lives in an APP13 "Photoshop 3.0" segment, inserted right after SOI
-    iptc = b"Photoshop 3.0\x00" + b"8BIM\x04\x04\x00\x00\x00\x00\x00\x07\x1c\x02\x78\x00\x02Hi\x00"
+    iptc = (
+        b"Photoshop 3.0\x00"
+        + b"8BIM\x04\x04\x00\x00\x00\x00\x00\x07\x1c\x02\x78\x00\x02Hi\x00"
+    )
     segment = b"\xff\xed" + (len(iptc) + 2).to_bytes(2, "big") + iptc
     data = data[:2] + segment + data[2:]
 
     with Image.open(BytesIO(data)) as check:
-        assert has_metadata(check) and "photoshop" in check.info, "fixture lost metadata"
+        assert (
+            has_metadata(check) and "photoshop" in check.info
+        ), "fixture lost metadata"
 
     return SimpleUploadedFile("foto.jpg", data, content_type="image/jpeg")
 
@@ -97,13 +103,13 @@ class RecipeTestCase(ApiTestCase):
 
     def create_recipe(self, approve=False, **overrides):
         self.login(self.author)
-        response = self.client.post("/recipes", recipe_payload(**overrides))
+        response = self.client.post(reverse("recipe-list"), recipe_payload(**overrides))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
 
         if approve:
-            Recipe.objects.filter(pk=response.json()["id"]).update(
+            Recipe.objects.filter(pk=response.data["id"]).update(
                 status=Recipe.Status.APPROVED
             )
             RecipeSubmission.objects.update(status=Recipe.Status.APPROVED)
 
-        return response.json()
+        return response.data
