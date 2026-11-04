@@ -50,3 +50,8 @@ services:
 
 volumes:
   postgres_data:
+
+# Coolify's network does not exist locally, a network of the project stands in for it
+networks:
+  coolify:
+    external: false

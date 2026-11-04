@@ -1,5 +1,6 @@
-# Production stack (Coolify). The database is a separate resource, reached via
-# DATABASE_URL. compose.override.yaml adds a local database and publishes the ports.
+# Production stack (Coolify). The database is a separate resource in Coolify's network
+# "coolify", reached via DATABASE_URL. compose.override.yaml adds a local database,
+# replaces that network and publishes the ports.
 
 x-logging: &logging
   driver: ${LOG_DRIVER:-journald}
@@ -38,6 +39,9 @@ x-backend: &backend
     CELERY_BROKER_URL: redis://redis:6379/1
   volumes:
     - media_data:/app/media
+  networks:
+    - default
+    - coolify
   depends_on:
     redis:
       condition: service_healthy
@@ -75,3 +79,7 @@ volumes:
   redis_data:
   media_data:
   static_data:
+
+networks:
+  coolify:
+    external: true
