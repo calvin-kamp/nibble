@@ -27,7 +27,7 @@ export const OPERATOR: Operator = {
  * Date of the terms on /agb, shown there as "Stand". Change it together with the text and
  * TERMS_VERSION in the backend settings, which is recorded with every new profile.
  */
-export const TERMS_VERSION = '2026-10-28'
+export const TERMS_VERSION = '2026-11-05'
 
 /**
  * Date of the privacy policy revision on /datenschutz, also the version recorded with every
@@ -35,7 +35,7 @@ export const TERMS_VERSION = '2026-10-28'
  * version: change the text in PrivacyPolicyView and this date together, and
  * PRIVACY_POLICY_VERSION in the backend settings, which is recorded with every new profile.
  */
-export const PRIVACY_POLICY_VERSION = '2026-11-04'
+export const PRIVACY_POLICY_VERSION = '2026-11-05'
 
 /** Nibble is for people aged 16 and up, see sections 5 and 21 of the privacy policy */
 export const MIN_AGE = 16
