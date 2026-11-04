@@ -346,8 +346,8 @@ DELETION_LOG_RECIPIENTS = [
 # Current revisions of the legal texts (date of the "Stand" on /agb and /datenschutz).
 # Stored on every new profile. Change together with the texts and legal.constants.ts
 # in the frontend.
-TERMS_VERSION = "2026-10-28"
-PRIVACY_POLICY_VERSION = "2026-11-04"
+TERMS_VERSION = "2026-11-05"
+PRIVACY_POLICY_VERSION = "2026-11-05"
 
 OFF_DUMP_URL = env(
     "OFF_DUMP_URL",
