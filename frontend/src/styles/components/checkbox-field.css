@@ -9,19 +9,20 @@
 
 	.checkbox-field__box {
 		@apply grid place-items-center shrink-0 size-6 mt-0.5;
-		@apply border-2 border-line-strong rounded-sm bg-surface text-on-brand;
+		@apply border border-input rounded-sm bg-surface text-primary-foreground;
 		@apply transition-interactive;
-		@apply hover:border-muted;
-		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
-		@apply data-[state=checked]:border-brand data-[state=checked]:bg-brand;
-		@apply aria-[invalid=true]:border-danger aria-[invalid=true]:hover:border-danger;
+		@apply hover:border-foreground/80;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
+		@apply data-[state=checked]:border-primary data-[state=checked]:bg-primary;
+		@apply aria-[invalid=true]:border-destructive aria-[invalid=true]:hover:border-destructive;
+		@apply aria-[invalid=true]:focus-visible:outline-destructive;
 	}
 
 	.checkbox-field__hint {
-		@apply pl-9 text-sm text-muted;
+		@apply pl-9 text-md text-muted-foreground;
 	}
 
 	.checkbox-field__error {
-		@apply pl-9 text-sm font-semibold text-danger;
+		@apply pl-9 text-md font-semibold text-destructive;
 	}
 }

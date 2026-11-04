@@ -8,6 +8,7 @@ import {
 	SearchIcon,
 	SearchXIcon,
 	SlidersHorizontalIcon,
+	XIcon,
 } from '@lucide/vue'
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -22,6 +23,7 @@ import {
 	BaseDrawer,
 	BaseIcon,
 	BasePagination,
+	BaseSelect,
 	BaseEmptyState,
 } from '@shared/ui'
 
@@ -33,15 +35,15 @@ import { searchRecipes } from '@features/recipes/recipes.api'
 import {
 	EMPTY_FILTERS,
 	RECIPES_PAGE_SIZE as PAGE_SIZE,
+	SORT_OPTIONS,
 	VIEW_QUERY,
 } from '@features/recipes/recipes.constants'
 import { countActiveFilters } from '@features/recipes/recipes.utils'
 
 const auth = useAuthStore()
 
-const { filters, page, view, reset } = useRecipeFilters()
+const { filters, page, view, sort, reset } = useRecipeFilters()
 
-// Own and saved recipes require signing in; guests always see all of them
 const TABS: { view: RecipeListView; label: string; intro: string; searchLabel: string }[] = [
 	{
 		view: 'all',
@@ -70,23 +72,20 @@ const activeTab = computed(() => TABS.find((tab) => tab.view === activeView.valu
 // a handful of recipes into an empty list.
 const isCollection = computed<boolean>(() => activeView.value !== 'all')
 
-// Filtering and paging happen in the backend; only the current page lives here
 const visible = ref<RecipeSummary[]>([])
 const total = ref<number>(0)
 const loading = ref<boolean>(true)
 const loadError = ref<boolean>(false)
 
-// Collections only have the search, see isCollection
 const activeFilters = computed(() =>
 	isCollection.value ? { ...EMPTY_FILTERS, query: filters.value.query } : filters.value,
 )
 
-// Discard older responses once newer filters are set
 let latestRequest = 0
 
 // As a key, so only real changes trigger a request, not every new address
 const requestKey = computed<string>(() =>
-	JSON.stringify([activeView.value, activeFilters.value, page.value]),
+	JSON.stringify([activeView.value, activeFilters.value, page.value, sort.value]),
 )
 
 watch(
@@ -98,7 +97,12 @@ watch(
 		loadError.value = false
 
 		try {
-			const result = await searchRecipes(activeView.value, activeFilters.value, page.value)
+			const result = await searchRecipes(
+				activeView.value,
+				activeFilters.value,
+				page.value,
+				sort.value,
+			)
 
 			if (request !== latestRequest) return
 
@@ -127,7 +131,6 @@ const isEmptyCollection = computed<boolean>(
 		total.value === 0,
 )
 
-/** Every view starts on page 1 without search or filters */
 function tabLocation(tab: RecipeListView) {
 	return { query: { ansicht: VIEW_QUERY[tab] } }
 }
@@ -151,8 +154,6 @@ const resultLabel = computed<string>(() => {
 	return countLabel.value
 })
 
-// The search only writes to the address after a short pause, so the list and the announced
-// match count do not change with every letter
 const search = ref<string>(filters.value.query)
 let searchTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -161,7 +162,6 @@ watch(search, (value) => {
 	searchTimer = setTimeout(() => (filters.value = { ...filters.value, query: value }), 300)
 })
 
-// If the search changes from outside (reset, browser Back), sync the field
 watch(
 	() => filters.value.query,
 	(query) => {
@@ -178,7 +178,14 @@ function applySearch(): void {
 
 const searchInput = ref<HTMLInputElement | null>(null)
 
-// From desktop up the filters sit below the search as a bar with popovers, below that in the drawer
+// Own clear button instead of the browser's, which looks different in every browser and is
+// missing in Firefox
+function clearSearch(): void {
+	search.value = ''
+	applySearch()
+	searchInput.value?.focus()
+}
+
 const { isDesktop } = useBreakpoint()
 
 const drawerOpen = ref<boolean>(false)
@@ -195,7 +202,6 @@ function onDrawerCloseAutoFocus(event: Event): void {
 	element?.focus()
 }
 
-// After paging, start at the top with the match count, which screen readers announce
 const resultCount = ref<HTMLElement | null>(null)
 
 watch(page, async () => {
@@ -205,20 +211,24 @@ watch(page, async () => {
 </script>
 
 <template>
-	<main class="content-wrapper flex flex-col gap-6 pt-6 pb-10">
-		<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-			<div class="flex flex-col gap-3">
-				<h1>Rezepte</h1>
+	<main class="page">
+		<div class="page__header">
+			<div class="page__intro">
+				<h1>
+					Rezepte
+				</h1>
 
-				<p class="max-w-3xl text-lg text-muted">{{ activeTab.intro }}</p>
+				<p class="page__lead">
+					{{ activeTab.intro }}
+				</p>
 			</div>
 
-			<!-- Creating recipes requires an account -->
 			<BaseButton
 				v-if="auth.isLoggedIn"
 				route-name="recipe-create"
 			>
 				<BaseIcon :icon="PlusIcon" />
+
 				Rezept anlegen
 			</BaseButton>
 		</div>
@@ -243,14 +253,12 @@ watch(page, async () => {
 			</ul>
 		</nav>
 
-		<!-- An empty collection needs no search; it only explains how it fills up -->
 		<section
 			v-if="!isEmptyCollection"
 			class="flex flex-col gap-3"
 			:aria-label="isCollection ? 'Suche' : 'Suche und Filter'"
 		>
 			<div class="flex flex-wrap items-center gap-3">
-				<!-- The label is for screen readers only; the magnifier and placeholder explain the field -->
 				<form
 					class="relative flex-1 min-w-0 xl:flex-none xl:w-full xl:max-w-md"
 					role="search"
@@ -259,11 +267,12 @@ watch(page, async () => {
 					<label
 						for="recipe-search"
 						class="sr-only"
-						>{{ activeTab.searchLabel }}</label
 					>
+						{{ activeTab.searchLabel }}
+					</label>
 
 					<BaseIcon
-						class="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
+						class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
 						:icon="SearchIcon"
 					/>
 
@@ -271,11 +280,25 @@ watch(page, async () => {
 						id="recipe-search"
 						ref="searchInput"
 						v-model="search"
-						class="field__input pl-12 rounded-sm"
+						class="field__input pl-12 pr-14 rounded-sm"
 						type="search"
 						:placeholder="activeTab.searchLabel"
 						autocomplete="off"
+						@keydown.esc="search && clearSearch()"
 					/>
+
+					<button
+						v-if="search"
+						type="button"
+						class="field__action absolute right-0.5 top-1/2 -translate-y-1/2"
+						aria-label="Suche leeren"
+						@click="clearSearch"
+					>
+						<BaseIcon
+							:icon="XIcon"
+							:size="18"
+						/>
+					</button>
 				</form>
 
 				<template v-if="!isCollection">
@@ -296,14 +319,19 @@ watch(page, async () => {
 					>
 						<BaseIcon :icon="SlidersHorizontalIcon" />
 
-						<span class="max-sm:sr-only">Filter</span>
+						<span class="max-sm:sr-only">
+							Filter
+						</span>
 
 						<span
 							v-if="activeCount"
-							class="inline-grid place-items-center min-w-6 h-6 px-1.5 rounded-full bg-brand text-sm tabular-nums text-on-brand"
+							class="inline-grid place-items-center min-w-6 h-6 px-1.5 rounded-full bg-primary text-md tabular-nums text-primary-foreground"
 						>
 							{{ activeCount }}
-							<span class="sr-only">aktiv</span>
+
+							<span class="sr-only">
+								aktiv
+							</span>
 						</span>
 					</BaseButton>
 				</template>
@@ -336,24 +364,44 @@ watch(page, async () => {
 						variant="ghost"
 						:disabled="!activeCount"
 						@click="reset"
-						>Zurücksetzen</BaseButton
 					>
+						Zurücksetzen
+					</BaseButton>
 				</BaseActions>
 			</template>
 		</BaseDrawer>
 
 		<div class="flex flex-col gap-10">
 			<div class="flex flex-col gap-4">
-				<!-- Live region: the new match count is announced after every filter -->
-				<p
+				<div
 					v-if="!isEmptyCollection"
-					ref="resultCount"
-					class="font-semibold text-ink-soft outline-none"
-					role="status"
-					tabindex="-1"
+					class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3"
 				>
-					{{ resultLabel }}
-				</p>
+					<p
+						ref="resultCount"
+						class="font-semibold text-foreground/80 outline-none"
+						role="status"
+						tabindex="-1"
+					>
+						{{ resultLabel }}
+					</p>
+
+					<div class="flex items-center gap-3">
+						<label
+							for="recipe-sort"
+							class="field__label shrink-0"
+						>
+							Sortieren nach
+						</label>
+
+						<BaseSelect
+							id="recipe-sort"
+							v-model="sort"
+							class="w-44"
+							:options="SORT_OPTIONS"
+						/>
+					</div>
+				</div>
 
 				<ul
 					v-if="visible.length"
@@ -373,7 +421,6 @@ watch(page, async () => {
 					</li>
 				</ul>
 
-				<!-- Empty own or saved list without search or filters: explain how it fills up -->
 				<BaseEmptyState
 					v-else-if="isEmptyCollection"
 					:icon="activeView === 'own' ? ChefHatIcon : BookmarkIcon"
@@ -395,6 +442,7 @@ watch(page, async () => {
 							route-name="recipe-create"
 						>
 							<BaseIcon :icon="PlusIcon" />
+
 							Rezept anlegen
 						</BaseButton>
 
@@ -409,7 +457,6 @@ watch(page, async () => {
 					</template>
 				</BaseEmptyState>
 
-				<!-- Empty without search or filters: no recipe has been approved yet -->
 				<BaseEmptyState
 					v-else-if="
 						!loading && !loadError && !isCollection && !activeCount && !filters.query
@@ -425,6 +472,7 @@ watch(page, async () => {
 					>
 						<BaseButton route-name="recipe-create">
 							<BaseIcon :icon="PlusIcon" />
+
 							Rezept anlegen
 						</BaseButton>
 					</template>

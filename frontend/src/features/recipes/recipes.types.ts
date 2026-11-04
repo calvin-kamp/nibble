@@ -3,18 +3,15 @@ import type { ChoiceOption } from '@shared/ui/types'
 /** omnivore stands for recipes without a diet (e.g. with meat), null in the backend */
 export type Diet = 'omnivore' | 'pescetarian' | 'vegetarian' | 'vegan'
 
-/** What a recipe is free from, e.g. gluten-free */
 export type Intolerance = 'gluten_free' | 'lactose_free'
 
 export type Equipment = 'stove' | 'oven' | 'mixer' | 'airfryer'
 
-/** Which meals a recipe suits, at least one */
 export type RecipeMealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'dessert'
 
 /** Properties the backend derives on save from nutrition values, ingredients and time */
 export type RecipeTag = 'protein_rich' | 'low_calorie' | 'few_ingredients' | 'under_30_min'
 
-/** Values as in the backend; the German names from INGREDIENT_UNIT_LABELS are displayed */
 export type IngredientUnit =
 	| 'g'
 	| 'kg'
@@ -41,7 +38,6 @@ export interface Ingredient {
 	unit: IngredientUnit
 }
 
-/** Recipe in the list, without ingredients and instructions */
 export interface RecipeSummary {
 	id: string
 	title: string
@@ -56,23 +52,19 @@ export interface RecipeSummary {
 	/** Empty means: no appliance needed */
 	equipment: Equipment[]
 	mealTypes: RecipeMealType[]
-	/** Assigned by the backend, not part of the form */
 	tags: RecipeTag[]
 	imageUrl?: string
 	/** null when signed out */
 	isSaved: boolean | null
 	status: RecipeStatus
-	/** Whether a change is waiting for approval */
 	hasPendingRevision: boolean
 }
 
-/** Recipe content as submitted */
 export interface RecipeContent {
 	title: string
 	description?: string
 	diet: Diet
 	durationMinutes: number
-	/** Servings the ingredient amounts apply to */
 	servings: number
 	kcalPerServing: number
 	protein: number
@@ -85,7 +77,6 @@ export interface RecipeContent {
 	steps: string[]
 }
 
-/** Changed version of an approved recipe that is still waiting for moderation */
 export interface RecipeRevision {
 	status: 'pending' | 'rejected'
 	rejectionReason: string | null
@@ -102,7 +93,6 @@ export interface Recipe extends RecipeSummary, RecipeContent {
 	pendingRevision: RecipeRevision | null
 }
 
-/** Values in the create and edit form */
 export interface RecipeFormValues {
 	title: string
 	description: string
@@ -121,7 +111,6 @@ export interface RecipeFormValues {
 	steps: string[]
 }
 
-/** Ingredient in the form. The amount is missing until something is entered. */
 export interface IngredientDraft {
 	name: string
 	amount?: number
@@ -139,8 +128,9 @@ export interface RecipeFilterValues {
 	tags: RecipeTag[]
 }
 
-/** Which recipes the list shows. Own and saved recipes require signing in. */
 export type RecipeListView = 'all' | 'own' | 'saved'
+
+export type RecipeSort = 'newest' | 'popular'
 
 export type FilterGroupId = 'tags' | 'diet' | 'freeFrom' | 'equipment'
 
@@ -152,18 +142,15 @@ export interface FilterGroup {
 }
 
 export interface ActiveFilter {
-	/** Unique, e.g. "freeFrom:gluten" */
 	key: string
 	label: string
 	remove: (filters: RecipeFilterValues) => RecipeFilterValues
 }
 
-/** Recipe form sections in order. On phones, each one is a separate step. */
 export type RecipeFormSection = 'basics' | 'nutrition' | 'properties' | 'ingredients' | 'steps'
 
 export interface RecipePage {
 	recipes: RecipeSummary[]
-	/** Total number of matches across all pages */
 	total: number
 }
 
@@ -225,7 +212,6 @@ export interface RecipeDetailResponse extends RecipeInputResponse {
 	is_saved: boolean | null
 }
 
-/** A detail with a label, e.g. "Zubereitungszeit: 25 Minuten" */
 export interface RecipeFact {
 	label: string
 	value: string

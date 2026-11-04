@@ -12,7 +12,7 @@ import { notifyTrackingChanged } from '@features/tracking/composables/tracking-c
 import { fromApiAmount, toApiAmount } from '@features/tracking/tracking.api'
 import { apiRequest } from '@shared/api/client'
 
-// Saved meals live in the backend under /tracking/meals, notes included, and require consent.
+// Saved meals live in the backend under /tracking/meals and require consent.
 // The backend calculates nutrition values on save. The functions throw ApiError, e.g. 404.
 
 function toMealItem(item: MealItemResponse, index: number): MealItem {
@@ -41,7 +41,6 @@ function toSavedMeal(meal: MealResponse): SavedMeal {
 	return {
 		id: String(meal.id),
 		name: meal.name,
-		note: meal.note || undefined,
 		items: meal.items.map(toMealItem),
 		kcal: Math.round(meal.totals.kcal),
 		protein: meal.totals.protein,
@@ -53,8 +52,6 @@ function toSavedMeal(meal: MealResponse): SavedMeal {
 function toInput(values: MealFormValues) {
 	return {
 		name: values.name.trim(),
-		// Without a note the backend clears an existing one
-		note: values.note?.trim() ?? '',
 		items: values.items.map((item) => ({
 			off_code: item.product.code,
 			...toApiAmount(item.product, item.amount!, item.unit!),

@@ -7,16 +7,19 @@ import { useRoute, useRouter } from 'vue-router'
 interface FormStepsOptions {
 	/** Step keys in order. They appear in the address like this, e.g. ?schritt=2. */
 	keys: MaybeRefOrGetter<readonly string[]>
-	/** false when everything is on one page, e.g. from tablet up */
 	enabled?: MaybeRefOrGetter<boolean>
 	/**
 	 * Furthest step reached so far. The address cannot take the user further, otherwise a reload
 	 * could open a step with empty required fields.
 	 */
 	furthest?: Ref<number>
-	/** After every change, once the new step is visible. E.g. for focus. */
 	onChange?: (index: number) => void
 	queryKey?: string
+	/**
+	 * Finds the step for a key from the address. Defaults to an exact match; a flow whose steps
+	 * change with the screen width can map a key that no longer exists to its replacement.
+	 */
+	indexOf?: (key: string) => number
 }
 
 export interface FormSteps {
@@ -27,7 +30,6 @@ export interface FormSteps {
 	isLast: ComputedRef<boolean>
 	next: () => Promise<void>
 	back: () => Promise<void>
-	/** Jumps to a step. focus: false when e.g. an invalid field receives focus afterwards. */
 	goTo: (index: number, options?: { focus?: boolean }) => Promise<void>
 	/**
 	 * Leaves the form after submitting. The steps are removed from history so Back does not land
@@ -55,10 +57,11 @@ export function useFormSteps(options: FormStepsOptions): FormSteps {
 	const requestedIndex = computed<number>(() => {
 		const value = route.query[queryKey]
 
-		return typeof value === 'string' ? keys.value.indexOf(value) : 0
+		if (typeof value !== 'string') return 0
+
+		return options.indexOf ? options.indexOf(value) : keys.value.indexOf(value)
 	})
 
-	// Unknown steps and steps beyond the furthest reached one count as the furthest
 	const index = computed<number>(() => {
 		const requested = requestedIndex.value < 0 ? furthest.value : requestedIndex.value
 
@@ -73,7 +76,6 @@ export function useFormSteps(options: FormStepsOptions): FormSteps {
 		}
 	}
 
-	// If the address does not match the displayed step, it is corrected without a new history entry
 	watch(
 		[requestedIndex, index, enabled],
 		() => {

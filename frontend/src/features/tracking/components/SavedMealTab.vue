@@ -11,8 +11,6 @@ import { formatMacrosShort } from '@features/tracking/tracking.utils'
 import { RadioField } from '@shared/forms'
 import { formatNumber } from '@shared/utils/number'
 
-// "Mahlzeiten" tab in the food dialog: pick a saved meal and log it with one click. Runs
-// inside FoodEntryForm's form.
 interface Props {
 	meals: SavedMeal[]
 }
@@ -23,7 +21,7 @@ const options = computed<FieldOption[]>(() =>
 	props.meals.map((meal) => ({
 		value: meal.id,
 		label: meal.name,
-		description: `${formatNumber(meal.kcal)} kcal · ${formatMacrosShort(meal)}`,
+		description: `${formatNumber(meal.kcal)}\u00a0kcal\n${formatMacrosShort(meal, ', ')}`,
 	})),
 )
 </script>

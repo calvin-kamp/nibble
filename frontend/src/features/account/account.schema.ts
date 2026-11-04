@@ -85,7 +85,6 @@ export const passwordChangeSchema = toTypedSchema(
 		}),
 )
 
-/** Same rules as in onboarding, plus the goal */
 export const nutritionSchema = toTypedSchema(
 	z.intersection(
 		manualNeedsRules,

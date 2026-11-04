@@ -1,18 +1,21 @@
-import type { RecipeFilterValues, RecipeListView } from '@features/recipes/recipes.types'
+import type {
+	RecipeFilterValues,
+	RecipeListView,
+	RecipeSort,
+} from '@features/recipes/recipes.types'
 import type { ComputedRef, WritableComputedRef } from 'vue'
 import type { LocationQuery } from 'vue-router'
 
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { EMPTY_FILTERS } from '@features/recipes/recipes.constants'
+import { EMPTY_FILTERS, SORT_QUERY } from '@features/recipes/recipes.constants'
 import { filtersFromQuery, filtersToQuery, viewFromQuery } from '@features/recipes/recipes.utils'
 
 // Most recently used list filters. Breadcrumbs and "Abbrechen" use them to return to the list
 // as the user left it, not to the unfiltered one.
 const lastListQuery = ref<LocationQuery>({})
 
-/** Target for links back to the recipe list, with the most recently used filters */
 export function useRecipeListLocation(): ComputedRef<{ name: string; query: LocationQuery }> {
 	return computed(() => ({ name: 'recipe-list', query: lastListQuery.value }))
 }
@@ -23,10 +26,9 @@ export function useRecipeListLocation(): ComputedRef<{ name: string; query: Loca
  */
 export function useRecipeFilters(): {
 	filters: WritableComputedRef<RecipeFilterValues>
-	/** New pages are added to history, so the browser's Back goes to the previous one */
 	page: WritableComputedRef<number>
-	/** All, own or saved recipes, e.g. ?ansicht=eigene */
 	view: ComputedRef<RecipeListView>
+	sort: WritableComputedRef<RecipeSort>
 	reset: () => void
 } {
 	const route = useRoute()
@@ -40,12 +42,16 @@ export function useRecipeFilters(): {
 		{ immediate: true },
 	)
 
-	// replace instead of push: not every filter click should become a history entry.
-	// New filters start again on page 1.
 	const filters = computed<RecipeFilterValues>({
 		get: () => filtersFromQuery(route.query),
 		set: (values) => {
-			router.replace({ query: { ...filtersToQuery(values), ansicht: route.query.ansicht } })
+			router.replace({
+				query: {
+					...filtersToQuery(values),
+					ansicht: route.query.ansicht,
+					sortierung: route.query.sortierung,
+				},
+			})
 		},
 	})
 
@@ -62,9 +68,18 @@ export function useRecipeFilters(): {
 		},
 	})
 
+	const sort = computed<RecipeSort>({
+		get: () => (route.query.sortierung === SORT_QUERY.popular ? 'popular' : 'newest'),
+		set: (value) => {
+			router.replace({
+				query: { ...route.query, seite: undefined, sortierung: SORT_QUERY[value] },
+			})
+		},
+	})
+
 	function reset(): void {
 		filters.value = { ...EMPTY_FILTERS }
 	}
 
-	return { filters, page, view, reset }
+	return { filters, page, view, sort, reset }
 }

@@ -2,7 +2,7 @@
 import type { RecipeSummary } from '@features/recipes/recipes.types'
 
 import { ArrowRightIcon } from '@lucide/vue'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import RecipeCard from '@features/recipes/components/RecipeCard.vue'
 import { BaseButton, BaseIcon } from '@shared/ui'
@@ -10,18 +10,20 @@ import { BaseButton, BaseIcon } from '@shared/ui'
 import { searchRecipes } from '@features/recipes/recipes.api'
 import { EMPTY_FILTERS } from '@features/recipes/recipes.constants'
 
-// The newest approved recipes. The list is sorted newest first in the backend.
 const COUNT = 3
 
 const recipes = ref<RecipeSummary[]>([])
 const loading = ref<boolean>(true)
-const failed = ref<boolean>(false)
+
+// A single card looks like an empty shelf: the section only shows with a full row. Errors and
+// an empty catalogue hide it as well, the hero already links to the recipes.
+const isShown = computed<boolean>(() => loading.value || recipes.value.length >= COUNT)
 
 onMounted(async () => {
 	try {
 		recipes.value = (await searchRecipes('all', EMPTY_FILTERS, 1)).recipes.slice(0, COUNT)
 	} catch {
-		failed.value = true
+		recipes.value = []
 	} finally {
 		loading.value = false
 	}
@@ -30,14 +32,17 @@ onMounted(async () => {
 
 <template>
 	<section
-		class="flex flex-col gap-6"
+		v-if="isShown"
+		class="section"
 		aria-labelledby="landing-recipes-title"
 	>
-		<div class="flex flex-wrap items-end justify-between gap-4">
-			<div class="flex flex-col gap-2 max-w-2xl">
-				<h2 id="landing-recipes-title">Frisch aus der Community</h2>
+		<div class="section__header">
+			<div class="section__intro">
+				<h2 id="landing-recipes-title">
+					Frisch aus der Community
+				</h2>
 
-				<p class="text-lg text-ink-soft">
+				<p class="text-lg section__lead">
 					Rezepte von Menschen, die auch auf ihre Ernährung achten. Jedes mit Nährwerten
 					pro Portion, geprüft, bevor es online geht.
 				</p>
@@ -48,6 +53,7 @@ onMounted(async () => {
 				route-name="recipe-list"
 			>
 				Alle Rezepte
+
 				<BaseIcon :icon="ArrowRightIcon" />
 			</BaseButton>
 		</div>
@@ -60,9 +66,9 @@ onMounted(async () => {
 			<li
 				v-for="index in COUNT"
 				:key="index"
-				class="col-span-12 rounded-lg bg-surface overflow-hidden sm:col-span-6 lg:col-span-4"
+				class="col-span-12 overflow-hidden rounded-lg border border-divider bg-card sm:col-span-6 lg:col-span-4"
 			>
-				<span class="block aspect-4/3 bg-surface-muted animate-pulse" />
+				<span class="block aspect-4/3 bg-muted animate-pulse" />
 
 				<span class="block h-24" />
 			</li>
@@ -83,19 +89,5 @@ onMounted(async () => {
 				/>
 			</li>
 		</ul>
-
-		<p
-			v-else-if="failed"
-			class="notice notice--info"
-		>
-			Die Rezepte konnten gerade nicht geladen werden. In der Rezeptübersicht findest du alle.
-		</p>
-
-		<p
-			v-else
-			class="notice notice--info"
-		>
-			Noch sind keine Rezepte freigegeben. Leg mit einem Konto das erste an!
-		</p>
 	</section>
 </template>

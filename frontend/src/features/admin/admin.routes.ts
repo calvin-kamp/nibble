@@ -1,6 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-// Staff only: new recipes and changes waiting for approval
 export const adminRoutes: RouteRecordRaw[] = [
 	{
 		path: '/verwaltung',

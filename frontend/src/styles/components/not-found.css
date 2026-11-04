@@ -1,0 +1,23 @@
+@layer components {
+	.not-found {
+		@apply items-center justify-center gap-8 text-center;
+		@apply md:gap-10;
+	}
+
+	.not-found__icon {
+		@apply grid place-items-center size-32 rounded-full bg-highlight text-highlight-foreground;
+		@apply md:size-40;
+	}
+
+	.not-found__intro {
+		@apply flex flex-col items-center gap-4 max-w-2xl;
+	}
+
+	.not-found__title {
+		@apply text-3xl md:text-4xl lg:text-5xl;
+	}
+
+	.not-found__text {
+		@apply max-w-xl text-lg text-foreground/80 md:text-xl;
+	}
+}

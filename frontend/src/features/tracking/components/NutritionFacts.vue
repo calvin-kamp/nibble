@@ -7,8 +7,6 @@ import { formatAmount } from '@features/tracking/tracking.utils'
 import { buildModifierClasses } from '@shared/utils/classes'
 import { formatNumber } from '@shared/utils/number'
 
-// Calories, protein, carbs and fat, spelled out and in the macro colors.
-// Without values (e.g. while the amount is missing) a dash is shown.
 interface Props {
 	nutrition: Nutrition | null
 	size?: 'default' | 'lg'
@@ -34,17 +32,17 @@ const facts = computed(() => {
 		{
 			label: 'Protein',
 			value: values ? `${formatAmount(values.protein)} g` : '–',
-			color: 'var(--color-macro-protein)',
+			color: 'var(--macro-protein)',
 		},
 		{
 			label: 'Kohlenhydrate',
 			value: values ? `${formatAmount(values.carbs)} g` : '–',
-			color: 'var(--color-macro-carbs)',
+			color: 'var(--macro-carbs)',
 		},
 		{
 			label: 'Fett',
 			value: values ? `${formatAmount(values.fat)} g` : '–',
-			color: 'var(--color-macro-fat)',
+			color: 'var(--macro-fat)',
 		},
 	]
 })
@@ -67,10 +65,15 @@ const facts = computed(() => {
 					:style="{ backgroundColor: fact.color }"
 					aria-hidden="true"
 				/>
-				{{ fact.label }}
+
+				<span class="min-w-0">
+					{{ fact.label }}
+				</span>
 			</dt>
 
-			<dd class="nutrition-facts__value">{{ fact.value }}</dd>
+			<dd class="nutrition-facts__value">
+				{{ fact.value }}
+			</dd>
 		</div>
 	</dl>
 </template>

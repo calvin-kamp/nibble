@@ -1,0 +1,25 @@
+@layer components {
+	.figure {
+		@apply font-display font-bold leading-none tracking-tighter tabular-nums;
+	}
+
+	.figure--md {
+		@apply text-2xl;
+	}
+
+	.figure--lg {
+		@apply text-3xl;
+	}
+
+	.figure--xl {
+		@apply text-4xl;
+	}
+
+	.figure--2xl {
+		@apply text-5xl md:text-6xl;
+	}
+
+	.figure__unit {
+		@apply ml-1 font-sans text-md font-semibold tracking-normal text-muted-foreground;
+	}
+}

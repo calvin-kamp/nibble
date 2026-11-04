@@ -2,7 +2,6 @@ import type { Goal } from '@features/calorie-calculator/calorie-calculator.types
 import type { DailyNeeds } from '@features/onboarding/onboarding.types'
 import type { Component } from 'vue'
 
-/** Daily needs including the goal, as shown in the nutrition settings */
 export interface NutritionSettings {
 	needs: DailyNeeds
 	/** null when only target values but no goal have been saved */
@@ -24,7 +23,6 @@ export interface GoalStateResponse {
 	valid_from: string | null
 }
 
-/** Area of the settings, e.g. "Datenschutz" */
 export interface AccountZone {
 	routeName: string
 	title: string
@@ -32,5 +30,4 @@ export interface AccountZone {
 	danger?: boolean
 }
 
-/** Result of opening the link to the new address */
 export type EmailChangeState = 'pending' | 'changed' | 'taken' | 'failed'

@@ -20,7 +20,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const ids = useFieldIds(() => props.hint)
 
-// Validates immediately on click
 const { value, errorMessage, handleBlur } = useField<boolean | undefined>(
 	() => props.name,
 	toRef(props, 'rules'),
@@ -33,8 +32,6 @@ const { value, errorMessage, handleBlur } = useField<boolean | undefined>(
 		class="checkbox-field"
 		:class="{ 'checkbox-field--invalid': errorMessage }"
 	>
-		<!-- The label wraps the checkbox, so the text is clickable too.
-         The slot replaces the text, e.g. for a link in the consent. -->
 		<Label
 			class="checkbox-field__label"
 			:for="ids.id"
@@ -56,7 +53,9 @@ const { value, errorMessage, handleBlur } = useField<boolean | undefined>(
 				</CheckboxIndicator>
 			</CheckboxRoot>
 
-			<slot>{{ props.label }}</slot>
+			<slot>
+				{{ props.label }}
+			</slot>
 		</Label>
 
 		<p

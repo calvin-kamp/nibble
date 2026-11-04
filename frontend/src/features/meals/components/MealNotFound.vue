@@ -4,12 +4,16 @@ import { BaseButton } from '@shared/ui'
 
 <template>
 	<div class="flex flex-col items-start gap-4 py-10">
-		<h1>Mahlzeit nicht gefunden</h1>
+		<h1>
+			Mahlzeit nicht gefunden
+		</h1>
 
-		<p class="max-w-2xl text-lg text-ink-soft">
+		<p class="page__lead">
 			Vielleicht wurde sie gelöscht, oder der Link ist nicht vollständig.
 		</p>
 
-		<BaseButton route-name="own-meals">Zu meinen Mahlzeiten</BaseButton>
+		<BaseButton route-name="own-meals">
+			Zu meinen Mahlzeiten
+		</BaseButton>
 	</div>
 </template>

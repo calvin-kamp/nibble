@@ -5,7 +5,6 @@ import { BaseChoiceList } from '@shared/ui'
 
 import { groupValue, withGroupValue } from '@features/recipes/recipes.utils'
 
-// One filter group as radios or checkboxes. Changes the filters immediately.
 interface Props {
 	group: FilterGroup
 }

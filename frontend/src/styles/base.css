@@ -1,49 +1,103 @@
 @layer base {
 	html {
 		@apply scheme-light scroll-pt-(--site-header-height);
-		scrollbar-color: var(--color-line-strong) var(--color-canvas);
+		scrollbar-color: var(--input) var(--background);
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	/* Autofill: no tinted backdrop from the browser, the field keeps its own colours. The long
+	   transition holds off the yellow or blue fill Chrome animates in. */
+	input:-webkit-autofill,
+	input:-webkit-autofill:hover,
+	input:-webkit-autofill:focus,
+	textarea:-webkit-autofill,
+	select:-webkit-autofill {
+		-webkit-text-fill-color: var(--foreground);
+		caret-color: var(--primary);
+		box-shadow: 0 0 0 100vmax var(--surface) inset;
+		transition:
+			background-color 600000s 0s,
+			color 600000s 0s;
+	}
+
+	/* The preview on hovering a suggestion otherwise shows in the browser's small system font,
+	   so the text jumps in size between preview and filled value. */
+	input:-webkit-autofill::first-line,
+	input:autofill::first-line {
+		font-family: inherit;
+		font-size: var(--text-md);
+		font-weight: inherit;
+		letter-spacing: inherit;
+	}
+
+	/* Search fields bring their own clear button, see the recipe search */
+	input[type='search']::-webkit-search-cancel-button,
+	input[type='search']::-webkit-search-decoration {
+		appearance: none;
 	}
 
 	body {
-		@apply bg-canvas font-sans text-base text-ink;
-		@apply caret-brand accent-brand;
+		@apply bg-background font-sans text-base leading-normal text-foreground;
+		@apply caret-primary accent-primary;
+		@apply antialiased;
 	}
 
 	::selection {
-		@apply bg-lime text-ink;
+		@apply bg-highlight text-highlight-foreground;
 	}
 
-	/* Room for the fixed header, the fixed bottom navigation and, from desktop up, the sidebar,
-     only when they are present */
 	#app {
-		@apply min-h-svh pt-(--site-header-height) has-[>nav]:pb-18;
+		@apply flex flex-col min-h-svh pt-(--site-header-height) has-[>nav]:pb-18;
 		@apply xl:has-[>nav]:pb-0 xl:has-[>aside]:pl-72;
+	}
+
+	#app > main {
+		@apply flex-1;
+	}
+
+	#app:has(> footer) {
+		@apply pb-0;
+	}
+
+	#app:has(> nav) > footer {
+		@apply pb-18 xl:pb-0;
 	}
 
 	h1,
 	h2,
 	h3 {
-		@apply font-display font-extrabold tracking-tighter text-balance;
+		@apply font-display font-bold tracking-tighter text-balance;
 	}
 
 	h1 {
-		@apply text-3xl leading-none;
-		@apply md:text-5xl;
-		@apply lg:text-6xl;
+		@apply text-2xl leading-tight;
+		@apply md:text-3xl;
+		@apply lg:text-4xl lg:leading-tighter;
 	}
 
 	h2 {
-		@apply text-2xl leading-tight;
-		@apply md:text-3xl;
-		@apply lg:text-4xl;
+		@apply text-xl leading-tight;
+		@apply md:text-2xl;
 	}
 
 	h3 {
-		@apply text-xl leading-tight;
-		@apply lg:text-2xl;
+		@apply text-lg leading-snug;
+		@apply lg:text-xl;
 	}
 
-	/* Target of the skip link and of focus after navigation, the region itself needs no ring */
+	p,
+	li,
+	dt,
+	dd,
+	label,
+	figcaption {
+		@apply text-pretty;
+	}
+
+	:focus-visible {
+		@apply outline-2 outline-offset-2 outline-ring;
+	}
+
 	main:focus {
 		@apply outline-hidden;
 	}
@@ -53,7 +107,6 @@
 	}
 }
 
-/* Motion is decoration here: with reduced motion, drawers, dialogs and toasts appear instantly */
 @media (prefers-reduced-motion: reduce) {
 	*,
 	::before,

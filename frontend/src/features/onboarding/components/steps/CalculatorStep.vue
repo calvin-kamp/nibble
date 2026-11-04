@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+	CalculatorSection,
 	CalorieCalculatorValues,
 	CalorieResult as CalorieResultData,
 	Goal,
@@ -22,33 +23,31 @@ import {
 
 interface Props {
 	goal?: Goal
-	/** Previous inputs, e.g. after a reload or from the calculator as a guest */
 	values?: Partial<CalorieCalculatorValues>
-	/** Calculator section on phones; without it, all sections at once */
+	sections?: readonly CalculatorSection[]
 	part?: number
-	/** Show the result instead of the form. It is calculated from values. */
 	showResult?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
 	goal: undefined,
 	values: undefined,
+	sections: undefined,
 	part: undefined,
 	showResult: false,
 })
 
 const emit = defineEmits<{
-	/** All details are valid, the result comes next */
 	calculated: [values: CalorieCalculatorValues]
-	/** The value from the result is adopted */
 	confirm: [payload: { needs: DailyNeeds; goal: Goal }]
 	back: []
 	'part-complete': [values: Partial<CalorieCalculatorValues>]
 	'go-to-part': [part: number]
 }>()
 
-// The goal chosen in onboarding takes precedence over the one from the guest calculator
-const initialValues = { ...props.values, goal: props.goal ?? props.values?.goal }
+// The goal chosen in onboarding takes precedence over the one from the guest calculator. The
+// calculator does not ask for it again, so without a choice it calculates for maintenance.
+const initialValues = { ...props.values, goal: props.goal ?? props.values?.goal ?? 'maintain' }
 
 const result = computed<CalorieResultData | null>(() =>
 	props.showResult && props.values
@@ -56,7 +55,6 @@ const result = computed<CalorieResultData | null>(() =>
 		: null,
 )
 
-// Back from the result: the form is visible again and its heading receives focus
 const form = ref<InstanceType<typeof CalorieCalculatorForm> | null>(null)
 
 watch(
@@ -77,15 +75,19 @@ function onConfirm(): void {
 <template>
 	<OnboardingStep
 		as="section"
-		wide
-		title="Wir berechnen deinen Tagesbedarf"
-		lead="Ein paar Angaben zu dir und deiner Bewegung, dann steht dein Richtwert."
+		:title="result ? 'Dein Tagesbedarf' : 'Wir berechnen deinen Tagesbedarf'"
+		:lead="
+			result
+				? 'Passt der Wert, übernimm ihn. Sonst geh zurück und ändere deine Angaben.'
+				: 'Ein paar Angaben zu dir und deiner Bewegung, dann steht dein Richtwert.'
+		"
 	>
 		<!-- v-show instead of v-if: after going back from the result, the inputs are still there -->
 		<CalorieCalculatorForm
 			v-show="!result"
 			ref="form"
 			:initial-values="initialValues"
+			:sections="props.sections"
 			:part="props.part"
 			@calculate="emit('calculated', $event)"
 			@part-complete="emit('part-complete', $event)"
@@ -99,7 +101,6 @@ function onConfirm(): void {
 			</template>
 		</CalorieCalculatorForm>
 
-		<!-- The result with all notes, before the value is adopted -->
 		<template v-if="result && props.values">
 			<CalorieResult
 				:result="result"
@@ -110,6 +111,7 @@ function onConfirm(): void {
 				<template #primary>
 					<BaseButton @click="onConfirm">
 						Wert übernehmen
+
 						<BaseIcon :icon="ArrowRightIcon" />
 					</BaseButton>
 				</template>

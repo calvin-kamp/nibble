@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useId } from 'reka-ui'
 
-// Section within a settings area, e.g. "Passwort ändern"
 interface Props {
 	title: string
 	description?: string
@@ -16,7 +15,7 @@ const titleId = useId(undefined, 'account-section')
 
 <template>
 	<section
-		class="flex flex-col gap-5 pt-7 border-t border-divider first:pt-0 first:border-t-0"
+		class="flex flex-col gap-5 pt-8 border-t border-divider first:pt-0 first:border-t-0"
 		:aria-labelledby="titleId"
 	>
 		<div class="flex flex-col gap-1">
@@ -29,7 +28,7 @@ const titleId = useId(undefined, 'account-section')
 
 			<p
 				v-if="props.description"
-				class="text-muted"
+				class="text-foreground/80"
 			>
 				{{ props.description }}
 			</p>

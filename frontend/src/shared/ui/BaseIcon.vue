@@ -18,6 +18,7 @@ const props = withDefaults(defineProps<Props>(), {
 	<component
 		:is="props.icon"
 		:size="props.size"
+		:stroke-width="1.75"
 		class="shrink-0"
 		:class="props.class"
 		aria-hidden="true"

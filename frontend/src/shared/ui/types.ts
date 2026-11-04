@@ -2,7 +2,7 @@ import type { LocationQueryRaw, RouteParamsRawGeneric } from 'vue-router'
 
 export interface DonutSegment {
 	value: number
-	/** CSS color, e.g. 'var(--color-macro-fat)'. Defaults to --vis-color0, --vis-color1, … */
+	/** CSS color, e.g. 'var(--macro-fat)'. Defaults to --vis-color0, --vis-color1, … */
 	color?: string
 }
 

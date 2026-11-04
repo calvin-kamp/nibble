@@ -1,38 +1,61 @@
 @layer components {
 	.sidebar {
 		@apply fixed inset-y-0 left-0 z-30 hidden w-72;
-		@apply flex-col gap-8 px-4 pt-7 pb-5 overflow-y-auto;
-		@apply border-r border-line bg-surface;
+		@apply flex-col gap-8 px-4 pt-6 pb-5 overflow-y-auto;
+		@apply border-r border-border bg-surface;
 		@apply xl:flex;
+	}
+
+	.sidebar__brand {
+		@apply flex items-center h-11 px-3;
 	}
 
 	.sidebar__heading {
 		@apply px-3;
-		@apply font-sans text-md font-normal tracking-normal text-muted;
+		@apply font-sans text-md font-medium tracking-normal text-muted-foreground;
 	}
 
 	.sidebar__link {
-		@apply flex items-center gap-3 min-h-12 px-3;
+		@apply flex items-center gap-3 min-h-11 px-3;
 		@apply rounded-md;
-		@apply text-base font-semibold text-muted;
-		@apply transition-interactive;
-		@apply hover:bg-surface-muted hover:text-ink;
-		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
-	}
-
-	/* Legal links: small and quiet, but underlined so they read as links */
-	.sidebar__legal-link {
-		@apply inline-flex items-center min-h-9;
-		@apply rounded-sm text-sm text-ink-soft;
-		@apply underline decoration-line-subtle underline-offset-4;
-		@apply transition-interactive;
-		@apply hover:text-ink hover:decoration-current;
-		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
-		@apply aria-[current=page]:font-semibold aria-[current=page]:text-brand-ink aria-[current=page]:decoration-current;
+		@apply text-md font-semibold text-foreground/80;
+		@apply transition-[color,background-color,border-color];
+		@apply hover:bg-accent hover:text-primary;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
 	}
 
 	.sidebar__link--active {
-		@apply bg-brand-soft text-brand-ink;
-		@apply hover:bg-brand-soft hover:text-brand-ink;
+		@apply bg-accent text-primary;
+		@apply hover:bg-accent hover:text-primary;
+	}
+
+	.sidebar__link--danger,
+	.sidebar__link--danger.sidebar__link--active {
+		@apply text-destructive hover:bg-destructive-soft hover:text-destructive;
+	}
+
+	.sidebar__link--danger.sidebar__link--active {
+		@apply bg-destructive-soft hover:bg-destructive-soft;
+	}
+
+	.sidebar__account {
+		@apply flex flex-col gap-2 pt-4 border-t border-border;
+	}
+
+	.account-menu__trigger {
+		@apply flex items-center gap-3 w-full min-h-14 px-2 py-2;
+		@apply rounded-md text-foreground;
+		@apply transition-[background-color];
+		@apply hover:bg-accent data-[state=open]:bg-accent;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
+	}
+
+	.account-menu__avatar {
+		@apply grid place-items-center shrink-0 size-10;
+		@apply rounded-full bg-forest font-display text-lg font-bold text-highlight;
+	}
+
+	.account-menu__content {
+		@apply w-(--reka-popover-trigger-width);
 	}
 }

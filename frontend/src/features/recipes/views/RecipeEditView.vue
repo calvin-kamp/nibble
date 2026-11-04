@@ -26,7 +26,6 @@ const listLocation = useRecipeListLocation()
 
 const form = ref<InstanceType<typeof RecipeForm> | null>(null)
 
-// Confirm on "Abbrechen" and in the breadcrumbs once something has changed
 const {
 	open: leaveDialogOpen,
 	leave,
@@ -34,7 +33,6 @@ const {
 	interceptLink,
 } = useLeaveConfirmation(computed(() => form.value?.isDirty ?? false))
 
-// Only own recipes can be edited. undefined: still loading, null: missing or someone else's.
 const recipe = ref<Recipe | null | undefined>(undefined)
 
 watch(
@@ -83,9 +81,8 @@ async function onSubmit(values: RecipeFormValues): Promise<void> {
 <template>
 	<main
 		v-if="recipe"
-		class="content-wrapper pt-4 pb-10"
+		class="page"
 	>
-		<!-- Form centered in the page, header and form at the same width -->
 		<div class="content-column content-column--form gap-6">
 			<BaseBreadcrumb
 				:items="[
@@ -100,7 +97,9 @@ async function onSubmit(values: RecipeFormValues): Promise<void> {
 				@click.capture="interceptLink"
 			/>
 
-			<h1>Rezept bearbeiten</h1>
+			<h1>
+				Rezept bearbeiten
+			</h1>
 
 			<p
 				v-if="submitError"
@@ -110,7 +109,6 @@ async function onSubmit(values: RecipeFormValues): Promise<void> {
 				{{ submitError }}
 			</p>
 
-			<!-- key: switching to another recipe restarts the form -->
 			<RecipeForm
 				:key="recipe.id"
 				ref="form"
@@ -137,9 +135,7 @@ async function onSubmit(values: RecipeFormValues): Promise<void> {
 		v-else-if="recipe === null"
 		class="content-wrapper"
 	>
-		<RecipeNotFound
-			message="Vielleicht wurde es gelöscht, oder es ist nicht deins. Bearbeiten kannst du nur eigene Rezepte."
-		/>
+		<RecipeNotFound message="Vielleicht wurde es gelöscht, oder es ist nicht deins. Bearbeiten kannst du nur eigene Rezepte." />
 	</main>
 
 	<main

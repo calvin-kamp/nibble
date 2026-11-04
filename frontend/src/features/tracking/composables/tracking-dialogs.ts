@@ -32,7 +32,6 @@ export function useTrackingDialogs(): {
 		chooserOpen.value = true
 	}
 
-	/** From the chooser or directly, e.g. via "Gewicht eintragen" on the dashboard */
 	function openEntry(kind: TrackingEntryKind, entryPreset: EntryPreset = {}): void {
 		if (!chooserOpen.value) rememberTrigger()
 
@@ -47,7 +46,6 @@ export function useTrackingDialogs(): {
 
 		if (chooserOpen.value || entry.value) return
 
-		// The trigger may be gone by now, e.g. a button that only shows while nothing is logged
 		const main = document.querySelector<HTMLElement>('main')
 		const target = returnFocusTo?.isConnected ? returnFocusTo : main
 

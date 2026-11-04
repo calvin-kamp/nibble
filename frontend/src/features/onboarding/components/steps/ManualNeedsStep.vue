@@ -4,11 +4,11 @@ import type { DailyNeeds } from '@features/onboarding/onboarding.types'
 import { useForm } from 'vee-validate'
 import { computed } from 'vue'
 
+import KcalSplitField from '@features/calorie-calculator/components/KcalSplitField.vue'
 import OnboardingNav from '@features/onboarding/components/OnboardingNav.vue'
 import OnboardingStep from '@features/onboarding/components/OnboardingStep.vue'
 
-import { KCAL_PER_GRAM } from '@features/calorie-calculator/calorie-calculator.constants'
-import { macrosToKcal } from '@features/calorie-calculator/calorie-calculator.utils'
+import { macroShares, macrosToKcal } from '@features/calorie-calculator/calorie-calculator.utils'
 import { manualNeedsSchema } from '@features/onboarding/onboarding.schema'
 import { focusFirstError, NumberField } from '@shared/forms'
 import { formatNumber } from '@shared/utils/number'
@@ -35,7 +35,6 @@ const { handleSubmit, values, errors } = useForm({
 	},
 })
 
-// Read-only: derived from the three macros
 const kcal = computed<number | null>(() => {
 	const { protein, carbs, fat } = values
 
@@ -49,13 +48,16 @@ const kcal = computed<number | null>(() => {
 const distribution = computed<string>(() => {
 	if (!kcal.value) return 'Trag Protein, Kohlenhydrate und Fett ein.'
 
-	const share = (grams: number, kcalPerGram: number) =>
-		Math.round(((grams * kcalPerGram) / kcal.value!) * 100)
+	const shares = macroShares({
+		protein: values.protein!,
+		carbs: values.carbs!,
+		fat: values.fat!,
+	})
 
 	return (
-		`Verteilung: Protein ${share(values.protein!, KCAL_PER_GRAM.protein)} %, ` +
-		`Kohlenhydrate ${share(values.carbs!, KCAL_PER_GRAM.carbs)} %, ` +
-		`Fett ${share(values.fat!, KCAL_PER_GRAM.fat)} %.`
+		`Verteilung: Protein ${shares.protein} %, ` +
+		`Kohlenhydrate ${shares.carbs} %, ` +
+		`Fett ${shares.fat} %.`
 	)
 })
 
@@ -83,30 +85,34 @@ const onSubmit = handleSubmit(
 		lead="Die Kalorien ergeben sich aus den Makros: Protein und Kohlenhydrate haben 4 kcal pro Gramm, Fett 9 kcal pro Gramm."
 		@submit="onSubmit"
 	>
-		<!-- Total above the macros, as in the settings. output: screen readers announce the new
-         value whenever a macro changes. -->
 		<div class="flex flex-col gap-1">
 			<p class="flex flex-wrap items-baseline gap-x-2">
 				<output
 					aria-label="Kalorien pro Tag"
-					class="font-display text-4xl font-extrabold tracking-tighter tabular-nums"
+					class="figure figure--xl"
 				>
 					{{ kcal ? formatNumber(Math.round(kcal)) : '–' }}
 				</output>
 
-				<span class="font-semibold text-ink-soft">kcal pro Tag</span>
+				<span class="font-semibold text-foreground/80">
+					kcal pro Tag
+				</span>
 			</p>
 
-			<p class="text-sm text-muted">{{ distribution }}</p>
+			<p class="text-md text-muted-foreground">
+				{{ distribution }}
+			</p>
 
 			<p
 				v-if="kcalError"
-				class="text-sm font-semibold text-danger"
+				class="text-md font-semibold text-destructive"
 				role="alert"
 			>
 				{{ kcalError }}
 			</p>
 		</div>
+
+		<KcalSplitField />
 
 		<div class="grid grid-cols-12 gap-5">
 			<NumberField

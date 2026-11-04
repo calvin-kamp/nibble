@@ -17,7 +17,6 @@ const toast = useToast()
 
 const form = ref<InstanceType<typeof MealForm> | null>(null)
 
-// Confirm on "Abbrechen" and in the breadcrumbs once something has been entered
 const {
 	open: leaveDialogOpen,
 	leave,
@@ -47,8 +46,7 @@ async function onSubmit(values: MealFormValues): Promise<void> {
 </script>
 
 <template>
-	<main class="content-wrapper pt-4 pb-10">
-		<!-- Form centered in the page, header and form at the same width -->
+	<main class="page">
 		<div class="content-column content-column--form gap-6">
 			<BaseBreadcrumb
 				:items="[{ label: 'Meine Mahlzeiten', routeName: 'own-meals' }]"
@@ -57,9 +55,11 @@ async function onSubmit(values: MealFormValues): Promise<void> {
 			/>
 
 			<div class="flex flex-col gap-3">
-				<h1>Mahlzeit anlegen</h1>
+				<h1>
+					Mahlzeit anlegen
+				</h1>
 
-				<p class="max-w-3xl text-lg text-muted">
+				<p class="page__lead">
 					Stell zusammen, was du oft isst. Danach trägst du alles mit einem Klick ein.
 				</p>
 			</div>

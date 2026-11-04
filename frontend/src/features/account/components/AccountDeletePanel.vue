@@ -29,7 +29,6 @@ async function onExport(): Promise<void> {
 	}
 }
 
-// The backend deletes after 7 days. Until then the deletion can be cancelled after signing in.
 const scheduledFor = computed<string | null>(() => {
 	const value = auth.user?.deletionScheduledFor
 
@@ -41,9 +40,7 @@ async function onDeleted(date: string): Promise<void> {
 
 	try {
 		await logout()
-	} catch {
-		// Deletion has been requested, but the user is still signed out here
-	}
+	} catch {}
 
 	auth.signOut()
 
@@ -79,18 +76,18 @@ async function onCancelDeletion(): Promise<void> {
 	<AccountPanel title="Konto löschen">
 		<section
 			v-if="scheduledFor"
-			class="flex flex-col gap-5 p-4 border-2 md:p-5 border-danger-line rounded-lg bg-danger-subtle"
+			class="flex flex-col gap-5 p-4 border-2 md:p-5 border-destructive-border rounded-lg bg-destructive-soft/50"
 			aria-labelledby="account-delete-scheduled-title"
 		>
 			<div class="flex flex-col gap-1">
 				<h3
 					id="account-delete-scheduled-title"
-					class="font-sans text-lg font-bold tracking-normal text-danger"
+					class="font-sans text-lg font-bold tracking-normal text-destructive"
 				>
 					Löschung beantragt
 				</h3>
 
-				<p class="text-danger-strong">
+				<p class="text-destructive-soft-foreground">
 					Dein Konto wird am {{ scheduledFor }} endgültig gelöscht. Bis dahin kannst du es
 					dir anders überlegen.
 				</p>
@@ -115,29 +112,28 @@ async function onCancelDeletion(): Promise<void> {
 			</BaseActions>
 		</section>
 
-		<!-- Separate, red-bordered area: something is lost irreversibly here -->
 		<section
 			v-else
-			class="flex flex-col gap-5 p-4 border-2 md:p-5 border-danger-line rounded-lg bg-danger-subtle"
+			class="flex flex-col gap-5 p-4 border-2 md:p-5 border-destructive-border rounded-lg bg-destructive-soft/50"
 			aria-labelledby="account-delete-title"
 		>
 			<div class="flex flex-col gap-1">
 				<h3
 					id="account-delete-title"
-					class="font-sans text-lg font-bold tracking-normal text-danger"
+					class="font-sans text-lg font-bold tracking-normal text-destructive"
 				>
 					Alle Daten entfernen
 				</h3>
 
-				<p class="text-danger-strong">
+				<p class="text-destructive-soft-foreground">
 					Wir löschen dein Konto, deine gespeicherten und noch nicht freigegebenen Rezepte
-					und alle Tracking-Daten. Freigegebene Rezepte bleiben ohne deinen Namen. Nach 7
-					Tagen lässt sich das nicht mehr rückgängig machen. Lad deine Daten vorher
-					herunter, wenn du sie behalten willst.
+					und alle Tracking-Daten. Freigegebene Rezepte bleiben ohne deinen Namen. Die
+					Löschung passiert erst nach 7 Tagen: Bis dahin kannst du dich anmelden und sie
+					hier abbrechen, danach ist alles endgültig weg. Lad deine Daten vorher herunter,
+					wenn du sie behalten willst.
 				</p>
 			</div>
 
-			<!-- Primary action first: on top on phones, on the right from tablet up -->
 			<BaseActions>
 				<BaseButton
 					variant="danger"
@@ -159,7 +155,6 @@ async function onCancelDeletion(): Promise<void> {
 			</BaseActions>
 		</section>
 
-		<!-- A dialog instead of a plain confirmation: the password confirms it is really the user -->
 		<BaseDialog
 			v-model:open="dialogOpen"
 			title="Konto löschen?"

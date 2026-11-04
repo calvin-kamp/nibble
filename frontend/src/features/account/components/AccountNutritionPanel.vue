@@ -18,6 +18,7 @@ import {
 	GOAL_LABELS,
 	KCAL_PER_GRAM,
 } from '@features/calorie-calculator/calorie-calculator.constants'
+import { macroShares } from '@features/calorie-calculator/calorie-calculator.utils'
 import { formatNumber } from '@shared/utils/number'
 
 // Below 1,500 kcal a day, it is better to check with a doctor what is appropriate
@@ -26,7 +27,6 @@ const LOW_KCAL = 1500
 const auth = useAuthStore()
 const toast = useToast()
 
-// null means no daily needs have been saved yet
 const settings = ref<NutritionSettings | null>(null)
 const loaded = ref<boolean>(false)
 const loadError = ref<boolean>(false)
@@ -44,7 +44,6 @@ onMounted(async () => {
 	}
 })
 
-// Grams alone say little, so each macro also shows its share of the calories
 const macros = computed(() => {
 	if (!settings.value) return []
 
@@ -55,30 +54,27 @@ const macros = computed(() => {
 			label: 'Protein',
 			grams: protein,
 			kcal: protein * KCAL_PER_GRAM.protein,
-			color: 'var(--color-macro-protein)',
+			color: 'var(--macro-protein)',
 		},
 		{
 			label: 'Kohlenhydrate',
 			grams: carbs,
 			kcal: carbs * KCAL_PER_GRAM.carbs,
-			color: 'var(--color-macro-carbs)',
+			color: 'var(--macro-carbs)',
 		},
 		{
 			label: 'Fett',
 			grams: fat,
 			kcal: fat * KCAL_PER_GRAM.fat,
-			color: 'var(--color-macro-fat)',
+			color: 'var(--macro-fat)',
 		},
 	]
-	const total = items.reduce((sum, item) => sum + item.kcal, 0) || 1
+	const shares = macroShares({ protein, carbs, fat })
+	const keys = ['protein', 'carbs', 'fat'] as const
 
-	// The items are created right here, so they can take the share directly
-	return items.map((item) =>
-		Object.assign(item, { share: Math.round((item.kcal / total) * 100) }),
-	)
+	return items.map((item, index) => Object.assign(item, { share: shares[keys[index]!] }))
 })
 
-// After saving or cancelling, return focus to the button that opened the form
 const editButton = ref<InstanceType<typeof BaseButton> | null>(null)
 
 async function closeForm(): Promise<void> {
@@ -118,11 +114,14 @@ async function onSave(updated: NutritionSettings): Promise<void> {
 		>
 			Das Tracking ist ausgeschaltet, deshalb gibt es keinen gespeicherten Tagesbedarf. Du
 			kannst es im Bereich
+
 			<BaseLink
 				route-name="account-privacy"
 				variant="inline"
-				>Datenschutz</BaseLink
 			>
+				Datenschutz
+			</BaseLink>
+
 			einschalten.
 		</p>
 
@@ -149,19 +148,19 @@ async function onSave(updated: NutritionSettings): Promise<void> {
 			>
 				<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
 					<p class="flex flex-wrap items-baseline gap-x-2">
-						<strong
-							class="font-display text-5xl font-extrabold leading-none tracking-tighter tabular-nums"
-						>
+						<strong class="figure figure--2xl">
 							{{ formatNumber(settings.needs.kcal) }}
 						</strong>
 
-						<span class="font-semibold text-ink-soft">kcal pro Tag</span>
+						<span class="font-semibold text-foreground/80">
+							kcal pro Tag
+						</span>
 					</p>
 
-					<p class="flex flex-wrap items-center gap-2 text-sm text-muted">
+					<p class="flex flex-wrap items-center gap-2 text-md text-muted-foreground">
 						<span
 							v-if="settings.goal"
-							class="px-3 py-1 rounded-full bg-brand-soft font-bold text-brand-ink"
+							class="tag tag--accent"
 						>
 							Ziel: {{ GOAL_LABELS[settings.goal] }}
 						</span>
@@ -176,10 +175,8 @@ async function onSave(updated: NutritionSettings): Promise<void> {
 					</p>
 				</div>
 
-				<!-- Calorie split. The numbers are in the tiles below. -->
 				<MacroSplitBar :macros="settings.needs" />
 
-				<!-- As a list like the macros in the diary: name and share on the left, grams on the right -->
 				<dl class="data-list">
 					<div
 						v-for="macro in macros"
@@ -187,21 +184,24 @@ async function onSave(updated: NutritionSettings): Promise<void> {
 						class="data-list__row"
 					>
 						<dt class="data-list__label">
-							<span class="flex items-center gap-2 font-semibold text-ink">
+							<span class="flex items-center gap-2 font-semibold text-foreground">
 								<span
 									class="size-2.5 shrink-0 rounded-full"
 									:style="{ backgroundColor: macro.color }"
 									aria-hidden="true"
 								/>
+
 								{{ macro.label }}
 							</span>
 
-							<span class="data-list__meta pl-4.5"
-								>{{ macro.share }} % der Kalorien</span
-							>
+							<span class="data-list__meta pl-4.5">
+								{{ macro.share }} % der Kalorien
+							</span>
 						</dt>
 
-						<dd class="data-list__value">{{ formatNumber(macro.grams) }} g</dd>
+						<dd class="data-list__value">
+							{{ formatNumber(macro.grams) }} g
+						</dd>
 					</div>
 				</dl>
 
@@ -209,7 +209,9 @@ async function onSave(updated: NutritionSettings): Promise<void> {
 					v-if="settings.needs.kcal < LOW_KCAL"
 					class="notice notice--warning"
 				>
-					<strong>Bitte sprich mit einer Ärztin oder einem Arzt.</strong> Dein Wert liegt
+					<strong>
+						Bitte sprich mit einer Ärztin oder einem Arzt.
+					</strong> Dein Wert liegt
 					unter 1.500 kcal. Wie viel für dich passt, solltest du ärztlich abklären.
 				</p>
 			</AccountSection>
@@ -230,13 +232,13 @@ async function onSave(updated: NutritionSettings): Promise<void> {
 					@cancel="closeForm"
 				/>
 
-				<!-- Two paths as plain buttons; what each one does is in their label -->
 				<div
 					v-else
 					class="flex flex-col gap-3 sm:flex-row"
 				>
 					<BaseButton route-name="calorie-calculator">
 						<BaseIcon :icon="CalculatorIcon" />
+
 						Neu berechnen
 					</BaseButton>
 
@@ -246,6 +248,7 @@ async function onSave(updated: NutritionSettings): Promise<void> {
 						@click="editing = true"
 					>
 						<BaseIcon :icon="PencilIcon" />
+
 						Makros selbst festlegen
 					</BaseButton>
 				</div>

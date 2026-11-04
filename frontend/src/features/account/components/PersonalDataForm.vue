@@ -14,8 +14,6 @@ import { SEX_OPTIONS } from '@features/calorie-calculator/calorie-calculator.con
 import { DateField, focusFirstError, NumberField, RadioField } from '@shared/forms'
 import { toIsoDate } from '@shared/utils/date'
 
-// All personal details in one form that is always open. Empty fields are left out, so a single
-// detail can be saved without the others.
 const auth = useAuthStore()
 const toast = useToast()
 
@@ -84,8 +82,9 @@ const onSubmit = handleSubmit(
 			<BaseButton
 				type="submit"
 				:disabled="isSubmitting"
-				>Speichern</BaseButton
 			>
+				Speichern
+			</BaseButton>
 		</BaseActions>
 	</form>
 </template>

@@ -19,7 +19,6 @@ export const weightEntrySchema = toTypedSchema(
 	}),
 )
 
-/** Where the entry comes from, matches the tabs in the dialog */
 export type FoodEntrySource = 'product' | 'saved'
 
 // One form for both tabs. Each field is optional on its own; which ones are required depends
@@ -32,11 +31,9 @@ export const foodEntrySchema = toTypedSchema(
 				message: 'Wähl eine Mahlzeit aus.',
 			}),
 			source: z.enum(['product', 'saved']),
-			// Food: barcode and amount; the form calculates the nutrition values
 			productCode: z.string().optional(),
 			amount: z.number().positive({ message: 'Wie viel hast du gegessen?' }).optional(),
 			unit: z.enum(['g', 'ml', 'serving', 'package']).optional(),
-			// Saved meal
 			savedMealId: z.string().optional(),
 		})
 		// Only runs once every field is individually valid
@@ -54,6 +51,27 @@ export const foodEntrySchema = toTypedSchema(
 				return issue('productCode', 'Such ein Lebensmittel und wähl es aus der Liste.')
 
 			amountIssue(values.amount, values.unit, issue)
+		}),
+)
+
+// Changing an entry. Amount and unit only exist for foods from the search (hasAmount).
+export const foodEntryEditSchema = toTypedSchema(
+	z
+		.object({
+			date: entryDate(),
+			meal: z.enum(['breakfast', 'lunch', 'dinner', 'snack'], {
+				message: 'Wähl eine Mahlzeit aus.',
+			}),
+			hasAmount: z.boolean(),
+			amount: z.number().positive({ message: 'Wie viel hast du gegessen?' }).optional(),
+			unit: z.enum(['g', 'ml', 'serving', 'package']).optional(),
+		})
+		.superRefine((values, context) => {
+			if (!values.hasAmount) return
+
+			amountIssue(values.amount, values.unit, (path, message) =>
+				context.addIssue({ code: z.ZodIssueCode.custom, path: [path], message }),
+			)
 		}),
 )
 

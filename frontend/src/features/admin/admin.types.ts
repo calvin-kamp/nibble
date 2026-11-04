@@ -7,7 +7,6 @@ import type {
 /** A new recipe, or a change to one that is already approved */
 export type SubmissionKind = 'new' | 'revision'
 
-/** Same values as a recipe's status */
 export type SubmissionStatus = RecipeStatus
 
 export interface SubmissionSummary {
@@ -18,7 +17,6 @@ export interface SubmissionSummary {
 	title: string
 	/** null once the author has deleted the account, or before onboarding */
 	author: string | null
-	/** ISO timestamp */
 	submittedAt: string
 }
 
@@ -28,19 +26,15 @@ export interface SubmissionDetail extends SubmissionSummary {
 	current: RecipeContent | null
 	imageUrl?: string
 	rejectionReason: string | null
-	/** Username of the moderator */
 	reviewedBy: string | null
-	/** ISO timestamp */
 	reviewedAt: string | null
 }
 
 export interface SubmissionPage {
 	submissions: SubmissionSummary[]
-	/** Total across all pages */
 	total: number
 }
 
-/** A field of a revision that differs from the live version, e.g. "Zutaten" */
 export interface SubmissionChange {
 	key: keyof RecipeContent
 	label: string

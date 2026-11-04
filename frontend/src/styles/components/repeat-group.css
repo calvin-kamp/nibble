@@ -1,0 +1,18 @@
+@layer components {
+	.repeat-group {
+		@apply flex flex-col gap-4 min-w-0 p-3 border border-divider rounded-lg bg-background;
+		@apply md:p-5;
+	}
+
+	.repeat-group__header {
+		@apply flex flex-wrap items-center justify-between gap-x-3 gap-y-2;
+	}
+
+	.repeat-group__title {
+		@apply font-semibold whitespace-nowrap text-foreground;
+	}
+
+	.repeat-group__actions {
+		@apply flex shrink-0 gap-2;
+	}
+}

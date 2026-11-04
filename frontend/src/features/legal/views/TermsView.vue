@@ -5,7 +5,6 @@ import { BaseLink } from '@shared/ui'
 import { MIN_AGE, OPERATOR, TERMS_VERSION } from '@features/legal/legal.constants'
 import { formatLongDate, parseIsoDate } from '@shared/utils/date'
 
-// Terms of use for the free service: accounts, user recipes, health notice and liability
 const SECTIONS = {
 	scope: { id: 'geltungsbereich', title: '1. Geltungsbereich' },
 	service: { id: 'leistungen', title: '2. Leistungen von Nibble' },
@@ -24,20 +23,31 @@ const revisionLabel = formatLongDate(parseIsoDate(TERMS_VERSION)!)
 </script>
 
 <template>
-	<main class="content-wrapper pt-6 pb-10">
+	<main class="page">
 		<article class="legal">
 			<div class="legal__header">
-				<h1>Nutzungs&shy;bedingungen (AGB)</h1>
+				<h1>
+					Nutzungs&shy;bedingungen (AGB)
+				</h1>
 
 				<p class="font-bold">
-					Stand: <time :datetime="TERMS_VERSION">{{ revisionLabel }}</time>
+					Stand: <time :datetime="TERMS_VERSION">
+						{{ revisionLabel }}
+					</time>
 				</p>
 			</div>
 
 			<PolicySection :section="SECTIONS.scope">
 				<p>
 					Diese Bedingungen gelten für die Nutzung der Webanwendung Nibble unter
-					{{ OPERATOR.website }}. Anbieter ist {{ OPERATOR.name }}, {{ OPERATOR.street }},
+
+					<BaseLink
+						route-name="home"
+						variant="inline"
+					>
+						{{ OPERATOR.website }}
+					</BaseLink>. Anbieter ist {{ OPERATOR.name }}, {{ OPERATOR.street }},
+
 					{{ OPERATOR.postalCode }} {{ OPERATOR.city }} (im Folgenden „wir“). Mit dem
 					Erstellen eines Kontos erkennst du diese Bedingungen an.
 				</p>
@@ -50,9 +60,7 @@ const revisionLabel = formatLongDate(parseIsoDate(TERMS_VERSION)!)
 						variant="inline"
 					>
 						Datenschutzerklärung
-					</BaseLink>
-
-					.
+					</BaseLink>.
 				</p>
 			</PolicySection>
 
@@ -92,12 +100,13 @@ const revisionLabel = formatLongDate(parseIsoDate(TERMS_VERSION)!)
 				<p>
 					Halte dein Passwort geheim. Vermutest du, dass jemand anderes Zugriff auf dein
 					Konto hat, ändere es sofort in den Einstellungen und schreib uns an
+
 					<BaseLink
 						:href="`mailto:${OPERATOR.email}`"
 						variant="inline"
 					>
-						{{ OPERATOR.email }}</BaseLink
-					>.
+						{{ OPERATOR.email }}
+					</BaseLink>.
 				</p>
 			</PolicySection>
 
@@ -125,14 +134,18 @@ const revisionLabel = formatLongDate(parseIsoDate(TERMS_VERSION)!)
 			</PolicySection>
 
 			<PolicySection :section="SECTIONS.conduct">
-				<p>Nicht erlaubt sind insbesondere:</p>
+				<p>
+					Nicht erlaubt sind insbesondere:
+				</p>
 
 				<ul class="legal__list">
 					<li>
 						rechtswidrige, beleidigende, diskriminierende oder pornografische Inhalte,
 					</li>
 
-					<li>Werbung und Links zu kommerziellen Angeboten,</li>
+					<li>
+						Werbung und Links zu kommerziellen Angeboten,
+					</li>
 
 					<li>
 						Inhalte, die fremde Urheber-, Marken- oder Persönlichkeitsrechte verletzen,
@@ -212,9 +225,7 @@ const revisionLabel = formatLongDate(parseIsoDate(TERMS_VERSION)!)
 						variant="inline"
 					>
 						Impressum
-					</BaseLink>
-
-					.
+					</BaseLink>.
 				</p>
 			</PolicySection>
 		</article>

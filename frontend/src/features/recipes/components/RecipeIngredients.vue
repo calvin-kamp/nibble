@@ -15,7 +15,6 @@ interface Props {
 
 const props = defineProps<Props>()
 
-// Scaling only affects the view, the recipe itself stays unchanged
 const servings = ref<number>(props.recipe.servings)
 
 watch(
@@ -32,21 +31,21 @@ watch(
 		<div class="flex flex-col gap-4">
 			<h2
 				id="recipe-ingredients-title"
-				class="text-2xl"
+				class="card__title"
 			>
 				Zutaten
 			</h2>
 
 			<div class="flex flex-col gap-2">
-				<!-- Label on the left, stepper on the right. The gap grows with the width. -->
-				<div class="flex items-center justify-between gap-3">
+				<div class="flex items-center justify-between gap-2">
 					<span
 						id="recipe-servings-label"
-						class="font-semibold"
-						>Portionen</span
+						class="min-w-0 font-semibold"
 					>
+						Portionen
+					</span>
 
-					<div class="flex items-center gap-3">
+					<div class="flex shrink-0 items-center gap-1 sm:gap-3">
 						<BaseButton
 							variant="outline"
 							size="icon"
@@ -57,9 +56,8 @@ watch(
 							<BaseIcon :icon="MinusIcon" />
 						</BaseButton>
 
-						<!-- output is a live region: screen readers announce the new number -->
 						<output
-							class="min-w-8 font-display text-2xl font-extrabold text-center tabular-nums"
+							class="figure figure--md min-w-8 text-center"
 							aria-labelledby="recipe-servings-label"
 						>
 							{{ servings }}
@@ -83,7 +81,9 @@ watch(
 						:key="index"
 						class="data-list__row"
 					>
-						<span class="data-list__label">{{ ingredient.name }}</span>
+						<span class="data-list__label">
+							{{ ingredient.name }}
+						</span>
 
 						<span class="data-list__value">
 							{{

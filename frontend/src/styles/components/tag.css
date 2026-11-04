@@ -1,0 +1,31 @@
+@layer components {
+	.tag {
+		@apply inline-flex items-center gap-1.5 px-3 py-0.5;
+		@apply rounded-full bg-muted;
+		@apply text-md font-semibold leading-normal text-foreground/80 whitespace-nowrap;
+	}
+
+	.tag--accent {
+		@apply bg-accent text-primary;
+	}
+
+	.tag--highlight {
+		@apply bg-highlight text-highlight-foreground;
+	}
+
+	.tag--warning {
+		@apply bg-warning text-warning-foreground;
+	}
+
+	.tag--danger {
+		@apply bg-destructive-soft text-destructive-soft-foreground;
+	}
+
+	.tag--info {
+		@apply bg-info text-info-foreground;
+	}
+
+	.tag--inverse {
+		@apply bg-forest-border text-forest-foreground;
+	}
+}

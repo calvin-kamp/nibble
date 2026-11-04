@@ -9,7 +9,6 @@ import BaseIcon from './BaseIcon.vue'
 
 import { useToast } from '@shared/composables/toast'
 
-// Mounted once in App.vue. Shows every message from useToast().
 const { toasts, dismiss } = useToast()
 
 const ICONS: Record<ToastVariant, Component> = {
@@ -42,7 +41,9 @@ function onOpenChange(id: number, open: boolean): void {
 				:icon="ICONS[toast.variant]"
 			/>
 
-			<ToastTitle class="toast__title">{{ toast.message }}</ToastTitle>
+			<ToastTitle class="toast__title">
+				{{ toast.message }}
+			</ToastTitle>
 
 			<ToastClose
 				class="toast__close"
@@ -52,7 +53,6 @@ function onOpenChange(id: number, open: boolean): void {
 			</ToastClose>
 		</ToastRoot>
 
-		<!-- F8 jumps to the messages via keyboard -->
 		<ToastViewport
 			class="toast-viewport"
 			label="Meldungen ({hotkey})"

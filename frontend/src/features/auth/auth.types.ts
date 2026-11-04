@@ -5,27 +5,26 @@ export interface Credentials {
 	password: string
 }
 
-/** Signed-in user as returned by /api/auth/me, plus consent */
+/** Body of /auth/register: the checkbox covers the terms and the minimum age */
+export interface RegisterRequest extends Credentials {
+	terms_accepted: true
+}
+
 export interface AuthUser {
 	id: number
 	email: string
-	/** Only set after onboarding */
 	username: string | null
 	isEmailVerified: boolean
 	hasCompletedOnboarding: boolean
-	/** Consent from onboarding: without it there is no tracking and no saved meals */
 	hasDataConsent: boolean
 	/** When consent was last given or revoked (ISO timestamp), null if never decided */
 	dataConsentChangedAt: string | null
-	/** For recipe moderation */
 	isStaff: boolean
 	/** Time of permanent deletion (ISO) when a deletion has been requested */
 	deletionScheduledFor: string | null
-	/** Personal details, e.g. for the calorie calculator */
 	profile: PersonalProfile
 }
 
-/** Details from the account's "Persönliches" area. null while nothing has been entered. */
 export interface PersonalProfile {
 	/** YYYY-MM-DD */
 	birthDate: string | null
@@ -35,7 +34,6 @@ export interface PersonalProfile {
 
 export type OnboardingStepResponse = 'username' | 'consent' | 'goal' | 'targets' | 'summary'
 
-/** Response from Django (AccountState), fields in snake_case */
 export interface AccountStateResponse {
 	id: number
 	email: string
@@ -61,5 +59,4 @@ export interface BodyProfileResponse {
 	sex: Sex | null
 }
 
-/** Result of opening the confirmation link from the email */
 export type VerifyState = 'pending' | 'verified' | 'failed'

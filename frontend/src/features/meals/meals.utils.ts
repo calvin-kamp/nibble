@@ -28,7 +28,6 @@ export function draftNutrition(draft: MealItemDraft): Nutrition | null {
 export function toFormValues(meal: SavedMeal): MealFormValues {
 	return {
 		name: meal.name,
-		note: meal.note,
 		items: meal.items.map((item) => ({
 			product: item.product,
 			amount: item.quantity.value,

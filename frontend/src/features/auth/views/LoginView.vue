@@ -8,22 +8,27 @@ import { BaseLink } from '@shared/ui'
 	<AuthLayout
 		title="Anmelden"
 		lead="Schön, dich wiederzusehen."
+		aside-title="Dein Tagebuch wartet."
+		aside-text="Melde dich an und mach da weiter, wo du aufgehört hast."
 	>
 		<LoginForm />
 
-		<p class="pt-5 border-t border-divider text-ink-soft">
+		<p class="pt-5 border-t border-divider text-foreground/80">
 			Noch kein Konto?
+
 			<BaseLink
+				class="whitespace-nowrap"
 				route-name="auth-register"
 				variant="inline"
-				>Konto erstellen</BaseLink
 			>
+				Konto erstellen
+			</BaseLink>
 		</p>
 
 		<p>
-			<BaseLink route-name="calorie-calculator"
-				>Erst den Kalorienrechner ausprobieren</BaseLink
-			>
+			<BaseLink route-name="calorie-calculator">
+				Kalorienrechner ausprobieren
+			</BaseLink>
 		</p>
 	</AuthLayout>
 </template>

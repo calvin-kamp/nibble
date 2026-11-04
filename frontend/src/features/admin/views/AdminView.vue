@@ -33,7 +33,6 @@ const EMPTY_STATES: Record<SubmissionStatus, { title: string; text: string }> = 
 	rejected: { title: 'Noch nichts abgelehnt', text: 'Abgelehnte Einreichungen stehen hier.' },
 }
 
-// Status and page live in the address, so Back and reloading keep the place
 const status = computed<SubmissionStatus>(() => statusFromQuery(route.query))
 
 const page = computed<number>({
@@ -81,7 +80,6 @@ const resultLabel = computed<string>(() => {
 	return total.value === 1 ? '1 Einreichung' : `${formatNumber(total.value)} Einreichungen`
 })
 
-// After paging, start at the top with the count, which screen readers announce
 const resultCount = ref<HTMLElement | null>(null)
 
 watch(page, async () => {
@@ -89,7 +87,6 @@ watch(page, async () => {
 	resultCount.value?.focus()
 })
 
-// Totals as on the landing page, up to 10 minutes old
 const stats = ref<PublicStats | null>(null)
 
 fetchPublicStats()
@@ -109,11 +106,13 @@ const statItems = computed(() =>
 </script>
 
 <template>
-	<main class="content-wrapper flex flex-col gap-8 pt-6 pb-10">
+	<main class="page">
 		<div class="flex flex-col gap-3">
-			<h1>Verwaltung</h1>
+			<h1>
+				Verwaltung
+			</h1>
 
-			<p class="max-w-3xl text-lg text-muted">
+			<p class="page__lead">
 				Neue Rezepte und Änderungen an freigegebenen Rezepten warten hier auf deine Prüfung.
 				Die älteste Einreichung steht oben.
 			</p>
@@ -134,13 +133,13 @@ const statItems = computed(() =>
 				<div
 					v-for="item in statItems"
 					:key="item.label"
-					class="flex flex-col gap-1 col-span-6 p-4 rounded-lg bg-surface md:px-5 xl:col-span-3"
+					class="flex flex-col gap-2 col-span-12 min-w-0 p-4 border border-divider rounded-lg bg-card sm:col-span-6 md:px-5 xl:col-span-3"
 				>
-					<dt class="text-sm text-muted">
+					<dt class="text-md text-muted-foreground">
 						{{ item.label }}
 					</dt>
 
-					<dd class="font-display text-3xl font-extrabold tabular-nums">
+					<dd class="figure figure--lg">
 						{{ formatNumber(item.value) }}
 					</dd>
 				</div>
@@ -151,7 +150,9 @@ const statItems = computed(() =>
 			class="flex flex-col gap-6"
 			aria-labelledby="admin-submissions-title"
 		>
-			<h2 id="admin-submissions-title">Rezept-Einreichungen</h2>
+			<h2 id="admin-submissions-title">
+				Rezept-Einreichungen
+			</h2>
 
 			<nav aria-label="Status">
 				<ul class="tabs">
@@ -173,7 +174,7 @@ const statItems = computed(() =>
 			<div class="flex flex-col gap-4">
 				<p
 					ref="resultCount"
-					class="font-semibold text-ink-soft outline-none"
+					class="font-semibold text-foreground/80 outline-none"
 					role="status"
 					tabindex="-1"
 				>
@@ -194,18 +195,23 @@ const statItems = computed(() =>
 								class="data-list__row data-list__row--link"
 							>
 								<span class="data-list__label">
-									<span class="font-semibold text-ink">{{
-										submission.title
-									}}</span>
+									<span class="font-semibold text-foreground">
+										{{
+											submission.title
+										}}
+									</span>
 
 									<span class="data-list__meta">
-										{{ SUBMISSION_KIND_LABELS[submission.kind] }} ·
+										{{ SUBMISSION_KIND_LABELS[submission.kind] }} –
+
 										{{
 											submission.author
 												? `von ${submission.author}`
 												: 'Konto gelöscht'
 										}}
-										·
+
+										–
+
 										<time :datetime="submission.submittedAt">
 											{{ formatTimestamp(submission.submittedAt) }}
 										</time>
@@ -213,7 +219,7 @@ const statItems = computed(() =>
 								</span>
 
 								<BaseIcon
-									class="text-muted"
+									class="text-muted-foreground"
 									:icon="ChevronRightIcon"
 								/>
 							</RouterLink>

@@ -63,7 +63,6 @@ export function emptyIngredient(): IngredientDraft {
 	return { name: '', amount: undefined, unit: 'g' }
 }
 
-/** Completely empty rows do not count, they are simply left alone */
 export function isEmptyIngredient(ingredient: IngredientDraft): boolean {
 	return !ingredient.name.trim() && ingredient.amount === undefined
 }
@@ -96,7 +95,6 @@ function contentToFormValues(recipe: RecipeContent, image: string | null): Recip
 	}
 }
 
-/** Calories per serving from the macros, rounded */
 export function kcalOf(values: Pick<RecipeFormValues, 'protein' | 'carbs' | 'fat'>): number {
 	return Math.round(macrosToKcal(values))
 }
@@ -115,7 +113,6 @@ export function recipeParams(recipe: Pick<RecipeSummary, 'id' | 'title'>): {
 // Filtering happens in the backend, see searchRecipes(). Vegan recipes also count as
 // vegetarian there, and vegetarian ones as pescatarian.
 
-/** Number of active filters excluding the search, e.g. for "Filter (2)" */
 export function countActiveFilters(filters: RecipeFilterValues): number {
 	return (
 		Number(filters.diet !== 'omnivore') +
@@ -167,7 +164,6 @@ export function filtersFromQuery(query: LocationQuery): RecipeFilterValues {
 	}
 }
 
-/** Empty filters are left out of the address entirely */
 export function filtersToQuery(filters: RecipeFilterValues): LocationQueryRaw {
 	const diet = DIET_LABELS[filters.diet]
 
@@ -187,7 +183,6 @@ export function viewFromQuery(query: LocationQuery): RecipeListView {
 	return 'all'
 }
 
-/** Value of a group, as the radios or checkboxes expect it */
 export function groupValue(filters: RecipeFilterValues, id: FilterGroupId): string | string[] {
 	if (id === 'diet') return filters.diet
 
@@ -206,12 +201,10 @@ export function withGroupValue(
 	return { ...filters, equipment: value as Equipment[] }
 }
 
-/** Group without a selection, e.g. for "Zurücksetzen" within a group */
 export function withoutGroup(filters: RecipeFilterValues, id: FilterGroupId): RecipeFilterValues {
 	return withGroupValue(filters, id, groupValue(EMPTY_FILTERS, id))
 }
 
-/** Active filters one by one, e.g. as removable chips */
 export function activeFilters(filters: RecipeFilterValues): ActiveFilter[] {
 	return FILTER_GROUPS.flatMap((group) => {
 		const value = groupValue(filters, group.id)
@@ -235,7 +228,6 @@ export function activeFilters(filters: RecipeFilterValues): ActiveFilter[] {
 	})
 }
 
-/** Time, meals, diet, intolerances and appliances, e.g. for the row below the title */
 export function recipeFacts(recipe: RecipeContent): RecipeFact[] {
 	const { diet, durationMinutes, equipment, freeFrom, mealTypes } = recipe
 	const list: RecipeFact[] = [{ label: 'Zubereitungszeit', value: `${durationMinutes} Minuten` }]
@@ -251,7 +243,6 @@ export function recipeFacts(recipe: RecipeContent): RecipeFact[] {
 
 	if (freeFrom.length) {
 		list.push({
-			// Soft hyphen: in the single row from tablet up, the word is wider than its column
 			label: 'Unverträg\u00adlichkeiten',
 			value: freeFrom.map((item) => INTOLERANCE_LABELS[item]).join(', '),
 		})

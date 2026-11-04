@@ -3,7 +3,7 @@
 		@apply inline-flex justify-center items-center gap-2 min-h-11;
 		@apply font-semibold;
 		@apply transition-interactive;
-		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
 	}
 
 	/* Not on links that look like buttons (BaseButton with route-name): this file loads after
@@ -13,25 +13,34 @@
 	}
 
 	.link--underlined {
-		@apply text-brand-ink underline underline-offset-4;
-		@apply hover:text-ink;
+		@apply text-primary underline underline-offset-4;
+		@apply hover:text-foreground;
 	}
 
-	/* For links inside running text: no minimum height so the line does not grow */
 	.link--inline {
-		@apply inline min-h-0;
-		@apply text-brand-ink underline underline-offset-2;
-		@apply hover:text-ink;
+		@apply max-w-full min-h-0 wrap-anywhere;
+		@apply text-primary underline underline-offset-2;
+		@apply hover:text-foreground;
 	}
 
 	.link--standalone {
 		@apply relative;
 		@apply -ml-2 pl-2;
-		@apply font-normal text-muted text-md;
-		@apply hover:text-ink hover:underline;
+		@apply font-normal text-muted-foreground text-md;
+		@apply hover:text-foreground hover:underline;
 
 		@apply before:absolute before:inset-y-3.5 before:left-0 before:w-0.5 before:rounded-full;
 
-		@apply aria-[current=page]:font-semibold aria-[current=page]:text-ink aria-[current=page]:before:bg-brand;
+		@apply aria-[current=page]:font-semibold aria-[current=page]:text-foreground aria-[current=page]:before:bg-primary;
+	}
+
+	.link--nav {
+		@apply relative justify-start pl-4;
+		@apply font-normal text-md;
+		@apply underline decoration-transparent underline-offset-4;
+		@apply transition-[color,text-decoration-color];
+		@apply hover:decoration-current;
+		@apply before:absolute before:left-0 before:inset-y-3 before:w-0.5 before:rounded-full;
+		@apply aria-[current=page]:font-semibold  aria-[current=page]:decoration-highlight aria-[current=page]:before:bg-highlight;
 	}
 }

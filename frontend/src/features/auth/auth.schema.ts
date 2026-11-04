@@ -1,6 +1,8 @@
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
 
+import { MIN_AGE } from '@features/legal/legal.constants'
+
 const MIN_PASSWORD_LENGTH = 8
 
 const email = z
@@ -18,7 +20,6 @@ export const loginSchema = toTypedSchema(
 	}),
 )
 
-// A new password, typed twice. For registration and for the reset via the emailed link.
 const newPasswordFields = {
 	password: z
 		.string({ message: 'Lege ein Passwort fest.' })
@@ -38,7 +39,17 @@ const passwordsMatch = {
 }
 
 export const registerSchema = toTypedSchema(
-	z.object({ email, ...newPasswordFields }).refine(passwordsMatch.check, passwordsMatch.issue),
+	z
+		.object({
+			email,
+			...newPasswordFields,
+			terms: z.literal(true, {
+				errorMap: () => ({
+					message: `Setz den Haken, wenn du mindestens ${MIN_AGE} Jahre alt bist und die AGB akzeptierst.`,
+				}),
+			}),
+		})
+		.refine(passwordsMatch.check, passwordsMatch.issue),
 )
 
 export const passwordForgotSchema = toTypedSchema(z.object({ email }))

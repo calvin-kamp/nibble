@@ -10,7 +10,6 @@ import { ApiError } from '@shared/api/client'
 import { focusFirstError, PasswordField } from '@shared/forms'
 
 const emit = defineEmits<{
-	/** Time at which the account is permanently deleted (ISO) */
 	deleted: [scheduledFor: string]
 	cancel: []
 }>()
@@ -68,14 +67,16 @@ const onSubmit = handleSubmit(
 				type="submit"
 				variant="danger"
 				:disabled="isSubmitting"
-				>Löschung beantragen</BaseButton
 			>
+				Löschung beantragen
+			</BaseButton>
 
 			<BaseButton
 				variant="outline"
 				@click="emit('cancel')"
-				>Abbrechen</BaseButton
 			>
+				Abbrechen
+			</BaseButton>
 		</BaseActions>
 	</form>
 </template>

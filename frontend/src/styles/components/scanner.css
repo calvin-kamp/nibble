@@ -1,10 +1,8 @@
 @layer components {
-	/* Full screen camera. Everything except the window is dimmed by the window's own shadow, so
-     the clear area always lines up exactly with the frame. */
 	.scanner {
-		@apply fixed inset-0 z-[60] overflow-hidden;
+		@apply fixed inset-0 z-60 overflow-hidden;
 		@apply flex flex-col items-center justify-center gap-8 px-6;
-		@apply bg-black text-white;
+		@apply bg-neutral-1000 text-neutral-0;
 		@apply data-[state=open]:animate-in data-[state=open]:fade-in-0;
 		@apply data-[state=closed]:animate-out data-[state=closed]:fade-out-0;
 	}
@@ -15,12 +13,11 @@
 
 	.scanner__window {
 		@apply relative w-full max-w-sm aspect-[16/10] rounded-lg;
-		box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.65);
+		box-shadow: 0 0 0 100vmax color-mix(in oklab, var(--color-neutral-1000) 65%, transparent);
 	}
 
-	/* Corner brackets instead of a full outline, so the barcode stays the focus */
 	.scanner__corner {
-		@apply absolute size-8 border-white;
+		@apply absolute size-8 border-neutral-0;
 	}
 
 	.scanner__corner--tl {
@@ -40,32 +37,30 @@
 	}
 
 	.scanner__line {
-		@apply absolute inset-x-4 top-1/2 h-0.5 rounded-full bg-lime;
-		box-shadow: 0 0 12px var(--color-lime);
+		@apply absolute inset-x-4 top-1/2 h-0.5 rounded-full bg-highlight;
+		box-shadow: 0 0 12px var(--highlight);
 		animation: scanner-sweep 2.2s ease-in-out infinite alternate;
 	}
 
-	/* Text and controls sit on top of the dimmed area */
 	.scanner__text {
 		@apply relative z-10 flex flex-col gap-2 max-w-sm text-center;
-		/* Stays readable over a busy camera picture */
-		text-shadow: 0 1px 12px rgb(0 0 0 / 0.7);
+		text-shadow: 0 1px 12px color-mix(in oklab, var(--color-neutral-1000) 70%, transparent);
 	}
 
 	.scanner__title {
-		@apply font-display text-3xl font-extrabold leading-tight tracking-tighter;
+		@apply font-display text-3xl font-bold leading-tight tracking-tighter;
 	}
 
 	.scanner__description {
-		@apply text-white/85;
+		@apply text-neutral-0/85;
 	}
 
 	.scanner__close {
 		@apply absolute top-4 right-4 z-10 grid place-items-center size-12;
-		@apply rounded-full bg-black/40 text-white;
+		@apply rounded-full bg-neutral-1000/40 text-neutral-0;
 		@apply transition-interactive;
-		@apply hover:bg-black/60;
-		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white;
+		@apply hover:bg-neutral-1000/60;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-0;
 	}
 
 	@keyframes scanner-sweep {

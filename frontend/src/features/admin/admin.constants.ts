@@ -1,8 +1,9 @@
 import type { SubmissionKind, SubmissionStatus } from '@features/admin/admin.types'
 import type { RecipeContent } from '@features/recipes/recipes.types'
 
-/** The backend always returns 20 submissions per page */
-export const SUBMISSIONS_PAGE_SIZE = 20
+import { PAGE_SIZE } from '@shared/constants'
+
+export const SUBMISSIONS_PAGE_SIZE = PAGE_SIZE
 
 export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
 	pending: 'Offen',
@@ -15,14 +16,12 @@ export const SUBMISSION_KIND_LABELS: Record<SubmissionKind, string> = {
 	revision: 'Änderung',
 }
 
-/** Status in the address, e.g. /verwaltung?status=abgelehnt. Open submissions need none. */
 export const STATUS_QUERY: Record<SubmissionStatus, string | undefined> = {
 	pending: undefined,
 	approved: 'freigegeben',
 	rejected: 'abgelehnt',
 }
 
-/** Fields of a recipe in the order the detail page shows them, for the list of changes */
 export const CONTENT_LABELS: Record<keyof RecipeContent, string> = {
 	title: 'Titel',
 	description: 'Beschreibung',

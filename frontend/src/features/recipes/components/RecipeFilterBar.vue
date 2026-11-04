@@ -10,8 +10,6 @@ import { BaseIcon } from '@shared/ui'
 import { FILTER_GROUPS } from '@features/recipes/recipes.constants'
 import { activeFilters } from '@features/recipes/recipes.utils'
 
-// From desktop up: one button with a popover per filter group. Selections apply immediately,
-// the list below updates while the popover is open.
 const filters = defineModel<RecipeFilterValues>({ required: true })
 
 function selectedCount(group: FilterGroup): number {
@@ -32,15 +30,19 @@ function selectedCount(group: FilterGroup): number {
 			<PopoverRoot>
 				<PopoverTrigger
 					class="chip"
-					:class="{ 'border-brand bg-brand-soft text-brand-ink': selectedCount(group) }"
+					:class="{ 'border-primary bg-accent text-primary': selectedCount(group) }"
 				>
 					{{ group.legend }}
+
 					<span
 						v-if="selectedCount(group)"
-						class="inline-grid place-items-center min-w-6 h-6 px-1.5 rounded-full bg-brand text-sm tabular-nums text-on-brand"
+						class="inline-grid place-items-center min-w-6 h-6 px-1.5 rounded-full bg-primary text-md tabular-nums text-primary-foreground"
 					>
 						{{ selectedCount(group) }}
-						<span class="sr-only">gewählt</span>
+
+						<span class="sr-only">
+							gewählt
+						</span>
 					</span>
 
 					<BaseIcon

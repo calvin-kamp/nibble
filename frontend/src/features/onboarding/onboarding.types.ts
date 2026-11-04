@@ -18,7 +18,6 @@ export interface DailyNeeds {
 	source?: 'calculated' | 'manual'
 }
 
-/** Body data from onboarding. Each detail is optional; saved to the account on completion. */
 export interface BodyData {
 	/** YYYY-MM-DD */
 	birthDate?: string
@@ -35,19 +34,15 @@ export interface OnboardingData {
 	goal?: Goal
 	method?: NeedsMethod
 	needs?: DailyNeeds
-	/** Calculator inputs, kept between steps or carried over from the guest calculator */
 	calculatorValues?: Partial<CalorieCalculatorValues>
 }
 
-/** Where the user is in onboarding. Kept in memory (onboarding store), never in the browser. */
 export interface OnboardingProgress {
-	/** Step key as it appears in the address, e.g. "ziel" */
 	step: string
 	consentAnswered: boolean
 	data: OnboardingData
 }
 
-/** Coarse step as the backend knows it */
 export type OnboardingStep = 'username' | 'consent' | 'goal' | 'targets' | 'summary'
 
 export interface OnboardingStateResponse {
@@ -60,8 +55,6 @@ export type OnboardingStepId =
 
 export interface OnboardingStepItem {
 	id: OnboardingStepId
-	/** Calculator section, phones only */
 	part?: number
-	/** Calculator result */
 	result?: boolean
 }

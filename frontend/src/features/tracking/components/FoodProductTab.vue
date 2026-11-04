@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import type { FoodProduct, FoodUnit, Nutrition } from '@features/tracking/tracking.types'
+import type { FoodEntry, FoodProduct, FoodUnit, Nutrition } from '@features/tracking/tracking.types'
 import type { FieldOption } from '@shared/forms/types'
 
-import { useFieldError, useFieldValue, useSetFieldValue } from 'vee-validate'
-import { computed, nextTick, ref, watch } from 'vue'
+import { useFieldError, useFieldValue, useSetFieldValue, useSubmitCount } from 'vee-validate'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
 import FoodSearchField from '@features/tracking/components/FoodSearchField.vue'
 import NutritionFacts from '@features/tracking/components/NutritionFacts.vue'
 import { BaseButton } from '@shared/ui'
 
+import { useBreakpoint } from '@shared/composables/breakpoint'
+import { useToast } from '@shared/composables/toast'
+
+import { fetchRecentFoods, findByBarcode } from '@features/tracking/tracking.api'
 import {
 	formatUnitOption,
 	nutritionFor,
@@ -18,16 +22,23 @@ import {
 import { NumberField, SelectField } from '@shared/forms'
 import { formatNumber } from '@shared/utils/number'
 
-// "Lebensmittel" tab in the food dialog: search, then choose amount and unit. The nutrition
-// values below are recalculated on every change. Runs inside FoodEntryForm's form.
 const product = defineModel<FoodProduct | null>('product', { required: true })
+
+const RECENT_FOODS_SHOWN = 6
+const toast = useToast()
 
 const setProductCode = useSetFieldValue<string | undefined>('productCode')
 const setAmount = useSetFieldValue<number | undefined>('amount')
 const setUnit = useSetFieldValue<FoodUnit | undefined>('unit')
 const amount = useFieldValue<number | undefined>('amount')
 const unit = useFieldValue<FoodUnit | undefined>('unit')
-const productError = useFieldError('productCode')
+// The form checks itself as soon as the date field reports its first value. "Nothing chosen"
+// is only an error once the user tried to save.
+const productFieldError = useFieldError('productCode')
+const submitCount = useSubmitCount()
+const productError = computed<string | undefined>(() =>
+	submitCount.value > 0 ? productFieldError.value : undefined,
+)
 
 const root = ref<HTMLElement | null>(null)
 
@@ -36,7 +47,6 @@ async function focusFirstInput(): Promise<void> {
 	root.value?.querySelector<HTMLElement>('input')?.focus()
 }
 
-/** Suggestion per unit: one serving or package, otherwise 100 g or ml */
 function defaultAmount(target: FoodUnit): number {
 	return target === 'serving' || target === 'package' ? 1 : 100
 }
@@ -49,6 +59,29 @@ function choose(selected: FoodProduct): void {
 	setUnit(firstUnit, false)
 	setAmount(defaultAmount(firstUnit), false)
 	focusFirstInput()
+}
+
+const { isTablet } = useBreakpoint()
+const recentFoods = ref<FoodEntry[]>([])
+const loadingCode = ref<string | null>(null)
+
+onMounted(async () => {
+	recentFoods.value = await fetchRecentFoods(RECENT_FOODS_SHOWN).catch(() => [])
+})
+
+async function chooseRecent(entry: FoodEntry): Promise<void> {
+	loadingCode.value = entry.productCode ?? null
+
+	try {
+		const found = entry.productCode ? await findByBarcode(entry.productCode) : null
+
+		if (found) choose(found)
+		else toast.show(`${entry.name} ist nicht mehr in der Lebensmittelsuche.`, 'danger')
+	} catch {
+		toast.show('Das Lebensmittel konnte nicht geladen werden.', 'danger')
+	} finally {
+		loadingCode.value = null
+	}
 }
 
 function clear(): void {
@@ -86,25 +119,58 @@ const nutrition = computed<Nutrition | null>(() => {
 		ref="root"
 		class="flex flex-col gap-5"
 	>
-		<!-- In the dialog the search is the first thing to do, so it takes focus on open -->
-		<!-- eslint-disable vuejs-accessibility/no-autofocus -->
-		<FoodSearchField
-			v-if="!product"
-			autofocus
-			:error="productError"
-			@select="choose"
-		/>
-		<!-- eslint-enable vuejs-accessibility/no-autofocus -->
+		<template v-if="!product">
+			<!-- eslint-disable vuejs-accessibility/no-autofocus -->
+			<FoodSearchField
+				autofocus
+				:error="productError"
+				@select="choose"
+			/>
+			<!-- eslint-enable vuejs-accessibility/no-autofocus -->
+
+			<section
+				v-if="isTablet && recentFoods.length"
+				class="flex flex-col gap-2"
+				aria-labelledby="recent-foods-title"
+			>
+				<h3
+					id="recent-foods-title"
+					class="font-sans text-md font-semibold tracking-normal text-foreground"
+				>
+					Zuletzt eingetragen
+				</h3>
+
+				<ul class="flex flex-wrap gap-2">
+					<li
+						v-for="entry in recentFoods"
+						:key="entry.productCode"
+					>
+						<BaseButton
+							variant="outline"
+							size="sm"
+							:disabled="loadingCode !== null"
+							@click="chooseRecent(entry)"
+						>
+							{{ entry.name }}
+						</BaseButton>
+					</li>
+				</ul>
+			</section>
+		</template>
 
 		<template v-else>
-			<div
-				class="flex items-start justify-between gap-4 px-4 py-3 rounded-md bg-surface-muted"
-			>
+			<!-- Stacked on narrow screens, so the name keeps the full width -->
+			<div class="flex flex-col items-start gap-3 px-4 py-3 rounded-md bg-muted sm:flex-row sm:justify-between sm:gap-4">
 				<p class="flex flex-col min-w-0">
-					<span class="font-semibold">{{ product.name }}</span>
+					<span class="font-semibold wrap-break-word">
+						{{ product.name }}
+					</span>
 
-					<span class="text-sm text-muted">
-						<template v-if="product.brand">{{ product.brand }} · </template>
+					<span class="text-md text-muted-foreground">
+						<template v-if="product.brand">
+							{{ product.brand }} –
+						</template>
+
 						{{ formatNumber(product.per100.kcal) }} kcal pro 100 {{ product.unit }}
 					</span>
 				</p>
@@ -115,14 +181,15 @@ const nutrition = computed<Nutrition | null>(() => {
 					size="sm"
 					@click="clear"
 				>
-					Ändern<span class="sr-only">: anderes Lebensmittel suchen</span>
+					Ändern<span class="sr-only">
+						: anderes Lebensmittel suchen
+					</span>
 				</BaseButton>
 			</div>
 
-			<!-- The unit gets more room, e.g. for "Packung (1.000 ml)" -->
 			<div class="grid grid-cols-12 gap-4">
 				<NumberField
-					class="col-span-5"
+					class="col-span-12 sm:col-span-5"
 					name="amount"
 					label="Menge"
 					:min="0"
@@ -130,14 +197,13 @@ const nutrition = computed<Nutrition | null>(() => {
 				/>
 
 				<SelectField
-					class="col-span-7"
+					class="col-span-12 sm:col-span-7"
 					name="unit"
 					label="Einheit"
 					:options="unitOptions"
 				/>
 			</div>
 
-			<!-- Nutrition values for the chosen amount. aria-live: announced after a new amount. -->
 			<NutritionFacts
 				class="py-4 border-y border-divider"
 				:nutrition="nutrition"

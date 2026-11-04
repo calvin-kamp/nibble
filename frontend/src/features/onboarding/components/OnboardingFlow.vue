@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+	CalculatorSection,
 	CalorieCalculatorValues,
 	Goal,
 } from '@features/calorie-calculator/calorie-calculator.types'
@@ -23,14 +24,17 @@ import GoalStep from '@features/onboarding/components/steps/GoalStep.vue'
 import ManualNeedsStep from '@features/onboarding/components/steps/ManualNeedsStep.vue'
 import NeedsMethodStep from '@features/onboarding/components/steps/NeedsMethodStep.vue'
 import UsernameStep from '@features/onboarding/components/steps/UsernameStep.vue'
-import { BaseProgressBar } from '@shared/ui'
+import { BaseButton, BaseLink, BaseProgressBar } from '@shared/ui'
 
+import { useLogout } from '@features/auth/composables/logout'
 import { useBreakpoint } from '@shared/composables/breakpoint'
 import { useFormSteps } from '@shared/composables/form-steps'
 
 import { CALCULATOR_SECTIONS } from '@features/calorie-calculator/calorie-calculator.constants'
 import { usePendingCalculationStore } from '@features/calorie-calculator/calorie-calculator.store'
+import { saveUsername } from '@features/onboarding/onboarding.api'
 import { useOnboardingStore } from '@features/onboarding/onboarding.store'
+import { WORDMARK_PATH, WORDMARK_VIEWBOX } from '@layouts/logo-paths'
 import { ageOn } from '@shared/utils/date'
 
 interface Props {
@@ -73,6 +77,21 @@ const { isTablet } = useBreakpoint()
 
 const consentAnswered = ref<boolean>(props.progress?.consentAnswered ?? false)
 
+const logout = useLogout()
+
+// The goal has its own step before, and complete body data makes the basal section redundant.
+// Fixed after the body data step: values entered in the calculator must not shift its sections.
+function sectionsFor(values: Partial<CalorieCalculatorValues> | undefined): CalculatorSection[] {
+	const { sex, age, height, weight } = values ?? {}
+	const basalKnown = !!(sex && age && height && weight)
+
+	return CALCULATOR_SECTIONS.filter(
+		(section) => section !== 'goal' && !(section === 'basal' && basalKnown),
+	)
+}
+
+const calculatorSections = ref<CalculatorSection[]>(sectionsFor(data.calculatorValues))
+
 // Which steps exist depends on the answers: without consent the flow jumps straight to the
 // end, and on phones the calculator is split into sections.
 function buildSteps(consent: boolean, method: NeedsMethod | undefined): OnboardingStepItem[] {
@@ -85,7 +104,7 @@ function buildSteps(consent: boolean, method: NeedsMethod | undefined): Onboardi
 			list.push(
 				...(isTablet.value
 					? [{ id: 'calculator' as const }]
-					: CALCULATOR_SECTIONS.map((_, part) => ({ id: 'calculator' as const, part }))),
+					: calculatorSections.value.map((_, part) => ({ id: 'calculator' as const, part }))),
 				{ id: 'calculator', result: true },
 			)
 		}
@@ -106,7 +125,6 @@ const countedSteps = computed<OnboardingStepItem[]>(() =>
 	buildSteps(consentAnswered.value ? data.consent : true, data.method ?? 'calculate'),
 )
 
-// Keeps the step in the address, e.g. /einrichten?schritt=ziel
 const STEP_KEYS: Record<OnboardingStepId, string> = {
 	username: 'benutzername',
 	consent: 'datenschutz',
@@ -140,14 +158,35 @@ function indexOfKey(key: string): number {
 // The address cannot take the user past the saved state
 const furthest = ref<number>(props.progress ? indexOfKey(props.progress.step) : 0)
 
-const steps = useFormSteps({ keys, furthest })
+// Crossing the tablet breakpoint splits the calculator into sections or joins them, so the
+// steps after it move. The furthest step is an index: carry it over by its key, before the
+// steps react to the new list, or the result would count as not reached and the flow would
+// fall back into the calculator.
+watch(
+	keys,
+	(next, previous) => {
+		const reached = previous[furthest.value]
+
+		if (reached !== undefined && next[furthest.value] !== reached) {
+			furthest.value = indexOfKey(reached)
+		}
+	},
+	{ flush: 'sync' },
+)
+
+const steps = useFormSteps({
+	keys,
+	furthest,
+	// Unknown keys stay unknown (the flow then opens the furthest step), only calculator keys
+	// from the other screen width are mapped
+	indexOf: (key) =>
+		keys.value.includes(key) || key.startsWith(STEP_KEYS.calculator) ? indexOfKey(key) : -1,
+})
 
 const current = computed<OnboardingStepItem>(() => stepList.value[steps.index.value]!)
 
-// The last step does not count, it is the summary
-const stepCount = computed<number>(() => countedSteps.value.length - 1)
+const stepCount = computed<number>(() => countedSteps.value.length)
 
-// On the first visit without a step in the address, continue where the user left off
 onMounted(() => {
 	if (steps.index.value === 0 && furthest.value > 0) steps.goTo(furthest.value)
 })
@@ -169,6 +208,7 @@ function resetFurthest(): void {
 
 function onUsername(username: string): void {
 	data.username = username
+	saveUsername(username).catch(() => {})
 	steps.next()
 }
 
@@ -191,8 +231,9 @@ function onConsent(consent: boolean): void {
 	steps.next()
 }
 
-/** Nothing entered: nothing is saved. Entered details also prefill the calculator. */
 function onBody(body: BodyData | undefined): void {
+	const sectionCount = calculatorSections.value.length
+
 	data.body = body
 
 	if (body) {
@@ -206,6 +247,10 @@ function onBody(body: BodyData | undefined): void {
 			...(body.weightKg && { weight: body.weightKg }),
 		}
 	}
+
+	calculatorSections.value = sectionsFor(data.calculatorValues)
+
+	if (calculatorSections.value.length !== sectionCount) resetFurthest()
 
 	steps.next()
 }
@@ -238,6 +283,8 @@ function onCalculatorPart(values: Partial<CalorieCalculatorValues>): void {
 function onCalculated(values: CalorieCalculatorValues): void {
 	data.calculatorValues = values
 	data.goal = values.goal
+	// Details first entered in the calculator belong to the profile as well
+	data.body = { ...data.body, sex: values.sex, heightCm: values.height, weightKg: values.weight }
 	steps.next()
 }
 
@@ -258,15 +305,33 @@ function onComplete(): void {
 
 <template>
 	<div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-		<p class="font-display text-2xl font-extrabold tracking-tighter text-forest">nibble</p>
+		<!-- Not a link: the flow has no navigation to leave it by accident -->
+		<svg
+			class="h-7 w-auto text-forest"
+			:viewBox="WORDMARK_VIEWBOX"
+			role="img"
+			aria-label="nibble"
+		>
+			<path
+				:d="WORDMARK_PATH"
+				fill="currentColor"
+				fill-rule="evenodd"
+			/>
+		</svg>
 
-		<p class="text-sm font-semibold text-muted">
-			{{
-				current.id === 'done'
-					? 'Fertig'
-					: `Schritt ${steps.index.value + 1} von ${stepCount}`
-			}}
-		</p>
+		<div class="flex items-center gap-4">
+			<p class="text-md font-semibold text-muted-foreground">
+				Schritt {{ steps.index.value + 1 }} von {{ stepCount }}
+			</p>
+
+			<BaseButton
+				variant="ghost"
+				size="sm"
+				@click="logout"
+			>
+				Abmelden
+			</BaseButton>
+		</div>
 
 		<BaseProgressBar
 			class="basis-full h-1.5"
@@ -315,6 +380,7 @@ function onComplete(): void {
 		v-else-if="current.id === 'calculator'"
 		:goal="data.goal"
 		:values="data.calculatorValues"
+		:sections="calculatorSections"
 		:part="current.part"
 		:show-result="current.result"
 		@calculated="onCalculated"
@@ -337,4 +403,16 @@ function onComplete(): void {
 		@back="steps.back()"
 		@complete="onComplete"
 	/>
+
+	<!-- Same width as the steps above, so it lines up with them on large screens -->
+	<p class="w-full max-w-3xl mx-auto text-md text-muted-foreground">
+		Du möchtest nibble doch nicht nutzen?
+
+		<BaseLink
+			route-name="account-delete"
+			variant="inline"
+		>
+			Konto löschen
+		</BaseLink>
+	</p>
 </template>

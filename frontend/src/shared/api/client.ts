@@ -5,7 +5,6 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL
 const CSRF_COOKIE = 'csrftoken'
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
-/** API error response: { code, message, errors? }. errors only exists for validation errors. */
 interface ErrorBody {
 	code?: string
 	message?: string
@@ -13,7 +12,6 @@ interface ErrorBody {
 	errors?: Record<string, string[]>
 }
 
-/** API error response, e.g. field errors like { email: ['...'] } or code email_taken */
 export class ApiError extends Error {
 	constructor(
 		readonly status: number,
@@ -22,17 +20,14 @@ export class ApiError extends Error {
 		super((data as ErrorBody | undefined)?.message ?? `API-Anfrage fehlgeschlagen (${status})`)
 	}
 
-	/** API error code, e.g. validation_error, email_taken or consent_required */
 	get code(): string | null {
 		return (this.data as ErrorBody | undefined)?.code ?? null
 	}
 
-	/** API field errors, empty without validation errors */
 	get fieldErrors(): Record<string, string[]> {
 		return (this.data as ErrorBody | undefined)?.errors ?? {}
 	}
 
-	/** Whether the API reports an error for this field, e.g. password for a weak password */
 	hasFieldError(field: string): boolean {
 		return (this.fieldErrors[field]?.length ?? 0) > 0
 	}
@@ -48,7 +43,6 @@ export interface Paginated<T> {
 
 export interface ApiRequestOptions {
 	method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
-	/** Sent as JSON, FormData as multipart/form-data */
 	body?: unknown
 	/** Do not refresh on 401, e.g. for the sign-in request itself */
 	skipRefresh?: boolean
@@ -57,7 +51,6 @@ export interface ApiRequestOptions {
 let onSessionExpired: (() => void) | null = null
 let pendingRefresh: Promise<boolean> | null = null
 
-/** Called when even the refresh token can no longer be renewed */
 export function setSessionExpiredHandler(handler: () => void): void {
 	onSessionExpired = handler
 }
@@ -143,7 +136,6 @@ async function parse(response: Response): Promise<unknown> {
 	try {
 		return text ? JSON.parse(text) : undefined
 	} catch {
-		// E.g. an HTML error page from the proxy when the backend is not running
 		return undefined
 	}
 }

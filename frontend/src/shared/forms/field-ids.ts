@@ -8,11 +8,9 @@ export interface FieldIds {
 	labelId: string
 	hintId: string
 	errorId: string
-	/** For aria-describedby: hint and error, if present */
 	describedBy: (errorMessage: string | undefined) => string | undefined
 }
 
-/** IDs that connect label, hint and error to the input */
 export function useFieldIds(hint: MaybeRefOrGetter<string | undefined>): FieldIds {
 	const id = useId(undefined, 'field')
 	const hintId = `${id}-hint`

@@ -5,8 +5,6 @@ import { computed } from 'vue'
 
 import { KCAL_PER_GRAM } from '@features/calorie-calculator/calorie-calculator.constants'
 
-// Shares of protein, carbs and fat in the calories as a bar. Purely visual: the numbers are
-// always shown next to it, hence aria-hidden.
 interface Props {
 	macros: Pick<Nutrition, 'protein' | 'carbs' | 'fat'>
 }
@@ -17,14 +15,14 @@ const parts = computed(() => [
 	{
 		key: 'protein',
 		kcal: props.macros.protein * KCAL_PER_GRAM.protein,
-		color: 'var(--color-macro-protein)',
+		color: 'var(--macro-protein)',
 	},
 	{
 		key: 'carbs',
 		kcal: props.macros.carbs * KCAL_PER_GRAM.carbs,
-		color: 'var(--color-macro-carbs)',
+		color: 'var(--macro-carbs)',
 	},
-	{ key: 'fat', kcal: props.macros.fat * KCAL_PER_GRAM.fat, color: 'var(--color-macro-fat)' },
+	{ key: 'fat', kcal: props.macros.fat * KCAL_PER_GRAM.fat, color: 'var(--macro-fat)' },
 ])
 </script>
 

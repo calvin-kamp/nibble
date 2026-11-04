@@ -1,10 +1,9 @@
 @layer components {
 	.select__trigger {
 		@apply flex items-center justify-between gap-3 text-left;
-		@apply data-placeholder:text-muted;
+		@apply data-placeholder:text-muted-foreground;
 	}
 
-	/* One line; long values end with … instead of making the field taller */
 	.select__value {
 		@apply min-w-0 truncate;
 	}
@@ -12,28 +11,27 @@
 	.select__content {
 		@apply z-50 min-w-(--reka-select-trigger-width) max-w-(--reka-select-content-available-width) max-h-(--reka-select-content-available-height);
 		@apply overflow-y-auto p-1.5;
-		@apply border border-line rounded-md bg-surface shadow-lg;
+		@apply border border-border rounded-md bg-popover text-popover-foreground shadow-overlay;
 	}
 
-	/* Groups: a line between them, with the same room above and below */
 	.select__viewport--grouped {
 		@apply flex flex-col gap-1.5;
 	}
 
 	.select__group + .select__group {
-		@apply pt-1.5 border-t border-line;
+		@apply pt-1.5 border-t border-border;
 	}
 
 	.select__group-label {
 		@apply px-3 py-1.5;
-		@apply text-sm font-semibold text-muted;
+		@apply text-md font-semibold text-muted-foreground;
 	}
 
 	.select__item {
 		@apply flex items-center justify-between gap-3 min-h-11 px-3;
 		@apply rounded-sm cursor-pointer outline-hidden;
-		@apply data-highlighted:bg-surface-muted;
-		@apply data-[state=checked]:font-semibold data-[state=checked]:text-brand-ink;
+		@apply data-highlighted:bg-accent data-highlighted:text-primary;
+		@apply data-[state=checked]:font-semibold data-[state=checked]:text-primary;
 		@apply data-disabled:opacity-50 data-disabled:cursor-not-allowed;
 	}
 }

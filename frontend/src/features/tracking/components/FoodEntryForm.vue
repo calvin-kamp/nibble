@@ -20,10 +20,8 @@ import { DateField, focusFirstError, SelectField } from '@shared/forms'
 import { toIsoDate } from '@shared/utils/date'
 
 interface Props {
-	/** Prefill; defaults to today and the meal matching the time of day */
 	date?: string
 	meal?: MealType
-	/** Saved meal, e.g. from its own page. The dialog then starts on the "Mahlzeiten" tab. */
 	savedMealId?: string
 }
 
@@ -48,7 +46,6 @@ const TABS: { value: FoodEntrySource; label: string }[] = [
 	{ value: 'saved', label: 'Mahlzeiten' },
 ]
 
-/** Preselection by time of day; most people log right after eating */
 function mealOfNow(): MealType {
 	const hour = new Date().getHours()
 
@@ -85,14 +82,11 @@ const savedMeals = ref<SavedMeal[]>([])
 onMounted(async () => {
 	try {
 		savedMeals.value = await listMeals()
-	} catch {
-		// Without meals the tab stays empty; foods can still be logged
-	}
+	} catch {}
 })
 
 type FormValues = Parameters<Parameters<typeof handleSubmit>[0]>[0]
 
-/** Saves what belongs to the active tab. The backend calculates the nutrition values. */
 function saveEntry(formValues: FormValues): Promise<FoodEntry> {
 	const target = { date: formValues.date, meal: formValues.meal }
 
@@ -140,8 +134,6 @@ const onSubmit = handleSubmit(
 				{{ submitError }}
 			</p>
 
-			<!-- Where the entry belongs, often prefilled, e.g. via "Hinzufügen" on breakfast.
-             Stacked on phones, where two columns would cut off the values. -->
 			<div class="grid grid-cols-12 gap-4">
 				<SelectField
 					class="col-span-12 sm:col-span-6"
@@ -196,14 +188,16 @@ const onSubmit = handleSubmit(
 			<BaseButton
 				type="submit"
 				:disabled="isSubmitting"
-				>Eintragen</BaseButton
 			>
+				Eintragen
+			</BaseButton>
 
 			<BaseButton
 				variant="outline"
 				@click="emit('cancel')"
-				>Abbrechen</BaseButton
 			>
+				Abbrechen
+			</BaseButton>
 		</BaseActions>
 	</form>
 </template>

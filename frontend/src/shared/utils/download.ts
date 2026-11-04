@@ -1,4 +1,3 @@
-/** Offers a file for saving, e.g. a data export */
 export function downloadBlob(blob: Blob, filename: string): void {
 	const url = URL.createObjectURL(blob)
 	const link = document.createElement('a')

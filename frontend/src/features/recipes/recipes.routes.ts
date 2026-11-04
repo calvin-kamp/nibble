@@ -5,7 +5,11 @@ export const recipesRoutes: RouteRecordRaw[] = [
 		path: '/rezepte',
 		name: 'recipe-list',
 		component: () => import('@features/recipes/views/RecipeListView.vue'),
-		meta: { title: 'Rezepte' },
+		meta: {
+			title: 'Rezepte',
+			description:
+				'Rezepte aus der Community mit Nährwerten pro Portion. Filter nach Ernährungsform, Unverträglichkeiten, Küchengeräten und Zubereitungszeit.',
+		},
 	},
 	{
 		path: '/rezepte/neu',

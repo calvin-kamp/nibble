@@ -19,7 +19,6 @@ const router = useRouter()
 const auth = useAuthStore()
 const toast = useToast()
 
-// Link from the reset email, e.g. /reset-password?token=...
 const token = computed<string | null>(() =>
 	typeof route.query.token === 'string' ? route.query.token : null,
 )
@@ -38,7 +37,6 @@ const onSubmit = handleSubmit(
 		try {
 			await resetPassword(token.value, password)
 
-			// The reset ends every session, including one on this device
 			auth.signOut()
 			toast.show('Dein Passwort ist geändert. Melde dich jetzt damit an.')
 			await router.push({ name: 'auth-login' })
@@ -59,7 +57,11 @@ const onSubmit = handleSubmit(
 </script>
 
 <template>
-	<AuthLayout title="Neues Passwort">
+	<AuthLayout
+		title="Neues Passwort"
+		aside-title="Fast geschafft."
+		aside-text="Wähl ein neues Passwort. Danach meldest du dich damit an."
+	>
 		<template v-if="!token || linkInvalid">
 			<p
 				class="notice notice--danger"
@@ -112,7 +114,7 @@ const onSubmit = handleSubmit(
 			</BaseButton>
 		</form>
 
-		<p class="pt-5 border-t border-divider text-ink-soft">
+		<p class="pt-5 border-t border-divider text-foreground/80">
 			<BaseLink
 				route-name="auth-login"
 				variant="inline"

@@ -46,7 +46,9 @@ const page = defineModel<number>('page', { required: true })
 			>
 				<BaseIcon :icon="ArrowLeftIcon" />
 
-				<span class="max-sm:sr-only">Zurück</span>
+				<span class="max-sm:sr-only">
+					Zurück
+				</span>
 			</PaginationPrev>
 
 			<template
@@ -66,15 +68,18 @@ const page = defineModel<number>('page', { required: true })
 					v-else
 					class="pagination__gap"
 					aria-hidden="true"
-					>…</PaginationEllipsis
 				>
+					…
+				</PaginationEllipsis>
 			</template>
 
 			<PaginationNext
 				class="pagination__link"
 				aria-label="Weiter zur nächsten Seite"
 			>
-				<span class="max-sm:sr-only">Weiter</span>
+				<span class="max-sm:sr-only">
+					Weiter
+				</span>
 
 				<BaseIcon :icon="ArrowRightIcon" />
 			</PaginationNext>

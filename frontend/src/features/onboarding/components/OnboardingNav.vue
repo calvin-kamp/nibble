@@ -19,12 +19,11 @@ const emit = defineEmits<{
 </script>
 
 <template>
-	<!-- Next first: on top on phones, on the right from tablet up -->
 	<BaseActions>
-		<!-- Replaces the submit button, e.g. with a link in the last step -->
 		<slot name="primary">
 			<BaseButton type="submit">
 				{{ props.submitLabel }}
+
 				<BaseIcon :icon="ArrowRightIcon" />
 			</BaseButton>
 		</slot>
@@ -35,6 +34,7 @@ const emit = defineEmits<{
 			@click="emit('back')"
 		>
 			<BaseIcon :icon="ArrowLeftIcon" />
+
 			Zurück
 		</BaseButton>
 	</BaseActions>

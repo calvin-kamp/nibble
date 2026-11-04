@@ -1,0 +1,77 @@
+@layer components {
+	.landing {
+		@apply flex flex-col gap-12 w-full max-w-7xl px-4 pt-4 pb-16 mx-auto overflow-x-clip;
+		@apply md:gap-24 md:px-8 md:pt-8;
+		@apply xl:pt-12;
+	}
+
+	.landing__hero {
+		@apply grid grid-cols-12 items-center gap-y-12 px-5 py-10;
+		@apply rounded-xl bg-forest text-forest-muted-foreground;
+		@apply sm:px-10 md:py-16 lg:gap-x-10 xl:px-14 xl:py-20;
+	}
+
+	.landing__hero-text {
+		@apply flex flex-col items-start gap-7 col-span-12;
+		@apply lg:col-span-7;
+	}
+
+	.landing__title {
+		@apply text-4xl leading-tighter text-forest-foreground;
+		@apply md:text-5xl 2xl:text-6xl;
+	}
+
+	.landing__lead {
+		@apply max-w-xl text-lg leading-relaxed;
+	}
+
+	.landing__hero-preview {
+		@apply col-span-12 lg:col-span-5;
+	}
+
+	.landing__features {
+		@apply grid grid-cols-12 items-start gap-y-6;
+		@apply lg:gap-x-10;
+	}
+
+	.landing__features-intro {
+		@apply flex flex-col gap-6 col-span-12;
+		@apply lg:col-span-5;
+	}
+
+	.landing__privacy {
+		@apply flex flex-col items-start gap-5 p-6 rounded-lg bg-accent;
+		@apply md:flex-row md:items-center md:gap-6 md:p-8;
+		@apply lg:flex-col lg:items-start lg:gap-5;
+	}
+
+	.landing__privacy-icon {
+		@apply grid place-items-center shrink-0 size-12 rounded-full bg-primary text-primary-foreground;
+	}
+
+	.landing__privacy-title {
+		@apply block mb-2 font-display font-bold tracking-tighter text-foreground;
+	}
+
+	.landing__feature-list {
+		@apply flex flex-col col-span-12 px-6 py-2;
+		@apply border border-divider rounded-lg bg-card;
+		@apply md:px-8 lg:col-span-7;
+	}
+
+	.landing__feature {
+		@apply flex flex-col gap-4 py-6;
+		@apply border-b border-divider last:border-b-0;
+		@apply md:flex-row md:gap-6;
+	}
+
+	.landing__feature-icon {
+		@apply grid place-items-center shrink-0 size-12 rounded-full bg-forest text-highlight;
+	}
+
+	.landing__cta {
+		@apply flex flex-col items-start gap-6 px-6 py-10;
+		@apply rounded-xl bg-highlight text-highlight-foreground;
+		@apply sm:px-10 md:flex-row md:items-center md:justify-between md:py-12 xl:px-16;
+	}
+}

@@ -11,13 +11,13 @@ import { useToast } from '@shared/composables/toast'
 
 import { exportData, updateDataConsent } from '@features/account/account.api'
 import { useAuthStore } from '@features/auth/auth.store'
+import { OPERATOR } from '@features/legal/legal.constants'
 import { formatLongDate } from '@shared/utils/date'
 import { downloadBlob } from '@shared/utils/download'
 
 const auth = useAuthStore()
 const toast = useToast()
 
-// When consent was last given or revoked. Without a date, the user never consented.
 const changedAt = computed<{ iso: string; label: string } | null>(() => {
 	const value = auth.user?.dataConsentChangedAt
 
@@ -26,7 +26,6 @@ const changedAt = computed<{ iso: string; label: string } | null>(() => {
 
 const revokeOpen = ref<boolean>(false)
 
-// Revoking is as easy as consenting: one button and one confirmation
 async function revoke(): Promise<void> {
 	try {
 		auth.setUser(await updateDataConsent(false))
@@ -54,7 +53,7 @@ async function onExport(): Promise<void> {
 <template>
 	<AccountPanel title="Datenschutz">
 		<AccountSection
-			title="Einwilligung ins Tracking"
+			title="Einwilligung Gesundheitsdaten"
 			description="Mit dieser Einwilligung speichern wir deine Gesundheitsdaten: Gewicht, Körperdaten, Tagebuch, eigene Mahlzeiten und Kalorienbedarf. Ohne sie bleiben dir Rezepte und Rechner."
 		>
 			<p
@@ -62,17 +61,14 @@ async function onExport(): Promise<void> {
 				role="status"
 			>
 				<span
-					class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold"
-					:class="
-						auth.hasDataConsent
-							? 'bg-brand-soft text-brand-ink'
-							: 'bg-surface-muted text-ink-soft'
-					"
+					class="tag"
+					:class="auth.hasDataConsent ? 'tag--accent' : ''"
 				>
 					<BaseIcon
 						:icon="auth.hasDataConsent ? CircleCheckIcon : CircleSlashIcon"
 						:size="16"
 					/>
+
 					{{
 						auth.hasDataConsent
 							? 'Eingewilligt'
@@ -84,25 +80,37 @@ async function onExport(): Promise<void> {
 
 				<span
 					v-if="changedAt"
-					class="text-ink-soft"
+					class="text-foreground/80"
 				>
-					am <time :datetime="changedAt.iso">{{ changedAt.label }}</time>
+					am <time :datetime="changedAt.iso">
+						{{ changedAt.label }}
+					</time>
 				</span>
 			</p>
 
-			<template v-if="auth.hasDataConsent">
-				<p class="text-sm text-muted">
-					Was wir speichern und wie lange, steht in der
-					<BaseLink
-						route-name="legal-privacy"
-						variant="inline"
-						>Datenschutzerklärung</BaseLink
-					>.
-				</p>
+			<!-- In both states: also before consenting, the policy is one click away -->
+			<p class="text-md text-muted-foreground">
+				Was wir speichern und wie lange, steht in der
 
+				<BaseLink
+					route-name="legal-privacy"
+					variant="inline"
+				>
+					Datenschutzerklärung
+				</BaseLink>. Fragen zu deinen Daten beantworten wir unter
+
+				<BaseLink
+					:href="`mailto:${OPERATOR.privacyEmail}`"
+					variant="inline"
+				>
+					{{ OPERATOR.privacyEmail }}
+				</BaseLink>.
+			</p>
+
+			<template v-if="auth.hasDataConsent">
 				<BaseButton
 					class="self-start"
-					variant="outline"
+					variant="danger-soft"
 					@click="revokeOpen = true"
 				>
 					Einwilligung widerrufen
@@ -121,7 +129,7 @@ async function onExport(): Promise<void> {
 
 		<AccountSection
 			title="Datenexport"
-			description="Du bekommst eine JSON-Datei mit allen Daten zu deinem Konto: Konto- und Profildaten, Einwilligungsverlauf, Körperdaten, Ziele, Gewichts- und Tagebucheinträge, eigene Mahlzeiten mit Notizen, deine Rezepte und Einreichungen mit Ablehnungsgründen sowie deine Merkliste."
+			description="Du bekommst eine JSON-Datei mit allen Daten zu deinem Konto: Konto- und Profildaten, Einwilligungsverlauf, Körperdaten, Ziele, Gewichts- und Tagebucheinträge, eigene Mahlzeiten, deine Rezepte und Einreichungen mit Ablehnungsgründen sowie deine Merkliste."
 		>
 			<BaseButton
 				class="self-start"
@@ -130,6 +138,7 @@ async function onExport(): Promise<void> {
 				@click="onExport"
 			>
 				<BaseIcon :icon="DownloadIcon" />
+
 				Meine Daten herunterladen
 			</BaseButton>
 		</AccountSection>
@@ -137,7 +146,7 @@ async function onExport(): Promise<void> {
 		<BaseAlertDialog
 			v-model:open="revokeOpen"
 			title="Einwilligung widerrufen?"
-			description="Wir löschen sofort und endgültig dein Gewicht, deine Körperdaten, deine Einträge, eigene Mahlzeiten mit Notizen und deinen Tagesbedarf. Tagebuch und eigene Mahlzeiten sind dann nicht nutzbar. Du kannst jederzeit wieder einwilligen, die gelöschten Daten kommen aber nicht zurück."
+			description="Wir löschen sofort und endgültig dein Gewicht, deine Körperdaten, deine Einträge, eigene Mahlzeiten und deinen Tagesbedarf. Tagebuch und eigene Mahlzeiten sind dann nicht nutzbar. Du kannst jederzeit wieder einwilligen, die gelöschten Daten kommen aber nicht zurück."
 			confirm-label="Widerrufen"
 			cancel-label="Abbrechen"
 			variant="danger"

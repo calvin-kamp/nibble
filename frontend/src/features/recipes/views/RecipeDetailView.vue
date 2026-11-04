@@ -12,7 +12,7 @@ import { BaseBreadcrumb, BaseButton, BaseIcon } from '@shared/ui'
 
 import { useCanonicalRecipeRoute } from '@features/recipes/composables/canonical-recipe-route'
 import { useRecipeListLocation } from '@features/recipes/composables/recipe-filters'
-import { usePageTitle } from '@shared/composables/page-title'
+import { usePageDescription, usePageTitle } from '@shared/composables/page-title'
 import { useToast } from '@shared/composables/toast'
 
 import { useAuthStore } from '@features/auth/auth.store'
@@ -28,10 +28,15 @@ const props = defineProps<Props>()
 const auth = useAuthStore()
 const toast = useToast()
 
-// undefined: still loading, null: does not exist or is not visible
 const recipe = ref<Recipe | null | undefined>(undefined)
 
 usePageTitle(() => recipe.value?.title)
+usePageDescription(() =>
+	recipe.value
+		? recipe.value.description ||
+		`${recipe.value.title}: Rezept mit Zutaten, Zubereitung und Nährwerten pro Portion.`
+		: undefined,
+)
 
 watch(
 	() => props.id,
@@ -55,10 +60,8 @@ const facts = computed<RecipeFact[]>(() => (recipe.value ? recipeFacts(recipe.va
 
 const isSaved = computed<boolean>(() => recipe.value?.isSaved ?? false)
 
-// Saving only works when signed in and only for approved recipes
 const canSave = computed<boolean>(() => auth.isLoggedIn && recipe.value?.status === 'approved')
 
-// Notice for the author while moderation has not approved it yet
 const reviewNotice = computed<{ text: string; danger: boolean } | null>(() => {
 	const current = recipe.value
 
@@ -97,7 +100,6 @@ const reviewNotice = computed<{ text: string; danger: boolean } | null>(() => {
 	return null
 })
 
-// The label changes; the status message tells screen readers what happened
 const status = ref<string>('')
 const savingState = ref<boolean>(false)
 
@@ -123,7 +125,7 @@ async function toggleSaved(): Promise<void> {
 <template>
 	<main
 		v-if="recipe"
-		class="content-wrapper flex flex-col gap-6 pt-4 pb-10"
+		class="page page--compact"
 	>
 		<div class="flex flex-col gap-4">
 			<BaseBreadcrumb
@@ -132,16 +134,16 @@ async function toggleSaved(): Promise<void> {
 			/>
 
 			<RecipeMedia
-				class="aspect-4/3 rounded-xl bg-lime md:aspect-21/9"
+				class="recipe-media--2 aspect-4/3 rounded-xl md:aspect-21/9"
 				:image-url="recipe.imageUrl"
 			/>
 		</div>
 
 		<div class="flex flex-col gap-5">
-			<!-- Buttons to the right of the title. Icon-only on phones; the text stays as the label for
-           screen readers. -->
 			<div class="flex items-start justify-between gap-4">
-				<h1 class="min-w-0 wrap-break-word">{{ recipe.title }}</h1>
+				<h1 class="min-w-0 wrap-break-word">
+					{{ recipe.title }}
+				</h1>
 
 				<div class="flex shrink-0 gap-2 md:gap-3">
 					<BaseButton
@@ -153,7 +155,9 @@ async function toggleSaved(): Promise<void> {
 					>
 						<BaseIcon :icon="PencilIcon" />
 
-						<span class="max-md:sr-only">Bearbeiten</span>
+						<span class="max-md:sr-only">
+							Bearbeiten
+						</span>
 					</BaseButton>
 
 					<BaseButton
@@ -165,9 +169,11 @@ async function toggleSaved(): Promise<void> {
 					>
 						<BaseIcon :icon="isSaved ? BookmarkCheckIcon : BookmarkIcon" />
 
-						<span class="max-md:sr-only">{{
-							isSaved ? 'Gespeichert' : 'Rezept speichern'
-						}}</span>
+						<span class="max-md:sr-only">
+							{{
+								isSaved ? 'Gespeichert' : 'Rezept speichern'
+							}}
+						</span>
 					</BaseButton>
 				</div>
 
@@ -190,22 +196,25 @@ async function toggleSaved(): Promise<void> {
 
 			<p
 				v-if="recipe.description"
-				class="max-w-3xl text-lg text-ink-soft"
+				class="page__lead"
 			>
 				{{ recipe.description }}
 			</p>
 
-			<!-- Label above the value. Stacked on phones, all in one row from tablet up: a fixed number
-           of columns would leave single details alone in the last row. -->
-			<dl class="flex flex-col gap-4 py-5 border-y border-divider md:flex-row md:gap-6">
+			<!-- A grid, so a second row lines up with the first instead of stretching -->
+			<dl class="grid grid-cols-1 gap-x-6 gap-y-4 py-5 border-y border-divider sm:grid-cols-2 md:grid-cols-3">
 				<div
 					v-for="fact in facts"
 					:key="fact.label"
-					class="flex flex-col gap-0.5 min-w-0 md:flex-1"
+					class="flex flex-col gap-0.5 min-w-0"
 				>
-					<dt class="text-sm text-muted">{{ fact.label }}</dt>
+					<dt class="text-md text-muted-foreground">
+						{{ fact.label }}
+					</dt>
 
-					<dd class="font-bold">{{ fact.value }}</dd>
+					<dd class="font-bold wrap-break-word">
+						{{ fact.value }}
+					</dd>
 				</div>
 			</dl>
 		</div>
@@ -220,10 +229,9 @@ async function toggleSaved(): Promise<void> {
 			}"
 		/>
 
-		<div class="grid grid-cols-12 gap-10 xl:items-start xl:gap-6">
-			<!-- Stays in place below the fixed header while scrolling through the instructions -->
+		<div class="grid grid-cols-12 gap-y-10 xl:items-start xl:gap-6">
 			<RecipeIngredients
-				class="col-span-12 xl:col-span-5 xl:sticky xl:top-[calc(var(--site-header-height)+1.5rem)]"
+				class="col-span-12 xl:col-span-5 xl:sticky xl:top-below-header"
 				:recipe="recipe"
 			/>
 
@@ -244,15 +252,16 @@ async function toggleSaved(): Promise<void> {
 						:key="index"
 						class="flex items-baseline gap-4 text-base"
 					>
-						<!-- The list already provides the number; the visible one is only for orientation -->
 						<span
-							class="grid place-items-center shrink-0 size-11 rounded-full bg-lime font-display text-xl font-extrabold text-ink"
+							class="grid place-items-center shrink-0 size-11 rounded-full bg-highlight font-display text-xl font-bold text-foreground"
 							aria-hidden="true"
 						>
 							{{ index + 1 }}
 						</span>
 
-						<p class="leading-relaxed">{{ step }}</p>
+						<p class="leading-relaxed">
+							{{ step }}
+						</p>
 					</li>
 				</ol>
 			</section>

@@ -10,7 +10,6 @@ import { ApiError } from '@shared/api/client'
 import { focusFirstError, PasswordField, TextField } from '@shared/forms'
 
 const emit = defineEmits<{
-	/** The confirmation email is on its way; the new address only applies after the click */
 	done: [email: string]
 	cancel: []
 }>()
@@ -33,7 +32,6 @@ const onSubmit = handleSubmit(
 				setFieldError('password', 'Das Passwort stimmt nicht.')
 				focusFirstError(evt)
 			} else if (error instanceof ApiError && error.hasFieldError('email')) {
-				// Already taken, or already the account's own address; the backend says which
 				setFieldError('email', error.fieldErrors.email)
 				focusFirstError(evt)
 			} else {
@@ -78,14 +76,16 @@ const onSubmit = handleSubmit(
 			<BaseButton
 				type="submit"
 				:disabled="isSubmitting"
-				>Bestätigungslink senden</BaseButton
 			>
+				Bestätigungslink senden
+			</BaseButton>
 
 			<BaseButton
 				variant="ghost"
 				@click="emit('cancel')"
-				>Abbrechen</BaseButton
 			>
+				Abbrechen
+			</BaseButton>
 		</BaseActions>
 	</form>
 </template>

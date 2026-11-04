@@ -22,9 +22,7 @@ import { formatNumber } from '@shared/utils/number'
 interface Props {
 	foodEntries: FoodEntry[]
 	weightEntries: WeightEntry[]
-	/** null while no daily needs are set. The card then only shows what was eaten. */
 	goals: NutritionGoals | null
-	/** Day in the format YYYY-MM-DD, defaults to today */
 	date?: string
 }
 
@@ -32,7 +30,6 @@ const props = withDefaults(defineProps<Props>(), {
 	date: undefined,
 })
 
-// Opens the same dialogs as "Eintrag hinzufügen" in the navigation
 const { openEntry } = useTrackingDialogs()
 
 const day = computed<string>(() => props.date ?? toIsoDate())
@@ -45,19 +42,19 @@ const macros = computed(() => [
 		label: 'Protein',
 		value: summary.value.protein,
 		goal: props.goals?.protein,
-		color: 'var(--color-macro-protein)',
+		color: 'var(--macro-protein)',
 	},
 	{
 		label: 'Kohlenhydrate',
 		value: summary.value.carbs,
 		goal: props.goals?.carbs,
-		color: 'var(--color-macro-carbs)',
+		color: 'var(--macro-carbs)',
 	},
 	{
 		label: 'Fett',
 		value: summary.value.fat,
 		goal: props.goals?.fat,
-		color: 'var(--color-macro-fat)',
+		color: 'var(--macro-fat)',
 	},
 ])
 
@@ -92,12 +89,12 @@ watch(
 		size="lg"
 		aria-labelledby="today-card-title"
 	>
-		<div class="grid grid-cols-12 gap-8 xl:gap-x-10">
-			<div class="flex flex-col gap-6 col-span-12 min-w-0 xl:col-span-9">
+		<div class="grid grid-cols-12 gap-y-8 xl:gap-x-10">
+			<div class="flex flex-col gap-6 col-span-12 min-w-0 xl:col-span-8">
 				<h2
 					id="today-card-title"
 					ref="heading"
-					class="text-2xl text-white outline-none"
+					class="card__title text-forest-foreground outline-none"
 					tabindex="-1"
 				>
 					Heute
@@ -127,49 +124,59 @@ watch(
 					/>
 
 					<div class="flex flex-col gap-4 w-full min-w-0">
-						<p class="text-md sm:text-lg">
-							<strong class="text-white">{{ formatNumber(summary.kcal) }}</strong>
+						<p class="text-md text-balance sm:text-lg">
+							<strong class="text-forest-foreground">
+								{{ formatNumber(summary.kcal) }}
+							</strong>
 
 							<template v-if="props.goals">
-								von {{ formatNumber(props.goals.kcal) }}</template
-							>
+								von {{ formatNumber(props.goals.kcal) }}
+							</template>
+
 							kcal gegessen
 						</p>
 
 						<p
 							v-if="!props.goals"
-							class="text-sm"
+							class="text-md"
 						>
 							Noch kein Tagesbedarf festgelegt.
+
 							<BaseLink
 								route-name="account-nutrition"
 								variant="inline"
-								class="text-lime"
-								>Jetzt festlegen</BaseLink
+								class="text-highlight"
 							>
+								Jetzt festlegen
+							</BaseLink>
 						</p>
 
 						<ul class="flex flex-col gap-3">
 							<li
 								v-for="macro in macros"
 								:key="macro.label"
-								class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
+								class="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1.5 text-md md:text-base"
 							>
-								<span class="font-bold text-white">{{ macro.label }}</span>
+								<span class="min-w-0 font-bold text-forest-foreground wrap-break-word">
+									{{
+										macro.label
+									}}
+								</span>
 
-								<span class="tabular-nums">
-									<strong class="text-white">{{
-										formatNumber(Math.round(macro.value))
-									}}</strong>
+								<span class="tabular-nums whitespace-nowrap">
+									<strong class="text-forest-foreground">
+										{{ formatNumber(Math.round(macro.value)) }}
+									</strong>
 
 									<template v-if="macro.goal !== undefined">
-										/ {{ formatNumber(macro.goal) }}</template
-									>
+										/ {{ formatNumber(macro.goal) }}
+									</template>
+
 									g
 								</span>
 
 								<BaseProgressBar
-									class="basis-full"
+									class="col-span-2"
 									variant="inverse"
 									:value="macro.value"
 									:max="macro.goal ?? 0"
@@ -192,6 +199,7 @@ watch(
 						@click="openEntry('food')"
 					>
 						<BaseIcon :icon="PlusIcon" />
+
 						Essen eintragen
 					</BaseButton>
 
@@ -201,15 +209,16 @@ watch(
 						@click="openEntry('weight')"
 					>
 						<BaseIcon :icon="WeightIcon" />
+
 						Gewicht eintragen
 					</BaseButton>
 				</div>
 			</div>
 
-			<div
-				class="flex flex-col gap-2 col-span-12 pt-8 border-t border-white/15 xl:col-span-3 xl:pt-0 xl:pl-10 xl:border-t-0 xl:border-l"
-			>
-				<h3 class="text-2xl text-white">Gegessen</h3>
+			<div class="flex flex-col gap-3 col-span-12 pt-8 border-t border-forest-border xl:col-span-4 xl:pt-0 xl:pl-8 xl:border-t-0 xl:border-l">
+				<h3 class="card__title text-forest-foreground">
+					Gegessen
+				</h3>
 
 				<ul
 					v-if="hasFoodEntry"
@@ -220,20 +229,27 @@ watch(
 						:key="meal.meal"
 						class="data-list__row"
 					>
-						<span class="data-list__label">{{ meal.label }}</span>
+						<span class="data-list__label">
+							{{ meal.label }}
+						</span>
 
-						<span class="data-list__value">{{ formatNumber(meal.kcal) }} kcal</span>
+						<span class="data-list__value">
+							{{ formatNumber(meal.kcal) }} kcal
+						</span>
 					</li>
 				</ul>
 
-				<p v-else>Heute noch nichts eingetragen.</p>
+				<p v-else>
+					Heute noch nichts eingetragen.
+				</p>
 
 				<BaseLink
 					variant="no-decoration"
 					route-name="diary-food"
-					class="self-start mt-auto text-lime"
+					class="self-start mt-auto text-highlight"
 				>
 					Zum Tagebuch
+
 					<BaseIcon
 						:icon="ArrowRightIcon"
 						:size="16"

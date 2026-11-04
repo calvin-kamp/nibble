@@ -8,8 +8,6 @@ import { BaseIcon } from '@shared/ui'
 
 import { isNavItemActive, navItemLocation, useNavVisibility } from '@layouts/navigation'
 
-// A navigation group with an optional heading, e.g. "Entdecken".
-// Items that do not apply to the current user are dropped, an empty group entirely.
 interface Props {
 	items: NavItem[]
 	label?: string
@@ -53,6 +51,7 @@ const visibleItems = computed<NavItem[]>(() => props.items.filter(isVisible))
 						:icon="item.icon"
 						:size="22"
 					/>
+
 					{{ item.label }}
 				</RouterLink>
 			</li>

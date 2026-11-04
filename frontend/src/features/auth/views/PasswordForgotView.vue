@@ -38,6 +38,8 @@ const onSubmit = handleSubmit(
 	<AuthLayout
 		title="Passwort vergessen"
 		lead="Wir schicken dir einen Link, mit dem du ein neues Passwort festlegst."
+		aside-title="Kein Problem."
+		aside-text="Das passiert. Mit dem Link aus der E-Mail bist du gleich wieder drin."
 	>
 		<p
 			v-if="sentTo"
@@ -79,7 +81,7 @@ const onSubmit = handleSubmit(
 			</BaseButton>
 		</form>
 
-		<p class="pt-5 border-t border-divider text-ink-soft">
+		<p class="pt-5 border-t border-divider text-foreground/80">
 			Doch wieder eingefallen?
 
 			<BaseLink

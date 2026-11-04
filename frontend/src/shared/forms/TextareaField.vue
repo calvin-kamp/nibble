@@ -11,6 +11,7 @@ import { useFieldIds } from './field-ids'
 interface Props extends BaseFieldProps<string> {
 	placeholder?: string
 	rows?: number
+	labelHidden?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -19,11 +20,11 @@ const props = withDefaults(defineProps<Props>(), {
 	disabled: false,
 	placeholder: undefined,
 	rows: 4,
+	labelHidden: false,
 })
 
 const ids = useFieldIds(() => props.hint)
 
-// Validates on blur, and on every keystroke once there is an error
 const { value, errorMessage, handleBlur, validate } = useField<string>(
 	() => props.name,
 	toRef(props, 'rules'),
@@ -39,6 +40,7 @@ watch(value, () => {
 	<FormField
 		:ids="ids"
 		:label="props.label"
+		:label-hidden="props.labelHidden"
 		:hint="props.hint"
 		:error="errorMessage"
 	>

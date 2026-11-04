@@ -1,0 +1,47 @@
+@layer components {
+	.site-footer {
+		@apply bg-forest text-forest-foreground;
+	}
+
+	.site-footer__inner {
+		@apply grid w-full max-w-7xl px-4 mx-auto md:px-8 grid-cols-12 gap-x-6 gap-y-10 py-12;
+		@apply md:py-16;
+	}
+
+	.site-footer__brand {
+		@apply flex flex-col gap-4 col-span-12;
+		@apply lg:col-span-5;
+	}
+
+	.site-footer__logo {
+		@apply self-start text-forest-foreground;
+	}
+
+	.site-footer__tagline {
+		@apply max-w-xs font-display text-2xl font-bold leading-tight tracking-tighter text-forest-foreground;
+	}
+
+	.site-footer__note {
+		@apply max-w-sm text-md text-forest-muted-foreground;
+	}
+
+	.site-footer__nav {
+		@apply col-span-12 grid grid-cols-1 gap-x-6 gap-y-8;
+		@apply sm:grid-cols-3;
+		@apply lg:col-span-7;
+	}
+
+	.site-footer__heading {
+		@apply mb-2 pl-4 font-display text-lg font-bold tracking-tighter text-highlight;
+	}
+
+	.site-footer__link {
+		@apply text-forest-foreground;
+		@apply focus-visible:outline-highlight;
+	}
+
+	.site-footer__bottom {
+		@apply flex w-full max-w-7xl px-4 mx-auto md:px-8 flex-wrap items-center justify-between gap-x-6 gap-y-2 py-5;
+		@apply border-t border-forest-border text-md text-forest-muted-foreground;
+	}
+}

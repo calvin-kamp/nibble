@@ -1,19 +1,18 @@
 @layer components {
 	.breadcrumb__list {
 		@apply flex flex-wrap items-center gap-1 min-h-11;
-		@apply text-sm text-ink-soft;
+		@apply text-md text-foreground/80;
 	}
 
 	.breadcrumb__item {
 		@apply inline-flex items-center gap-1;
 	}
 
-	/* Inline links have no minimum height, here the whole row is the hit area */
 	.breadcrumb__link.link {
 		@apply inline-flex items-center min-h-11 font-bold;
 	}
 
 	.breadcrumb__separator {
-		@apply shrink-0 text-muted;
+		@apply shrink-0 text-muted-foreground;
 	}
 }

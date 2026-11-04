@@ -44,8 +44,9 @@ const onSubmit = handleSubmit(
 			<BaseButton
 				type="submit"
 				:disabled="isSubmitting"
-				>Einwilligen</BaseButton
 			>
+				Einwilligen
+			</BaseButton>
 		</BaseActions>
 	</form>
 </template>

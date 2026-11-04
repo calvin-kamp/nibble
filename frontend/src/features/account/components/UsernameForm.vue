@@ -8,7 +8,6 @@ import { useToast } from '@shared/composables/toast'
 import { updateUsername } from '@features/account/account.api'
 import { useAuthStore } from '@features/auth/auth.store'
 import { usernameSchema } from '@features/onboarding/onboarding.schema'
-import { ApiError } from '@shared/api/client'
 import { focusFirstError, TextField } from '@shared/forms'
 
 const emit = defineEmits<{
@@ -19,24 +18,19 @@ const emit = defineEmits<{
 const auth = useAuthStore()
 const toast = useToast()
 
-const { handleSubmit, isSubmitting, setFieldError } = useForm({
+const { handleSubmit, isSubmitting } = useForm({
 	validationSchema: usernameSchema,
 	initialValues: { username: auth.user?.username ?? '' },
 })
 
 const onSubmit = handleSubmit(
-	async ({ username }, { evt }) => {
+	async ({ username }) => {
 		try {
 			auth.setUser(await updateUsername(username))
 			toast.show('Benutzername gespeichert')
 			emit('done')
-		} catch (error) {
-			if (error instanceof ApiError && error.code === 'username_taken') {
-				setFieldError('username', 'Dieser Benutzername ist schon vergeben.')
-				focusFirstError(evt)
-			} else {
-				toast.show('Der Benutzername konnte nicht gespeichert werden.', 'danger')
-			}
+		} catch {
+			toast.show('Der Benutzername konnte nicht gespeichert werden.', 'danger')
 		}
 	},
 	({ evt }) => focusFirstError(evt),
@@ -60,14 +54,16 @@ const onSubmit = handleSubmit(
 			<BaseButton
 				type="submit"
 				:disabled="isSubmitting"
-				>Speichern</BaseButton
 			>
+				Speichern
+			</BaseButton>
 
 			<BaseButton
 				variant="ghost"
 				@click="emit('cancel')"
-				>Abbrechen</BaseButton
 			>
+				Abbrechen
+			</BaseButton>
 		</BaseActions>
 	</form>
 </template>

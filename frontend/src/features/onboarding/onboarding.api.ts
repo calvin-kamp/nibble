@@ -40,19 +40,18 @@ export async function loadOnboardingProgress(user: AuthUser): Promise<Onboarding
 	}
 }
 
-/** The user's own username counts as available. Throws ApiError, e.g. for an invalid format. */
-export async function isUsernameAvailable(username: string): Promise<boolean> {
-	const { available } = await apiRequest<{ available: boolean }>(
-		`/profile/username-availability?username=${encodeURIComponent(username)}`,
-	)
-
-	return available
+/**
+ * Saved right away, so a reload or signing out does not lose it: the backend then resumes at the
+ * consent step. completeOnboarding saves it again.
+ */
+export async function saveUsername(username: string): Promise<void> {
+	await apiRequest('/profile', { method: 'PATCH', body: { username } })
 }
 
 /**
  * Saves username, consent, body data, goal and daily needs via the individual endpoints and completes
  * onboarding. The backend advances step by step on its own.
- * Throws ApiError, e.g. 409 username_taken for a username that is already taken.
+ * Throws ApiError.
  */
 export async function completeOnboarding(data: OnboardingData): Promise<AuthUser> {
 	await apiRequest('/profile', { method: 'PATCH', body: { username: data.username } })
@@ -76,7 +75,6 @@ export async function completeOnboarding(data: OnboardingData): Promise<AuthUser
 		})
 	}
 
-	// The first entry in the weight diary
 	if (weightKg) await saveWeightEntry({ date: toIsoDate(), kg: weightKg })
 
 	if (data.consent && (data.goal || data.needs)) {

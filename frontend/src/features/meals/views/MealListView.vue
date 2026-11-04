@@ -11,7 +11,6 @@ import { useTrackingChanges } from '@features/tracking/composables/tracking-chan
 
 import { listMeals } from '@features/meals/meals.api'
 
-// Alphabetical, as returned by the backend. Reload after changes, e.g. from the food dialog.
 const meals = ref<SavedMeal[]>([])
 const loaded = ref<boolean>(false)
 const loadError = ref<boolean>(false)
@@ -33,19 +32,25 @@ watch(
 </script>
 
 <template>
-	<main class="content-wrapper flex flex-col gap-8 pt-6 pb-10">
-		<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-			<div class="flex flex-col gap-3">
-				<h1>Meine Mahlzeiten</h1>
+	<main class="page">
+		<div class="page__header">
+			<div class="page__intro">
+				<h1>
+					Meine Mahlzeiten
+				</h1>
 
-				<p class="max-w-2xl text-lg text-muted">
-					Was du oft isst, als Mahlzeit gespeichert. Ein Klick auf „Eintragen“, und sie
-					steht im Tagebuch.
+				<p class="page__lead">
+					Was du oft isst, als Mahlzeit gespeichert.
+
+					<br />
+
+					Ein Klick auf „Eintragen“, und sie steht im Tagebuch.
 				</p>
 			</div>
 
 			<BaseButton route-name="meal-create">
 				<BaseIcon :icon="PlusIcon" />
+
 				Mahlzeit anlegen
 			</BaseButton>
 		</div>
@@ -77,12 +82,16 @@ watch(
 			:icon="UtensilsIcon"
 			title="Noch keine Mahlzeiten"
 		>
-			Leg zum Beispiel dein übliches Frühstück an. Danach trägst du es mit einem Klick ein,
-			statt jedes Lebensmittel einzeln zu suchen.
+			Leg zum Beispiel dein übliches Frühstück an.
+
+			<br />
+
+			Danach trägst du es mit einem Klick ein, statt jedes Lebensmittel einzeln zu suchen.
 
 			<template #actions>
 				<BaseButton route-name="meal-create">
 					<BaseIcon :icon="PlusIcon" />
+
 					Mahlzeit anlegen
 				</BaseButton>
 			</template>

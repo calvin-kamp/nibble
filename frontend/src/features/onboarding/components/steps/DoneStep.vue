@@ -29,7 +29,7 @@ const NOT_ENTERED = 'Nicht angegeben'
 const lead = computed<string>(() =>
 	props.data.consent
 		? 'Du kannst jetzt dein Essen und dein Gewicht eintragen. Alles Weitere findest du in den Einstellungen.'
-		: 'Du kannst alle Rezepte und den Rechner nutzen. Wenn Nibble später doch deine Daten speichern soll, kannst du in den Einstellungen einwilligen.',
+		: 'Du kannst alle Rezepte und den Rechner nutzen. Wenn nibble später doch deine Daten speichern soll, kannst du in den Einstellungen einwilligen.',
 )
 
 const account = computed(() => [
@@ -41,8 +41,6 @@ const account = computed(() => [
 	},
 ])
 
-// One row per value instead of a joined line, so it stays a list on phones too.
-// Only with consent; without it nothing of this is saved.
 const healthData = computed(() => {
 	if (!props.data.consent) return []
 
@@ -70,9 +68,7 @@ const healthData = computed(() => {
 })
 
 const primary = computed(() =>
-	props.data.consent
-		? { label: 'Zum Dashboard', routeName: 'dashboard' }
-		: { label: 'Rezepte entdecken', routeName: 'recipe-list' },
+	props.data.consent ? { label: 'Zur Übersicht' } : { label: 'Rezepte entdecken' },
 )
 </script>
 
@@ -82,15 +78,19 @@ const primary = computed(() =>
 		:title="`Alles bereit, ${props.data.username}.`"
 		:lead="lead"
 	>
-		<dl class="data-list">
+		<dl class="data-list data-list--stacked">
 			<div
 				v-for="row in account"
 				:key="row.label"
 				class="data-list__row"
 			>
-				<dt class="data-list__label">{{ row.label }}</dt>
+				<dt class="data-list__label">
+					{{ row.label }}
+				</dt>
 
-				<dd class="data-list__value whitespace-normal text-right">{{ row.value }}</dd>
+				<dd class="data-list__value">
+					{{ row.value }}
+				</dd>
 			</div>
 		</dl>
 
@@ -106,18 +106,20 @@ const primary = computed(() =>
 				Deine Gesundheitsdaten
 			</h2>
 
-			<dl class="data-list">
+			<dl class="data-list data-list--stacked">
 				<div
 					v-for="row in healthData"
 					:key="row.label"
 					class="data-list__row"
 				>
-					<dt class="data-list__label">{{ row.label }}</dt>
+					<dt class="data-list__label">
+						{{ row.label }}
+					</dt>
 
 					<dd
-						class="data-list__value whitespace-normal text-right"
+						class="data-list__value"
 						:class="{
-							'font-normal text-muted':
+							'font-normal text-muted-foreground':
 								row.value === NOT_ENTERED || row.value === NOT_SET,
 						}"
 					>
@@ -129,11 +131,11 @@ const primary = computed(() =>
 
 		<OnboardingNav @back="emit('back')">
 			<template #primary>
-				<BaseButton
-					:route-name="primary.routeName"
-					@click="emit('complete')"
-				>
+				<!-- Not a link: the view navigates only once the onboarding is saved, otherwise the
+				router guard still sees it as unfinished and sends the user back to step 1 -->
+				<BaseButton @click="emit('complete')">
 					{{ primary.label }}
+
 					<BaseIcon :icon="ArrowRightIcon" />
 				</BaseButton>
 			</template>

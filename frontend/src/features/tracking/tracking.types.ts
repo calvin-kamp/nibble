@@ -15,18 +15,19 @@ export interface FoodEntry {
 	carbs: number
 	/** Grams */
 	fat: number
-	/** Brand, if the food comes from the search and has one */
 	brand?: string
-	/** Amount, if the food comes from the search */
 	quantity?: FoodQuantity
-	/** Open Food Facts barcode, if the food comes from the search */
 	productCode?: string
+	/**
+	 * The food as stored in the entry, for changing the amount later. Only for foods from the
+	 * search; saved meals have none. Without package size: the entry does not know it.
+	 */
+	product?: FoodProduct
 }
 
 /** Grams or millilitres: what a product's nutrition values refer to (per 100) */
 export type BaseUnit = 'g' | 'ml'
 
-/** Units for logging: the base unit, one serving or a whole package */
 export type FoodUnit = BaseUnit | 'serving' | 'package'
 
 /** Logged amount, e.g. 2 servings that equal 80 g */
@@ -49,11 +50,9 @@ export interface MealSummary {
 	meal: MealType
 	label: string
 	kcal: number
-	/** Food names, without duplicates */
 	items: string[]
 }
 
-/** One day in the diary list */
 export interface DayOverview {
 	/** Calendar day in the format YYYY-MM-DD */
 	date: string
@@ -73,7 +72,6 @@ export interface DaySummary {
 	meals: MealSummary[]
 }
 
-/** Days of a calendar week (Monday to Sunday) in the diary list */
 export interface DiaryWeek {
 	/** Monday of the week, YYYY-MM-DD */
 	start: string
@@ -86,7 +84,6 @@ export type Nutrition = Pick<FoodEntry, 'kcal' | 'protein' | 'carbs' | 'fat'>
 
 /** Food from the database (Open Food Facts snapshot), as returned by the search */
 export interface FoodProduct {
-	/** Barcode, the key at Open Food Facts */
 	code: string
 	name: string
 	brand?: string
@@ -127,9 +124,7 @@ export interface WeightPeriod {
 	value: string
 	/** Infinity for the whole history */
 	days: number
-	/** In the select, e.g. "Letzte 30 Tage" */
 	label: string
-	/** In a sentence, e.g. "in den letzten 30 Tagen" */
 	phrase: string
 }
 
@@ -137,11 +132,9 @@ export type BarcodeReader = Pick<BarcodeDetectorPonyfill, 'detect'>
 
 export type TrackingEntryKind = 'food' | 'weight'
 
-/** Prefill, e.g. from a diary day: date and meal are already in the form */
 export interface EntryPreset {
 	date?: string
 	meal?: MealType
-	/** A saved meal; the dialog then starts on the "Mahlzeiten" tab */
 	savedMealId?: string
 }
 
@@ -153,7 +146,6 @@ export interface TrackedDay {
 	entries: FoodEntry[]
 }
 
-/** Where a new entry goes */
 export interface EntryTarget {
 	/** YYYY-MM-DD, not in the future */
 	date: string
@@ -216,7 +208,6 @@ export interface WeightEntryResponse {
 	measured_on: string
 }
 
-/** Camera state of the barcode scanner */
 export type ScannerStatus = 'starting' | 'scanning' | 'denied' | 'unavailable' | 'failed'
 
 export interface WeightChartPoint extends WeightPoint {
@@ -224,7 +215,6 @@ export interface WeightChartPoint extends WeightPoint {
 	pointSize: number
 }
 
-/** One day of the diary list with the calorie target that applied that day */
 export interface DiaryDay extends DayOverview {
 	goalKcal: number | null
 }

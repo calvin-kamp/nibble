@@ -1,29 +1,30 @@
 @layer components {
 	.date__field {
 		@apply flex items-center gap-0.5 tabular-nums;
-		@apply focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand;
+		@apply focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring;
+		@apply aria-[invalid=true]:focus-within:border-destructive aria-[invalid=true]:focus-within:outline-destructive;
 	}
 
 	.date__segment {
 		@apply px-0.5 rounded-sm outline-hidden;
-		@apply focus:bg-brand-soft focus:text-brand-ink;
-		@apply data-placeholder:text-muted;
+		@apply focus:bg-accent focus:text-primary;
+		@apply data-placeholder:text-muted-foreground;
 	}
 
 	.date__literal {
-		@apply text-muted;
+		@apply text-muted-foreground;
 	}
 
 	.date__trigger {
-		@apply grid place-items-center size-9 ml-auto -mr-2;
-		@apply rounded-md text-ink-soft;
-		@apply hover:bg-surface-muted;
-		@apply focus-visible:outline-2 focus-visible:outline-brand;
+		@apply grid place-items-center size-11 ml-auto -mr-3.5;
+		@apply rounded-full text-foreground/80;
+		@apply hover:bg-accent hover:text-primary;
+		@apply focus-visible:outline-2 focus-visible:outline-ring;
 	}
 
 	.date__content {
 		@apply z-50 p-4;
-		@apply border border-line rounded-lg bg-surface shadow-lg;
+		@apply border border-border rounded-lg bg-popover text-popover-foreground shadow-overlay;
 	}
 
 	.calendar {
@@ -39,9 +40,9 @@
 	}
 
 	.calendar__nav {
-		@apply grid place-items-center size-9 rounded-md;
-		@apply hover:bg-surface-muted;
-		@apply focus-visible:outline-2 focus-visible:outline-brand;
+		@apply grid place-items-center size-11 rounded-full;
+		@apply hover:bg-accent hover:text-primary;
+		@apply focus-visible:outline-2 focus-visible:outline-ring;
 	}
 
 	.calendar__grid {
@@ -49,17 +50,17 @@
 	}
 
 	.calendar__weekday {
-		@apply pb-2 text-sm font-semibold text-muted;
+		@apply pb-2 text-md font-semibold text-muted-foreground;
 	}
 
 	.calendar__day {
-		@apply grid place-items-center size-10 mx-auto;
+		@apply grid place-items-center size-10 mx-auto sm:size-11;
 		@apply rounded-full tabular-nums outline-hidden cursor-pointer;
-		@apply hover:bg-surface-muted;
-		@apply focus-visible:outline-2 focus-visible:outline-brand;
-		@apply data-today:font-bold data-today:text-brand-ink;
-		@apply data-selected:bg-brand data-selected:text-on-brand;
-		@apply data-outside-view:text-line-strong;
+		@apply hover:bg-accent hover:text-primary;
+		@apply focus-visible:outline-2 focus-visible:outline-ring;
+		@apply data-today:font-bold data-today:text-primary;
+		@apply data-selected:bg-primary data-selected:text-primary-foreground;
+		@apply data-outside-view:text-input;
 		@apply data-disabled:opacity-40 data-disabled:cursor-not-allowed;
 		@apply data-unavailable:line-through;
 	}

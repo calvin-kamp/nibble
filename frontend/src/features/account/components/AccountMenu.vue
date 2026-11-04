@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ChevronDownIcon, LogOutIcon, SettingsIcon, UserRoundIcon } from '@lucide/vue'
+import { ChevronsUpDownIcon, LogOutIcon, SettingsIcon } from '@lucide/vue'
 import { PopoverClose, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import { BaseIcon, BaseLink } from '@shared/ui'
 
@@ -9,11 +9,14 @@ import { useLogout } from '@features/auth/composables/logout'
 
 import { useAuthStore } from '@features/auth/auth.store'
 
-// Account in the desktop header: who is signed in, settings, sign out
 const auth = useAuthStore()
 const logout = useLogout()
 
 const open = ref<boolean>(false)
+
+const initial = computed<string>(() =>
+	(auth.user?.username ?? auth.user?.email ?? '?').charAt(0).toUpperCase(),
+)
 
 async function onLogout(): Promise<void> {
 	open.value = false
@@ -23,35 +26,39 @@ async function onLogout(): Promise<void> {
 
 <template>
 	<PopoverRoot v-model:open="open">
-		<PopoverTrigger class="button button--outline">
-			<BaseIcon :icon="UserRoundIcon" />
+		<PopoverTrigger class="account-menu__trigger">
+			<span
+				class="account-menu__avatar"
+				aria-hidden="true"
+			>
+				{{ initial }}
+			</span>
 
-			{{ auth.user?.username ?? 'Konto' }}
+			<span class="flex flex-col flex-1 min-w-0 text-left">
+				<span class="font-semibold truncate">
+					{{ auth.user?.username ?? 'Konto' }}
+				</span>
+
+				<span class="text-md text-muted-foreground truncate">
+					{{ auth.user?.email }}
+				</span>
+			</span>
 
 			<BaseIcon
-				:icon="ChevronDownIcon"
+				class="text-muted-foreground"
+				:icon="ChevronsUpDownIcon"
 				:size="18"
 			/>
 		</PopoverTrigger>
 
 		<PopoverPortal>
 			<PopoverContent
-				class="popover flex flex-col gap-2 p-2"
-				align="end"
+				class="popover account-menu__content flex flex-col gap-2 p-2"
+				side="top"
+				align="start"
 				:side-offset="8"
 			>
-				<p class="flex flex-col px-3 pt-2 pb-3 border-b border-divider">
-					<span class="font-semibold">
-						{{ auth.user?.username ?? 'Angemeldet' }}
-					</span>
-
-					<span class="text-sm text-muted break-all">
-						{{ auth.user?.email }}
-					</span>
-				</p>
-
 				<div class="flex flex-col gap-1">
-					<!-- PopoverClose as wrapper: clicking an item closes the popover -->
 					<PopoverClose as-child>
 						<BaseLink
 							route-name="account"
@@ -66,7 +73,7 @@ async function onLogout(): Promise<void> {
 
 					<button
 						type="button"
-						class="popover__item text-danger"
+						class="popover__item popover__item--danger"
 						@click="onLogout"
 					>
 						<BaseIcon :icon="LogOutIcon" />

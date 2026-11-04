@@ -14,18 +14,12 @@ export interface MealItem extends Nutrition {
 	quantity: FoodQuantity
 }
 
-/**
- * Saved meal that can be logged again with one click, e.g. the usual breakfast.
- * Its nutrition values are the sum of its items.
- */
 export interface SavedMeal extends Nutrition {
 	id: string
 	name: string
-	note?: string
 	items: MealItem[]
 }
 
-/** One item in the form */
 export interface MealItemDraft {
 	product: FoodProduct
 	amount?: number
@@ -34,7 +28,6 @@ export interface MealItemDraft {
 
 export interface MealFormValues {
 	name: string
-	note?: string
 	items: MealItemDraft[]
 }
 
@@ -51,8 +44,6 @@ export interface MealItemResponse extends MacrosResponse {
 export interface MealResponse {
 	id: number
 	name: string
-	/** Empty without a note */
-	note: string
 	items: MealItemResponse[]
 	totals: MacrosResponse
 }

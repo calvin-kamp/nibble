@@ -23,13 +23,9 @@ import { canUseCamera } from '@features/tracking/tracking.barcode'
 import { FormField, useFieldIds } from '@shared/forms'
 import { formatNumber } from '@shared/utils/number'
 
-// Search by name or barcode as a combobox: type, pick a match with the arrow keys, Enter
-// selects. Filtering happens in the backend; the combobox only shows what comes back.
-// The camera button inside the field scans the barcode instead of typing it.
 interface Props {
 	label?: string
 	error?: string
-	/** Focus when a dialog opens */
 	autofocus?: boolean
 }
 
@@ -59,7 +55,6 @@ const loading = ref<boolean>(false)
 const failed = ref<boolean>(false)
 const selected = ref<FoodProduct | undefined>()
 
-// Only search after a short pause. If an older response arrives later, it no longer counts.
 let timer: ReturnType<typeof setTimeout> | undefined
 let requestId = 0
 
@@ -95,7 +90,6 @@ watch(term, (value) => {
 
 onBeforeUnmount(() => clearTimeout(timer))
 
-// Empty again after a selection, so the next food can be searched right away
 watch(selected, (product) => {
 	if (!product) return
 
@@ -140,7 +134,6 @@ async function onScan(barcode: string): Promise<void> {
 
 const hasQuery = computed<boolean>(() => term.value.trim().length >= MIN_LENGTH)
 
-// For screen readers: what the search just returned
 const status = computed<string>(() => {
 	if (lookingUp.value) return 'Barcode wird gesucht'
 	if (!hasQuery.value) return ''
@@ -167,19 +160,18 @@ const status = computed<string>(() => {
 			>
 				<ComboboxAnchor class="relative">
 					<BaseIcon
-						class="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
+						class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
 						:icon="loading || lookingUp ? LoaderCircleIcon : SearchIcon"
 						:class="{ 'animate-spin': loading || lookingUp }"
 					/>
 
-					<!-- Only set inside the food dialog, where the search is the first step -->
 					<!-- eslint-disable vuejs-accessibility/no-autofocus -->
 					<ComboboxInput
 						:id="ids.id"
 						v-model="term"
 						class="field__input pl-12"
-						:class="{ 'pr-14': hasCamera }"
-						placeholder="z. B. Haferflocken oder Marke"
+						:class="{ 'pr-12': hasCamera }"
+						placeholder="z. B. Haferflocken"
 						autocomplete="off"
 						:autofocus="props.autofocus || undefined"
 						:aria-invalid="!!props.error || undefined"
@@ -187,11 +179,10 @@ const status = computed<string>(() => {
 					/>
 					<!-- eslint-enable vuejs-accessibility/no-autofocus -->
 
-					<!-- Inside the field at its right edge. Only where the browser can open a camera at all. -->
 					<button
 						v-if="hasCamera"
 						type="button"
-						class="absolute right-1.5 top-1/2 -translate-y-1/2 grid place-items-center size-10 rounded-sm text-ink transition-interactive hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-brand disabled:opacity-50"
+						class="field__action absolute right-0.5 top-1/2 -translate-y-1/2"
 						:disabled="lookingUp"
 						aria-label="Barcode mit der Kamera scannen"
 						@click="scannerOpen = true"
@@ -210,14 +201,14 @@ const status = computed<string>(() => {
 						<ComboboxViewport>
 							<p
 								v-if="failed"
-								class="px-3 py-2 text-sm text-danger"
+								class="px-3 py-2 text-md text-destructive"
 							>
 								Die Suche hat nicht geklappt. Versuch es bitte noch einmal.
 							</p>
 
 							<p
 								v-else-if="!results.length"
-								class="px-3 py-2 text-sm text-muted"
+								class="px-3 py-2 text-md text-muted-foreground"
 							>
 								Nichts gefunden. Probier ein anderes Wort, die Marke oder den
 								Barcode.
@@ -231,13 +222,17 @@ const status = computed<string>(() => {
 								:text-value="product.name"
 							>
 								<span class="flex flex-col min-w-0">
-									<span class="font-semibold">{{ product.name }}</span>
+									<span class="font-semibold">
+										{{ product.name }}
+									</span>
 
-									<span class="text-sm text-muted">
-										<template v-if="product.brand"
-											>{{ product.brand }} ·
+									<span class="text-md text-muted-foreground">
+										<template v-if="product.brand">
+											{{ product.brand }} –
 										</template>
+
 										{{ formatNumber(product.per100.kcal) }} kcal pro 100
+
 										{{ product.unit }}
 									</span>
 								</span>
@@ -251,8 +246,9 @@ const status = computed<string>(() => {
 		<span
 			class="sr-only"
 			role="status"
-			>{{ status }}</span
 		>
+			{{ status }}
+		</span>
 
 		<BarcodeScanner
 			v-if="hasCamera"

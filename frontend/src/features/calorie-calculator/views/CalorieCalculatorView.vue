@@ -31,8 +31,6 @@ const router = useRouter()
 const auth = useAuthStore()
 const toast = useToast()
 
-// With tracking, the form is prefilled from the account. It only appears afterwards, otherwise
-// empty fields would show briefly.
 const prefill = ref<CalculatorPrefill | null>(null)
 const prefillReady = ref<boolean>(!auth.hasDataConsent)
 
@@ -46,7 +44,6 @@ onMounted(async () => {
 	}
 })
 
-/** "Alter, Größe und Gewicht" */
 const prefillSummary = computed<string>(() => {
 	const labels = prefill.value?.labels ?? []
 
@@ -61,9 +58,6 @@ const result = ref<CalorieResultData | null>(null)
 // Rebuilt on every calculation so focus jumps to the result again
 const resultKey = ref<number>(0)
 
-// On phones, one section per step, followed by the result as its own step.
-// From tablet up the form is on one page. In both cases the result replaces the
-// form; "Angaben ändern" goes back.
 const { isTablet } = useBreakpoint()
 
 const isStepped = computed<boolean>(() => !isTablet.value)
@@ -87,7 +81,6 @@ const part = computed<number | undefined>(() =>
 	isStepped.value ? Math.min(steps.index.value, RESULT_STEP - 1) : undefined,
 )
 
-// From tablet up without steps: the result stays visible until the details are changed
 const editing = ref<boolean>(true)
 
 const showsResult = computed<boolean>(() =>
@@ -119,7 +112,6 @@ function onReset(): void {
 	editing.value = true
 }
 
-// Signed in with consent: the result becomes the new daily needs
 const saving = ref<boolean>(false)
 
 async function applyAsNeeds(): Promise<void> {
@@ -138,7 +130,6 @@ async function applyAsNeeds(): Promise<void> {
 	}
 }
 
-// Guests carry their details through registration into onboarding, in memory only
 const pendingCalculation = usePendingCalculationStore()
 
 async function startSignup(): Promise<void> {
@@ -149,14 +140,14 @@ async function startSignup(): Promise<void> {
 </script>
 
 <template>
-	<main class="content-wrapper pt-6 pb-10">
-		<!-- Header, form and result centered at one width. max-w-4xl: on wide screens the rows would
-         otherwise be too long to fill in. -->
+	<main class="page">
 		<div class="content-column content-column--form gap-6">
 			<div class="flex flex-col gap-3">
-				<h1>Kalorienrechner</h1>
+				<h1>
+					Kalorienrechner
+				</h1>
 
-				<p class="max-w-3xl text-lg text-muted">
+				<p class="page__lead">
 					Wie viele Kalorien brauchst du wirklich? Wir rechnen Grundumsatz, Alltag,
 					Training und Verdauung einzeln und zeigen dir jeden Posten. Ohne Anmeldung.
 				</p>
@@ -169,7 +160,10 @@ async function startSignup(): Promise<void> {
 			>
 				{{ prefillSummary }} haben wir aus deinem Konto übernommen. Du kannst sie hier für
 				die Rechnung ändern, dauerhaft unter
-				<BaseLink route-name="account-personal">Persönliches</BaseLink>.
+
+				<BaseLink route-name="account-personal">
+					Persönliches
+				</BaseLink>.
 			</p>
 
 			<!-- v-show instead of v-if: after "Angaben ändern" the inputs are still there -->
@@ -202,16 +196,15 @@ async function startSignup(): Promise<void> {
 				:result="result"
 				:values="values"
 			>
-				<!-- Adopting belongs right with the value, so it sits in the card with the result -->
 				<template #actions>
 					<div class="flex flex-col gap-4">
 						<p v-if="!auth.isLoggedIn">
-							Mit einem kostenlosen Konto zeigt dir dein Dashboard jeden Tag, wie viel
+							Mit einem kostenlosen Konto zeigt dir deine Übersicht jeden Tag, wie viel
 							noch übrig ist. Deine Angaben nehmen wir mit.
 						</p>
 
 						<p v-else-if="auth.hasDataConsent">
-							Dein Dashboard rechnet dann mit diesem Wert. Ändern kannst du ihn
+							Deine Übersicht rechnet dann mit diesem Wert. Ändern kannst du ihn
 							jederzeit in den Einstellungen.
 						</p>
 
@@ -222,6 +215,7 @@ async function startSignup(): Promise<void> {
 								@click="startSignup"
 							>
 								<BaseIcon :icon="UserPlusIcon" />
+
 								Konto erstellen
 							</BaseButton>
 
@@ -232,6 +226,7 @@ async function startSignup(): Promise<void> {
 								@click="applyAsNeeds"
 							>
 								<BaseIcon :icon="CheckIcon" />
+
 								Als Tagesbedarf übernehmen
 							</BaseButton>
 
@@ -240,6 +235,7 @@ async function startSignup(): Promise<void> {
 								@click="editValues"
 							>
 								<BaseIcon :icon="PencilIcon" />
+
 								Angaben ändern
 							</BaseButton>
 						</div>

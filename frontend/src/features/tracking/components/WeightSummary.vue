@@ -26,22 +26,21 @@ const weeklyBalance = computed(() => getWeeklyBalance(points.value))
 		v-if="latest"
 		class="flex flex-col gap-2"
 	>
-		<p
-			class="font-display text-6xl font-extrabold leading-none tracking-[-0.03em] tabular-nums"
-		>
-			{{ formatNumber(latest.kg, 1)
-			}}<span class="ml-1 font-sans text-xl tracking-normal">kg</span>
+		<p class="figure figure--2xl">
+			{{ formatNumber(latest.kg, 1) }}<span class="figure__unit">
+				kg
+			</span>
 		</p>
 
 		<p
 			v-if="weeklyBalance"
-			class="text-md md:text-base"
+			class="text-foreground/80"
 		>
 			<template v-if="weeklyBalance.balance !== null">
 				{{ formatWeeklyBalance(weeklyBalance.balance) }},
 			</template>
 
-			Wochenschnitt {{ formatKg(weeklyBalance.average) }}
+			7-Tage-Schnitt {{ formatKg(weeklyBalance.average) }}
 		</p>
 	</div>
 </template>

@@ -1,20 +1,18 @@
 @layer components {
-	/* Choice chip: a label around a hidden radio or checkbox.
-     Works with native inputs (:checked) and with reka-ui (data-state). */
 	.chip {
 		@apply inline-flex items-center gap-2 min-h-11 px-4;
-		@apply border-2 border-line-strong rounded-full bg-surface;
-		@apply font-semibold cursor-pointer;
-		@apply transition-interactive;
-		@apply hover:border-muted;
-		@apply has-checked:border-brand has-checked:bg-brand-soft has-checked:text-brand-ink;
-		@apply has-[[data-state=checked]]:border-brand has-[[data-state=checked]]:bg-brand-soft has-[[data-state=checked]]:text-brand-ink;
-		@apply has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand;
+		@apply border border-input rounded-full bg-surface;
+		@apply text-md font-semibold cursor-pointer select-none;
+		@apply transition-[color,background-color,border-color,scale];
+		@apply hover:border-foreground/80;
+		@apply active:scale-97;
+		@apply has-checked:border-primary has-checked:bg-accent has-checked:text-primary;
+		@apply has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-primary;
+		@apply has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring;
 		@apply has-disabled:opacity-50 has-disabled:cursor-not-allowed;
 		@apply has-[[data-disabled]]:opacity-50 has-[[data-disabled]]:cursor-not-allowed;
 	}
 
-	/* Check mark for multiple choice, only visible when selected */
 	.chip__check {
 		@apply hidden;
 	}

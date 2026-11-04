@@ -15,10 +15,7 @@ import { formatUnitOption, unitsOf } from '@features/tracking/tracking.utils'
 import { NumberField, SelectField } from '@shared/forms'
 import { formatNumber } from '@shared/utils/number'
 
-// One item in the meal form: food with amount and unit. The nutrition values below are
-// recalculated on every change.
 interface Props {
-	/** Position in items, determines the field paths */
 	index: number
 }
 
@@ -49,7 +46,6 @@ const unitOptions = computed<FieldOption[]>(() => {
 
 const nutrition = computed(() => (item.value ? draftNutrition(item.value) : null))
 
-// Groups the fields: "Menge" alone does not say which food it belongs to
 const titleId = useId()
 </script>
 
@@ -60,39 +56,40 @@ const titleId = useId()
 		role="group"
 		:aria-labelledby="titleId"
 	>
-		<!-- Remove at the height of the name, like the steps in the recipe form -->
 		<div class="flex items-start justify-between gap-4">
 			<p class="flex flex-col min-w-0">
 				<span
 					:id="titleId"
 					class="text-md font-bold"
-					>{{ item.product.name }}</span
 				>
+					{{ item.product.name }}
+				</span>
 
-				<span class="text-sm text-muted tabular-nums">
-					<template v-if="item.product.brand">{{ item.product.brand }} · </template>
+				<span class="text-md text-muted-foreground tabular-nums">
+					<template v-if="item.product.brand">
+						{{ item.product.brand }} –
+					</template>
+
 					{{ formatNumber(item.product.per100.kcal) }} kcal pro 100
+
 					{{ item.product.unit }}
 				</span>
 			</p>
 
 			<BaseButton
-				variant="outline"
-				size="icon-sm"
+				class="shrink-0"
+				variant="danger-soft"
+				size="icon"
 				:aria-label="`${item.product.name} entfernen`"
 				@click="emit('remove')"
 			>
-				<BaseIcon
-					:icon="TrashIcon"
-					:size="16"
-				/>
+				<BaseIcon :icon="TrashIcon" />
 			</BaseButton>
 		</div>
 
-		<!-- The unit gets more room, e.g. for "Packung (1.000 ml)" -->
 		<div class="grid grid-cols-12 gap-3 md:flex md:items-start">
 			<NumberField
-				class="col-span-5 md:w-36"
+				class="col-span-12 md:w-36"
 				:name="path('amount')"
 				label="Menge"
 				:min="0"
@@ -100,14 +97,13 @@ const titleId = useId()
 			/>
 
 			<SelectField
-				class="col-span-7 md:w-64"
+				class="col-span-12 md:w-64"
 				:name="path('unit')"
 				label="Einheit"
 				:options="unitOptions"
 			/>
 		</div>
 
-		<!-- aria-live: after a new amount, the values are announced -->
 		<NutritionFacts
 			:nutrition="nutrition"
 			aria-live="polite"

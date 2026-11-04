@@ -9,8 +9,16 @@ import BaseLink from './BaseLink.vue'
 import { buildModifierClasses } from '@shared/utils/classes'
 
 interface Props {
-	/** selected for an on state, e.g. "Gespeichert" */
-	variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'muted' | 'danger' | 'selected'
+	/** selected for an on state, e.g. "Gespeichert". danger confirms a deletion, danger-soft starts one. */
+	variant?:
+		| 'primary'
+		| 'secondary'
+		| 'ghost'
+		| 'outline'
+		| 'muted'
+		| 'danger'
+		| 'danger-soft'
+		| 'selected'
 	/** sm and icon-sm: visually smaller, the hit area stays 44px */
 	size?: 'default' | 'sm' | 'lg' | 'icon' | 'icon-sm' | 'icon-lg'
 	type?: HTMLButtonElement['type']

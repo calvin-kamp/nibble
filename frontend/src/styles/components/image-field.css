@@ -1,8 +1,7 @@
 @layer components {
-	/* Image area in the same format as on the detail page, so the user sees how it will look */
 	.image-field__media {
 		@apply relative flex w-full aspect-4/3 overflow-hidden md:aspect-21/9;
-		@apply rounded-lg bg-surface-muted;
+		@apply rounded-lg bg-muted;
 	}
 
 	.image-field__preview {
@@ -11,14 +10,14 @@
 
 	.image-field__empty {
 		@apply flex flex-col items-center justify-center gap-1 size-full p-6;
-		@apply border-2 border-dashed border-line rounded-lg;
-		@apply text-center text-muted cursor-pointer;
+		@apply border border-dashed border-border rounded-lg;
+		@apply text-center text-muted-foreground cursor-pointer;
 		@apply transition-interactive;
-		@apply hover:border-line-strong hover:bg-surface-muted-hover;
+		@apply hover:border-accent-border hover:bg-accent hover:text-primary;
 	}
 
 	.image-field--invalid .image-field__empty {
-		@apply border-danger;
+		@apply border-destructive;
 	}
 
 	.image-field__actions {
@@ -33,9 +32,8 @@
 		@apply cursor-pointer;
 	}
 
-	/* The invisible file input holds focus; it is shown on the button next to it */
 	.image-field__input:focus-visible + .image-field__trigger {
-		@apply outline-2 outline-offset-2 outline-brand;
+		@apply outline-2 outline-offset-2 outline-ring;
 	}
 
 	.image-field__input:disabled + .image-field__trigger {

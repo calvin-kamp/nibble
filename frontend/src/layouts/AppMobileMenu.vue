@@ -9,21 +9,24 @@ import AppNavGroup from '@layouts/AppNavGroup.vue'
 import { BaseButton, BaseIcon, BaseSheet } from '@shared/ui'
 
 import { useAuthStore } from '@features/auth/auth.store'
-import { ADMIN_NAV, DISCOVER_NAV, LEGAL_NAV, MAIN_NAV, TRACKING_NAV } from '@layouts/navigation'
+import {
+	ADMIN_NAV,
+	DISCOVER_NAV,
+	HELP_NAV,
+	LEGAL_NAV,
+	MAIN_NAV,
+	TRACKING_NAV,
+} from '@layouts/navigation'
 
-// Menu for phone and tablet: the same items as the desktop sidebar, in groups.
-// For guests, sign in and register follow below.
 const route = useRoute()
 const auth = useAuthStore()
 
 const open = ref<boolean>(false)
 
-// Do not redirect the sign-in pages back to themselves
 const loginQuery = computed(() =>
 	route.meta.navigation === 'header' ? undefined : { weiter: route.fullPath },
 )
 
-// Close after a link is clicked, so the new page is visible
 watch(
 	() => route.fullPath,
 	() => (open.value = false),
@@ -49,6 +52,7 @@ watch(
 	<BaseSheet
 		id="app-mobile-menu"
 		v-model:open="open"
+		side="right"
 		title="Menü"
 		title-hidden
 	>
@@ -56,7 +60,6 @@ watch(
 			<AppLogo :route-name="auth.isLoggedIn ? 'dashboard' : 'home'" />
 		</template>
 
-		<!-- Separator and sign-in sit closer together than the sheet gap -->
 		<div class="flex flex-col gap-6">
 			<nav
 				class="flex flex-col gap-8"
@@ -79,16 +82,17 @@ watch(
 					:items="ADMIN_NAV"
 				/>
 
+				<AppNavGroup :items="HELP_NAV" />
+
 				<AppNavGroup
 					label="Rechtliches"
 					:items="LEGAL_NAV"
 				/>
 			</nav>
 
-			<!-- For guests, after the last group. After signing in, the user returns to this page. -->
 			<template v-if="!auth.isLoggedIn">
 				<Separator
-					class="h-px bg-line"
+					class="h-px bg-divider"
 					decorative
 				/>
 
@@ -98,6 +102,7 @@ watch(
 						:query="loginQuery"
 					>
 						<BaseIcon :icon="LogInIcon" />
+
 						Anmelden
 					</BaseButton>
 
@@ -106,6 +111,7 @@ watch(
 						route-name="auth-register"
 					>
 						<BaseIcon :icon="UserPlusIcon" />
+
 						Registrieren
 					</BaseButton>
 				</div>

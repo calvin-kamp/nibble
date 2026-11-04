@@ -38,7 +38,9 @@ const open = defineModel<boolean>('open')
 
 				<div class="drawer__content">
 					<div class="drawer__header">
-						<DrawerTitle class="drawer__title">{{ props.title }}</DrawerTitle>
+						<DrawerTitle class="drawer__title">
+							{{ props.title }}
+						</DrawerTitle>
 
 						<DrawerDescription
 							v-if="props.description"
@@ -53,7 +55,6 @@ const open = defineModel<boolean>('open')
 					</div>
 				</div>
 
-				<!-- Stays at the bottom while the content scrolls, e.g. for actions -->
 				<div
 					v-if="$slots.footer"
 					class="drawer__footer"

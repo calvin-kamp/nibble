@@ -9,8 +9,6 @@ const props = defineProps<Props>()
 </script>
 
 <template>
-	<!-- The heading carries the jump mark. tabindex -1: after a jump from the table of contents
-       focus moves there, without the heading joining the tab order. -->
 	<section
 		class="legal__section"
 		:aria-labelledby="props.section.id"

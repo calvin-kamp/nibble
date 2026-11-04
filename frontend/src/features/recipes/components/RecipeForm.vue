@@ -60,7 +60,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
 	submit: [values: RecipeFormValues]
-	/** "Abbrechen": where it leads and whether to confirm is decided by the page */
 	cancel: []
 }>()
 
@@ -101,8 +100,8 @@ const { handleSubmit, validateField, setFieldError, values, errors, meta } = use
 		freeFrom: [],
 		equipment: [],
 		mealTypes: [],
-		ingredients: [emptyIngredient(), emptyIngredient()],
-		steps: ['', '', ''],
+		ingredients: [emptyIngredient()],
+		steps: [''],
 		...props.initialValues,
 	},
 	keepValuesOnUnmount: true,
@@ -124,7 +123,6 @@ watch(kcal, (value) => {
 	if (value >= 1 && kcalError.value) setFieldError('kcal' as never, undefined)
 })
 
-// One section per step on phones, all sections stacked from tablet up
 const { isTablet } = useBreakpoint()
 
 const isStepped = computed<boolean>(() => !isTablet.value)
@@ -147,12 +145,10 @@ function isVisible(section: RecipeFormSection): boolean {
 	return !isStepped.value || RECIPE_FORM_SECTIONS[part.value] === section
 }
 
-/** After saving, go to the target page without Back landing in the form again */
 function finish(to: RouteLocationRaw): Promise<void> {
 	return formSteps.finish(to)
 }
 
-/** Whether anything changed since opening, e.g. to confirm before cancelling */
 const isDirty = computed<boolean>(() => meta.value.dirty)
 
 defineExpose({ finish, isDirty })
@@ -180,7 +176,6 @@ function sectionOf(path: string): RecipeFormSection {
 	)!
 }
 
-// New rows receive focus; after removing one, the add button receives it
 const ingredientList = ref<HTMLElement | null>(null)
 const stepList = ref<HTMLElement | null>(null)
 const addIngredientButton = ref<InstanceType<typeof BaseButton> | null>(null)
@@ -202,7 +197,6 @@ function addIngredient(): void {
 	focusLastRow(ingredientList.value)
 }
 
-// The last row is cleared instead of removed, so there is always one
 function removeIngredient(index: number): void {
 	ingredients.remove(index)
 
@@ -226,8 +220,6 @@ function removeStep(index: number): void {
 
 const stepIdBase = useId(undefined, 'recipe-step')
 
-// Focus moves with the moved step. Once it reaches the top or bottom, the button in that
-// direction is disabled, so the other button receives focus.
 async function moveStep(index: number, direction: -1 | 1): Promise<void> {
 	const target = index + direction
 
@@ -256,7 +248,6 @@ const submitAll = handleSubmit(
 	async ({ errors: invalid, evt }) => {
 		const firstPath = Object.keys(invalid)[0]
 
-		// If the error is in another section, go back there
 		if (isStepped.value && firstPath) {
 			await formSteps.goTo(RECIPE_FORM_SECTIONS.indexOf(sectionOf(firstPath)), {
 				focus: false,
@@ -268,7 +259,7 @@ const submitAll = handleSubmit(
 )
 
 // vee-validate already validates the lists silently on load. Only show their messages
-// ("mindestens eine Zutat") once someone tried to continue or save.
+// ("mindestens eine Zutat") once someone tried to continue or save in the current part.
 const attempted = ref<boolean>(false)
 
 async function onSubmit(event: Event): Promise<void> {
@@ -288,13 +279,14 @@ async function onSubmit(event: Event): Promise<void> {
 		valid = false
 	}
 
-	if (valid) formSteps.next()
-	else focusFirstError(event)
+	if (!valid) return focusFirstError(event)
+
+	attempted.value = false
+	formSteps.next()
 }
 </script>
 
 <template>
-	<!-- max-w-4xl: on wide screens the rows would otherwise be too long to fill in -->
 	<BaseCard
 		as="form"
 		size="lg"
@@ -318,13 +310,12 @@ async function onSubmit(event: Event): Promise<void> {
 					<h2
 						id="recipe-form-basics-title"
 						:ref="(el) => (headings.basics = el as HTMLElement)"
-						class="text-2xl outline-none"
+						class="outline-none wrap-break-word hyphens-auto"
 						tabindex="-1"
 					>
 						Grunddaten
 					</h2>
 
-					<!-- The photo first: it is the first thing others see of the recipe -->
 					<ImageField
 						name="image"
 						label="Foto (optional)"
@@ -339,7 +330,7 @@ async function onSubmit(event: Event): Promise<void> {
 
 					<TextareaField
 						name="description"
-						label="Kurzbeschreibung"
+						label="Kurzbeschreibung (optional)"
 						hint="Ein bis zwei Sätze, die Lust aufs Kochen machen."
 						:rows="3"
 					/>
@@ -379,34 +370,35 @@ async function onSubmit(event: Event): Promise<void> {
 						<h2
 							id="recipe-form-nutrition-title"
 							:ref="(el) => (headings.nutrition = el as HTMLElement)"
-							class="text-2xl outline-none"
+							class="outline-none wrap-break-word hyphens-auto"
 							tabindex="-1"
 						>
 							Nährwerte pro Portion
 						</h2>
 
-						<p class="text-muted">
+						<p class="text-muted-foreground">
 							Die Kalorien rechnen wir aus: Protein und Kohlenhydrate haben 4 kcal pro
 							Gramm, Fett 9 kcal pro Gramm. Trag 0 ein, wenn ein Wert nicht vorkommt.
 						</p>
 					</div>
 
-					<!-- Not an input: calories are derived from the macros. output announces the new value. -->
 					<div class="flex flex-col gap-2">
 						<p class="flex flex-wrap items-baseline gap-x-2">
 							<output
 								aria-label="Kalorien pro Portion"
-								class="font-display text-5xl font-extrabold tracking-tighter tabular-nums"
+								class="figure figure--2xl"
 							>
 								{{ kcal ? formatNumber(kcal) : '–' }}
 							</output>
 
-							<span class="font-semibold text-ink-soft">kcal pro Portion</span>
+							<span class="font-semibold text-foreground/80">
+								kcal pro Portion
+							</span>
 						</p>
 
 						<p
 							v-if="kcalError"
-							class="text-sm font-semibold text-danger"
+							class="text-md font-semibold text-destructive"
 							role="alert"
 						>
 							{{ kcalError }}
@@ -449,13 +441,13 @@ async function onSubmit(event: Event): Promise<void> {
 						<h2
 							id="recipe-form-properties-title"
 							:ref="(el) => (headings.properties = el as HTMLElement)"
-							class="text-2xl outline-none"
+							class="outline-none wrap-break-word hyphens-auto"
 							tabindex="-1"
 						>
 							Eigenschaften
 						</h2>
 
-						<p class="text-muted">
+						<p class="text-muted-foreground">
 							Damit andere dein Rezept über die Filter finden. Nur die Mahlzeit ist
 							Pflicht.
 						</p>
@@ -496,13 +488,13 @@ async function onSubmit(event: Event): Promise<void> {
 						<h2
 							id="recipe-form-ingredients-title"
 							:ref="(el) => (headings.ingredients = el as HTMLElement)"
-							class="text-2xl outline-none"
+							class="outline-none wrap-break-word hyphens-auto"
 							tabindex="-1"
 						>
 							Zutaten
 						</h2>
 
-						<p class="text-muted">
+						<p class="text-muted-foreground">
 							Die Mengen gelten für die Portionen aus den Grunddaten. Beim Kochen
 							lassen sie sich umrechnen.
 						</p>
@@ -515,53 +507,55 @@ async function onSubmit(event: Event): Promise<void> {
 						<li
 							v-for="(ingredient, index) in ingredients.fields.value"
 							:key="ingredient.key"
-							class="pb-5 border-b border-divider md:pb-0 md:border-b-0"
 						>
-							<fieldset
-								class="grid grid-cols-12 gap-3 min-w-0 md:flex md:items-start"
-							>
-								<legend class="sr-only">Zutat {{ index + 1 }}</legend>
+							<fieldset class="repeat-group">
+								<legend class="sr-only">
+									Zutat {{ index + 1 }}
+								</legend>
 
-								<TextField
-									class="col-span-12 md:flex-1"
-									:name="`ingredients[${index}].name`"
-									label="Zutat"
-									autocomplete="off"
-								/>
-
-								<NumberField
-									class="col-span-6 md:w-36"
-									:name="`ingredients[${index}].amount`"
-									label="Menge"
-									:min="0"
-									:format-options="{ maximumFractionDigits: 2 }"
-								/>
-
-								<SelectField
-									class="col-span-6 md:w-36"
-									:name="`ingredients[${index}].unit`"
-									label="Einheit"
-									:options="UNIT_OPTIONS"
-								/>
-
-								<!-- From tablet up in the row of fields: an invisible label lines the button up with the inputs -->
-								<div class="field col-span-12 items-start">
-									<span
-										class="field__label invisible max-md:hidden"
+								<div class="repeat-group__header">
+									<p
+										class="repeat-group__title"
 										aria-hidden="true"
-										>Entfernen</span
 									>
+										Zutat {{ index + 1 }}
+									</p>
 
 									<BaseButton
-										class="md:size-12 md:px-0"
-										variant="outline"
+										variant="danger-soft"
+										size="icon"
 										:aria-label="`Zutat ${index + 1} entfernen`"
 										@click="removeIngredient(index)"
 									>
-										<BaseIcon :icon="TrashIcon" />
-
-										<span class="md:sr-only">Entfernen</span>
+										<BaseIcon
+											:icon="TrashIcon"
+											:size="16"
+										/>
 									</BaseButton>
+								</div>
+
+								<div class="grid grid-cols-12 gap-3 min-w-0 md:flex md:items-start">
+									<TextField
+										class="col-span-12 md:flex-1"
+										:name="`ingredients[${index}].name`"
+										label="Name"
+										autocomplete="off"
+									/>
+
+									<NumberField
+										class="col-span-12 md:w-36"
+										:name="`ingredients[${index}].amount`"
+										label="Menge"
+										:min="0"
+										:format-options="{ maximumFractionDigits: 2 }"
+									/>
+
+									<SelectField
+										class="col-span-12 md:w-36"
+										:name="`ingredients[${index}].unit`"
+										label="Einheit"
+										:options="UNIT_OPTIONS"
+									/>
 								</div>
 							</fieldset>
 						</li>
@@ -569,7 +563,7 @@ async function onSubmit(event: Event): Promise<void> {
 
 					<p
 						v-if="attempted && errors.ingredients"
-						class="text-sm font-semibold text-danger"
+						class="text-md font-semibold text-destructive"
 					>
 						{{ errors.ingredients }}
 					</p>
@@ -581,6 +575,7 @@ async function onSubmit(event: Event): Promise<void> {
 						@click="addIngredient"
 					>
 						<BaseIcon :icon="PlusIcon" />
+
 						Zutat hinzufügen
 					</BaseButton>
 				</section>
@@ -593,7 +588,7 @@ async function onSubmit(event: Event): Promise<void> {
 					<h2
 						id="recipe-form-steps-title"
 						:ref="(el) => (headings.steps = el as HTMLElement)"
-						class="text-2xl outline-none"
+						class="outline-none wrap-break-word hyphens-auto"
 						tabindex="-1"
 					>
 						Zubereitung
@@ -603,66 +598,81 @@ async function onSubmit(event: Event): Promise<void> {
 						ref="stepList"
 						class="flex flex-col gap-5"
 					>
-						<!-- The buttons sit in the label row, to the right of "Schritt 1". In the markup they come
-                     before the text field so the tab order follows the visual order. -->
+						<!-- Number and actions on top, the text below. In the markup the buttons come before
+                     the text field so the tab order follows the visual order. -->
 						<li
 							v-for="(step, index) in steps.fields.value"
 							:key="step.key"
-							class="relative"
 						>
-							<div class="absolute z-1 -top-1 right-0 flex gap-2">
-								<BaseButton
-									:id="`${stepIdBase}-${index}-up`"
-									variant="outline"
-									size="icon-sm"
-									:aria-label="`Schritt ${index + 1} nach oben`"
-									:disabled="index === 0"
-									@click="moveStep(index, -1)"
-								>
-									<BaseIcon
-										:icon="ArrowUpIcon"
-										:size="16"
-									/>
-								</BaseButton>
+							<fieldset class="repeat-group">
+								<legend class="sr-only">
+									Schritt {{ index + 1 }}
+								</legend>
 
-								<BaseButton
-									:id="`${stepIdBase}-${index}-down`"
-									variant="outline"
-									size="icon-sm"
-									:aria-label="`Schritt ${index + 1} nach unten`"
-									:disabled="index === steps.fields.value.length - 1"
-									@click="moveStep(index, 1)"
-								>
-									<BaseIcon
-										:icon="ArrowDownIcon"
-										:size="16"
-									/>
-								</BaseButton>
+								<div class="repeat-group__header">
+									<p
+										class="repeat-group__title"
+										aria-hidden="true"
+									>
+										Schritt {{ index + 1 }}
+									</p>
 
-								<BaseButton
-									variant="outline"
-									size="icon-sm"
-									:aria-label="`Schritt ${index + 1} entfernen`"
-									@click="removeStep(index)"
-								>
-									<BaseIcon
-										:icon="TrashIcon"
-										:size="16"
-									/>
-								</BaseButton>
-							</div>
+									<div class="repeat-group__actions">
+										<BaseButton
+											:id="`${stepIdBase}-${index}-up`"
+											variant="outline"
+											size="icon"
+											:aria-label="`Schritt ${index + 1} nach oben`"
+											:disabled="index === 0"
+											@click="moveStep(index, -1)"
+										>
+											<BaseIcon
+												:icon="ArrowUpIcon"
+												:size="16"
+											/>
+										</BaseButton>
 
-							<TextareaField
-								:name="`steps[${index}]`"
-								:label="`Schritt ${index + 1}`"
-								:rows="3"
-							/>
+										<BaseButton
+											:id="`${stepIdBase}-${index}-down`"
+											variant="outline"
+											size="icon"
+											:aria-label="`Schritt ${index + 1} nach unten`"
+											:disabled="index === steps.fields.value.length - 1"
+											@click="moveStep(index, 1)"
+										>
+											<BaseIcon
+												:icon="ArrowDownIcon"
+												:size="16"
+											/>
+										</BaseButton>
+
+										<BaseButton
+											variant="danger-soft"
+											size="icon"
+											:aria-label="`Schritt ${index + 1} entfernen`"
+											@click="removeStep(index)"
+										>
+											<BaseIcon
+												:icon="TrashIcon"
+												:size="16"
+											/>
+										</BaseButton>
+									</div>
+								</div>
+
+								<TextareaField
+									:name="`steps[${index}]`"
+									:label="`Schritt ${index + 1}`"
+									label-hidden
+									:rows="3"
+								/>
+							</fieldset>
 						</li>
 					</ol>
 
 					<p
 						v-if="attempted && errors.steps"
-						class="text-sm font-semibold text-danger"
+						class="text-md font-semibold text-destructive"
 					>
 						{{ errors.steps }}
 					</p>
@@ -674,6 +684,7 @@ async function onSubmit(event: Event): Promise<void> {
 						@click="addStep"
 					>
 						<BaseIcon :icon="PlusIcon" />
+
 						Schritt hinzufügen
 					</BaseButton>
 				</section>
@@ -683,10 +694,13 @@ async function onSubmit(event: Event): Promise<void> {
 						type="submit"
 						:disabled="props.submitting"
 					>
-						<template v-if="isLastPart">{{ props.submitLabel }}</template>
+						<template v-if="isLastPart">
+							{{ props.submitLabel }}
+						</template>
 
 						<template v-else>
 							Weiter
+
 							<BaseIcon :icon="ArrowRightIcon" />
 						</template>
 					</BaseButton>
@@ -697,6 +711,7 @@ async function onSubmit(event: Event): Promise<void> {
 						@click="formSteps.back()"
 					>
 						<BaseIcon :icon="ArrowLeftIcon" />
+
 						Zurück
 					</BaseButton>
 
@@ -704,8 +719,9 @@ async function onSubmit(event: Event): Promise<void> {
 						v-else
 						variant="ghost"
 						@click="emit('cancel')"
-						>Abbrechen</BaseButton
 					>
+						Abbrechen
+					</BaseButton>
 				</BaseActions>
 			</div>
 		</div>

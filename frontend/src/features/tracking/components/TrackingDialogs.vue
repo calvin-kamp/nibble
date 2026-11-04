@@ -18,7 +18,6 @@ import { useToast } from '@shared/composables/toast'
 const { chooserOpen, entry, preset, openEntry, restoreFocus } = useTrackingDialogs()
 const toast = useToast()
 
-// From desktop the sidebar opens the chooser, below that the bottom navigation
 const { isDesktop } = useBreakpoint()
 
 function entryModel(kind: 'food' | 'weight') {
@@ -30,7 +29,6 @@ function entryModel(kind: 'food' | 'weight') {
 	})
 }
 
-// A link in the dialog, e.g. "Mahlzeit anlegen", leads to another page, where the dialog is closed.
 const route = useRoute()
 
 watch(
@@ -79,8 +77,6 @@ function onChooserClosed(event: Event): void {
 </script>
 
 <template>
-	<!-- The chooser is a drawer where the bottom navigation opens it, like the account menu next
-       to it. The entry itself is always a dialog. -->
 	<component
 		:is="isDesktop ? BaseDialog : BaseDrawer"
 		v-model:open="chooserOpen"

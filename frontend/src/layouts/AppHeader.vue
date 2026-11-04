@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import AccountMenu from '@features/account/components/AccountMenu.vue'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
 import AppLogo from '@layouts/AppLogo.vue'
 import AppMobileMenu from '@layouts/AppMobileMenu.vue'
+import { BaseButton } from '@shared/ui'
 
 import { useAuthStore } from '@features/auth/auth.store'
 
-// With the sidebar (standalone: false) it takes over logo and menu from desktop up, leaving only
-// the account here. Without the sidebar, e.g. on sign-in, the header shows both at every size.
+// Next to the sidebar (standalone: false) the header exists on phones and tablets only; from
+// desktop up the sidebar holds everything. Without the sidebar, e.g. on sign-in, the header shows
+// logo and menu at every size.
 interface Props {
 	standalone?: boolean
 }
@@ -15,38 +19,46 @@ const props = withDefaults(defineProps<Props>(), {
 	standalone: false,
 })
 
+const route = useRoute()
 const auth = useAuthStore()
+
+const loginQuery = computed(() =>
+	route.meta.navigation === 'header' ? undefined : { weiter: route.fullPath },
+)
 </script>
 
 <template>
 	<header
 		class="site-header"
-		:class="{
-			'site-header--sidebar': !props.standalone,
-			'site-header--sidebar-guest': !props.standalone && !auth.isLoggedIn,
-		}"
+		:class="{ 'site-header--sidebar': !props.standalone }"
 	>
 		<div
 			class="content-wrapper site-header__inner"
-			:class="props.standalone ? 'max-w-none' : 'xl:justify-end'"
+			:class="{ 'max-w-none': props.standalone }"
 		>
-			<AppLogo
-				:class="{ 'xl:hidden': !props.standalone }"
-				:route-name="auth.isLoggedIn ? 'dashboard' : 'home'"
-			/>
+			<AppLogo :route-name="auth.isLoggedIn ? 'dashboard' : 'home'" />
 
-			<div class="flex items-center gap-2">
-				<!-- On smaller screens the account lives in the bottom navigation -->
-				<div
-					v-if="auth.isLoggedIn && !props.standalone"
-					class="hidden xl:block"
+			<div class="site-header__actions">
+				<template v-if="!auth.isLoggedIn && route.name !== 'auth-login'">
+					<BaseButton
+						class="hidden md:inline-flex"
+						variant="ghost"
+						route-name="auth-login"
+						:query="loginQuery"
+					>
+						Anmelden
+					</BaseButton>
+				</template>
+
+				<BaseButton
+					v-if="!auth.isLoggedIn && route.name !== 'auth-register'"
+					class="hidden md:inline-flex"
+					route-name="auth-register"
 				>
-					<AccountMenu />
-				</div>
+					Registrieren
+				</BaseButton>
 
-				<div :class="{ 'xl:hidden': !props.standalone }">
-					<AppMobileMenu />
-				</div>
+				<AppMobileMenu />
 			</div>
 		</div>
 	</header>

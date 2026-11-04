@@ -11,7 +11,7 @@ import { BaseIcon, BaseSelect } from '@shared/ui'
 import { useAuthStore } from '@features/auth/auth.store'
 
 const ZONES: AccountZone[] = [
-	{ routeName: 'account-profile', title: 'Konto', icon: UserRoundIcon },
+	{ routeName: 'account-profile', title: 'Anmeldedaten', icon: UserRoundIcon },
 	{ routeName: 'account-personal', title: 'Persönliches', icon: IdCardIcon },
 	{ routeName: 'account-nutrition', title: 'Ernährung', icon: SaladIcon },
 	{ routeName: 'account-privacy', title: 'Datenschutz', icon: ShieldCheckIcon },
@@ -31,7 +31,6 @@ const initial = computed<string>(() =>
 	(auth.user?.username ?? auth.user?.email ?? '?').charAt(0).toUpperCase(),
 )
 
-// Phone and tablet: the areas sit in a select, and choosing one switches the page directly
 const currentZone = computed<string | undefined>({
 	get: () => (typeof route.name === 'string' ? route.name : undefined),
 	set: (routeName) => {
@@ -41,21 +40,25 @@ const currentZone = computed<string | undefined>({
 </script>
 
 <template>
-	<main class="content-wrapper flex flex-col gap-6 pt-6 pb-10">
-		<h1>Einstellungen</h1>
+	<main class="page">
+		<div class="page__header">
+			<h1>
+				Einstellungen
+			</h1>
+		</div>
 
-		<div class="grid grid-cols-12 gap-6 xl:items-start xl:gap-10">
+		<div class="grid grid-cols-12 gap-y-6 xl:items-start xl:gap-x-10">
 			<nav
 				class="flex flex-col gap-5 col-span-12 xl:col-span-3"
 				aria-label="Bereiche der Einstellungen"
 			>
-				<!-- Phone and tablet: a select saves the room a separate list would take before the content -->
 				<div class="field md:max-w-sm xl:hidden">
 					<label
 						for="account-zone"
 						class="field__label"
-						>Bereich</label
 					>
+						Bereich
+					</label>
 
 					<BaseSelect
 						id="account-zone"
@@ -64,21 +67,26 @@ const currentZone = computed<string | undefined>({
 					/>
 				</div>
 
-				<!-- Desktop: who is signed in, plus the areas as a list -->
 				<p class="flex items-center gap-3 max-xl:hidden">
 					<span
-						class="grid place-items-center shrink-0 size-12 rounded-full bg-forest font-display text-xl font-extrabold text-lime"
+						class="grid place-items-center shrink-0 size-12 rounded-full bg-forest font-display text-xl font-bold text-highlight"
 						aria-hidden="true"
 					>
 						{{ initial }}
 					</span>
 
 					<span class="flex flex-col min-w-0">
-						<span class="font-semibold truncate">{{
-							auth.user?.username ?? 'Dein Konto'
-						}}</span>
+						<span class="font-semibold truncate">
+							{{
+								auth.user?.username ?? 'Dein Konto'
+							}}
+						</span>
 
-						<span class="text-sm text-muted truncate">{{ auth.user?.email }}</span>
+						<span class="text-md text-muted-foreground truncate">
+							{{
+								auth.user?.email
+							}}
+						</span>
 					</span>
 				</p>
 
@@ -89,24 +97,21 @@ const currentZone = computed<string | undefined>({
 					>
 						<RouterLink
 							:to="{ name: zone.routeName }"
-							class="flex items-center gap-3 min-h-12 px-4 rounded-md font-semibold transition-interactive hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+							class="sidebar__link"
 							:class="{
-								'text-danger': zone.danger && route.name !== zone.routeName,
-								'bg-forest text-white hover:bg-forest':
-									route.name === zone.routeName && !zone.danger,
-								'bg-danger text-white hover:bg-danger':
-									route.name === zone.routeName && zone.danger,
+								'sidebar__link--active': route.name === zone.routeName,
+								'sidebar__link--danger': zone.danger,
 							}"
 							:aria-current="route.name === zone.routeName ? 'page' : undefined"
 						>
 							<BaseIcon :icon="zone.icon" />
+
 							{{ zone.title }}
 						</RouterLink>
 					</li>
 				</ul>
 			</nav>
 
-			<!-- RouterView hands the classes on to the panel -->
 			<RouterView class="col-span-12 min-w-0 xl:col-span-9 xl:max-w-3xl" />
 		</div>
 	</main>

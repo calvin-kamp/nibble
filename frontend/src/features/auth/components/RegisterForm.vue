@@ -10,8 +10,9 @@ import { useToast } from '@shared/composables/toast'
 import { register } from '@features/auth/auth.api'
 import { registerSchema } from '@features/auth/auth.schema'
 import { useAuthStore } from '@features/auth/auth.store'
+import { MIN_AGE } from '@features/legal/legal.constants'
 import { ApiError } from '@shared/api/client'
-import { focusFirstError, PasswordField, TextField } from '@shared/forms'
+import { CheckboxField, focusFirstError, PasswordField, TextField } from '@shared/forms'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -19,7 +20,6 @@ const toast = useToast()
 
 const { handleSubmit, isSubmitting } = useForm({ validationSchema: registerSchema })
 
-// API error, e.g. email address already registered
 const submitError = ref<string | null>(null)
 
 const onSubmit = handleSubmit(
@@ -28,9 +28,11 @@ const onSubmit = handleSubmit(
 
 		try {
 			auth.signIn(await register({ email, password }))
+
 			toast.show(
 				'Dein Konto ist erstellt. Wir haben dir eine E-Mail zum Bestätigen geschickt.',
 			)
+
 			await router.push({ name: 'onboarding' })
 		} catch (error) {
 			if (error instanceof ApiError && error.code === 'email_taken') {
@@ -84,19 +86,41 @@ const onSubmit = handleSubmit(
 			autocomplete="new-password"
 		/>
 
-		<p class="text-sm text-muted">
-			Mit dem Erstellen deines Kontos gelten unsere
-			<BaseLink
-				route-name="legal-tos"
-				variant="inline"
-				>AGB</BaseLink
-			>
-			. Wie wir mit deinen Daten umgehen, steht in der
+		<CheckboxField
+			name="terms"
+			:label="`Ich bin mindestens ${MIN_AGE} Jahre alt und akzeptiere die AGB.`"
+		>
+			<span>
+				Ich bin mindestens {{ MIN_AGE }} Jahre alt und akzeptiere die
+
+				<BaseLink
+					route-name="legal-tos"
+					target="_blank"
+					variant="inline"
+				>
+					AGB
+
+					<span class="sr-only">
+						(öffnet in neuem Tab)
+					</span>
+				</BaseLink>.
+			</span>
+		</CheckboxField>
+
+		<p class="-mt-2 text-md text-muted-foreground">
+			Wie wir mit deinen Daten umgehen, steht in der
+
 			<BaseLink
 				route-name="legal-privacy"
+				target="_blank"
 				variant="inline"
-				>Datenschutzerklärung</BaseLink
-			>.
+			>
+				Datenschutzerklärung
+
+				<span class="sr-only">
+					(öffnet in neuem Tab)
+				</span>
+			</BaseLink>.
 		</p>
 
 		<BaseButton

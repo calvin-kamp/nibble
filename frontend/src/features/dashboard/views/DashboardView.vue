@@ -2,12 +2,13 @@
 import type { RecipeSummary } from '@features/recipes/recipes.types'
 import type { FoodEntry, NutritionGoals, WeightEntry } from '@features/tracking/tracking.types'
 
+import { ShieldOffIcon } from '@lucide/vue'
 import { computed, ref, watch } from 'vue'
 
 import RecipeCard from '@features/recipes/components/RecipeCard.vue'
 import TodayCard from '@features/tracking/components/TodayCard.vue'
 import WeightCard from '@features/tracking/components/WeightCard.vue'
-import { BaseButton } from '@shared/ui'
+import { BaseButton, BaseEmptyState } from '@shared/ui'
 
 import { useTrackingChanges } from '@features/tracking/composables/tracking-changes'
 
@@ -24,7 +25,6 @@ const goals = ref<NutritionGoals | null>(null)
 const weightEntries = ref<WeightEntry[]>([])
 const trackingLoaded = ref<boolean>(false)
 
-// Today and the weight trend, refreshed after every new entry
 watch(
 	[() => auth.hasDataConsent, useTrackingChanges()],
 	async ([consent]) => {
@@ -40,7 +40,6 @@ watch(
 			goals.value = today.goals
 			weightEntries.value = weights
 		} catch {
-			// The cards then stay empty, but logging still works
 		} finally {
 			trackingLoaded.value = true
 		}
@@ -48,7 +47,6 @@ watch(
 	{ immediate: true },
 )
 
-// The first page of saved recipes
 const savedRecipes = ref<RecipeSummary[]>([])
 
 watch(
@@ -71,11 +69,27 @@ const greeting = computed<string>(() => {
 
 	return auth.user?.username ? `${time}, ${auth.user.username}` : time
 })
+
+const todayLabel = new Date().toLocaleDateString('de-DE', {
+	weekday: 'long',
+	day: 'numeric',
+	month: 'long',
+})
 </script>
 
 <template>
-	<main class="content-wrapper flex flex-col gap-6 pt-6 pb-10">
-		<h1>{{ greeting }}</h1>
+	<main class="page">
+		<div class="page__header">
+			<div class="page__intro">
+				<h1 class="wrap-break-word">
+					{{ greeting }}
+				</h1>
+
+				<p class="page__lead">
+					{{ todayLabel }}
+				</p>
+			</div>
+		</div>
 
 		<template v-if="auth.hasDataConsent">
 			<template v-if="trackingLoaded">
@@ -89,36 +103,30 @@ const greeting = computed<string>(() => {
 			</template>
 		</template>
 
-		<!-- Without consent there are no entries, so instead of empty cards this explains why -->
-		<section
+		<BaseEmptyState
 			v-else
-			class="flex flex-col items-center gap-5 px-6 py-10 border-2 border-dashed border-line rounded-lg text-center"
-			aria-labelledby="tracking-off-title"
+			:icon="ShieldOffIcon"
+			title="Tracking ist ausgeschaltet"
 		>
-			<div class="flex flex-col items-center gap-3">
-				<h2
-					id="tracking-off-title"
-					class="text-2xl"
-				>
-					Tracking ist ausgeschaltet
-				</h2>
+			Ohne deine Einwilligung speichern wir kein Gewicht, keine Mahlzeiten und keinen
+			Tagesbedarf. Deshalb kannst du hier nichts eintragen. Rezepte und Rechner kannst du
+			weiter nutzen.
 
-				<p class="max-w-2xl text-ink-soft text-balance">
-					Ohne deine Einwilligung speichern wir kein Gewicht, keine Mahlzeiten und keinen
-					Tagesbedarf. Deshalb kannst du hier nichts eintragen. Rezepte und Rechner kannst
-					du weiter nutzen.
-				</p>
-			</div>
-
-			<BaseButton route-name="account-privacy"> In den Einstellungen einschalten </BaseButton>
-		</section>
+			<template #actions>
+				<BaseButton route-name="account-privacy">
+					In den Einstellungen einschalten
+				</BaseButton>
+			</template>
+		</BaseEmptyState>
 
 		<section
 			v-if="savedRecipes.length"
-			class="flex flex-col gap-4"
+			class="section"
 			aria-labelledby="saved-recipes-title"
 		>
-			<h2 id="saved-recipes-title">Gespeicherte Rezepte</h2>
+			<h2 id="saved-recipes-title">
+				Gespeicherte Rezepte
+			</h2>
 
 			<ul class="grid grid-cols-12 gap-4">
 				<li

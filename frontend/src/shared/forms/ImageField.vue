@@ -27,7 +27,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const ids = useFieldIds(() => props.hint)
 
-// Validates immediately on selection
 const { value, errorMessage } = useField<ImageValue | undefined>(
 	() => props.name,
 	toRef(props, 'rules'),
@@ -37,7 +36,6 @@ const { value, errorMessage } = useField<ImageValue | undefined>(
 const input = ref<HTMLInputElement | null>(null)
 const objectUrl = ref<string | null>(null)
 
-// A temporary URL is created for a chosen file and released again
 watch(
 	value,
 	(image) => {
@@ -59,7 +57,6 @@ function onChange(event: Event): void {
 	value.value = (event.target as HTMLInputElement).files?.[0] ?? null
 }
 
-// After removing, the button disappears and focus returns to the file input
 function remove(): void {
 	value.value = null
 
@@ -86,8 +83,6 @@ function remove(): void {
 				class="image-field__preview"
 			/>
 
-			<!-- Empty area; clicking it opens the file picker. For screen readers the file input below is
-           enough, so the area is hidden from them. -->
 			<label
 				v-else
 				:for="ids.id"
@@ -99,9 +94,13 @@ function remove(): void {
 					:size="32"
 				/>
 
-				<span class="font-semibold text-ink">Noch kein Foto</span>
+				<span class="font-semibold text-foreground">
+					Noch kein Foto
+				</span>
 
-				<span class="text-sm">Tippen oder klicken, um eins auszuwählen</span>
+				<span class="text-md">
+					Tippen oder klicken, um eins auszuwählen
+				</span>
 			</label>
 		</div>
 
@@ -126,16 +125,18 @@ function remove(): void {
 				class="button button--outline image-field__trigger"
 			>
 				<BaseIcon :icon="UploadIcon" />
+
 				{{ previewUrl ? 'Foto ersetzen' : 'Foto auswählen' }}
 			</label>
 
 			<BaseButton
 				v-if="previewUrl"
-				variant="ghost"
+				variant="danger-soft"
 				:disabled="props.disabled"
 				@click="remove"
 			>
 				<BaseIcon :icon="TrashIcon" />
+
 				Foto entfernen
 			</BaseButton>
 		</div>

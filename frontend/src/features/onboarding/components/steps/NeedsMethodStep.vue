@@ -27,19 +27,19 @@ const METHOD_OPTIONS: FieldOption[] = [
 	{
 		value: 'calculate',
 		label: 'Für mich berechnen',
-		description: 'Wir fragen nach Größe, Gewicht und Bewegung. Das dauert etwa eine Minute.',
+		description: 'Wir fragen nach deiner Bewegung und, falls noch nicht angegeben, nach Größe und Gewicht.',
 	},
 	{
 		value: 'manual',
-		label: 'Ich kenne meinen Wert',
+		label: 'Ich kenne meine Werte',
 		description:
-			'Du trägst Protein, Kohlenhydrate und Fett ein, die Kalorien rechnen wir daraus.',
+			'Du trägst Protein, Kohlenhydrate und Fett ein oder nur deine Kalorien, wir teilen sie auf.',
 	},
 	{
 		value: 'later',
 		label: 'Später festlegen',
 		description:
-			'Geht jederzeit in den Einstellungen. Bis dahin zeigt dein Dashboard keinen Tagesbedarf.',
+			'Geht jederzeit in den Einstellungen. Bis dahin zeigt deine Übersicht keinen Tagesbedarf.',
 	},
 ]
 
@@ -57,8 +57,7 @@ const onSubmit = handleSubmit(
 <template>
 	<OnboardingStep
 		title="Wie legen wir deinen Tagesbedarf fest?"
-		lead="Daraus berechnet dein Dashboard, wie viel du heute noch essen kannst. Ohne Auswahl legst du ihn später in den Einstellungen fest."
-		optional
+		lead="Daraus berechnet deine Übersicht, wie viel du heute noch essen kannst."
 		@submit="onSubmit"
 	>
 		<RadioField

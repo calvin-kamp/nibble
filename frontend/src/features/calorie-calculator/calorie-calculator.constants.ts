@@ -81,7 +81,6 @@ export const MAX_WORKOUT_MINUTES = 300
 /** Upper limit for all training combined, in minutes per week (20 hours) */
 export const MAX_WEEKLY_TRAINING_MINUTES = 1200
 
-/** Calculator sections in order. On phones, each one is a separate step. */
 export const CALCULATOR_SECTIONS: readonly CalculatorSection[] = [
 	'basal',
 	'steps',
@@ -118,45 +117,60 @@ export const SEX_OPTIONS: FieldOption[] = [
  */
 export const TRAINING_GROUPS: TrainingGroup[] = [
 	{
+		label: 'Krafttraining',
+		activities: [
+			{ label: 'Krafttraining, hart', met: 6 },
+			{ label: 'Krafttraining, mittel', met: 4.5 },
+			{ label: 'Krafttraining, leicht', met: 3 },
+			{ label: 'Zirkeltraining', met: 7 },
+			{ label: 'Calisthenics, intensiv', met: 8 },
+			{ label: 'Calisthenics, moderat', met: 3.8 },
+		],
+	},
+	{
 		label: 'Ausdauer',
 		activities: [
-			{ label: 'Laufen, locker (8 km/h)', met: 8.3 },
-			{ label: 'Laufen, zügig (10 km/h)', met: 9.8 },
-			{ label: 'Radfahren, gemütlich', met: 4 },
-			{ label: 'Radfahren, zügig', met: 8 },
-			{ label: 'Schwimmen, gemütlich', met: 6 },
-			{ label: 'Schwimmen, Bahnen zügig', met: 9.8 },
+			{ label: 'Joggen, langsam (~8 km/h)', met: 8 },
+			{ label: 'Joggen, moderat (~10 km/h)', met: 10 },
+			{ label: 'Laufen, zügig (~12 km/h)', met: 12.5 },
+			{ label: 'Laufen, schnell (~16 km/h)', met: 16 },
+			{ label: 'Radfahren, leicht (~15 km/h)', met: 6 },
+			{ label: 'Radfahren, moderat (~20 km/h)', met: 8 },
+			{ label: 'Radfahren, schnell (~25 km/h)', met: 10 },
+			{ label: 'Schwimmen, locker', met: 6 },
+			{ label: 'Schwimmen, moderat (Bahnen)', met: 8 },
+			{ label: 'Schwimmen, intensiv (Kraul)', met: 10 },
 			{ label: 'Rudergerät, moderat', met: 7 },
-			{ label: 'Crosstrainer, moderat', met: 5 },
-			{ label: 'Wandern', met: 6 },
+			{ label: 'Rudergerät, intensiv', met: 8.5 },
+			{ label: 'Crosstrainer', met: 5 },
+			{ label: 'Seilspringen', met: 12 },
+			{ label: 'HIIT / Intervalltraining', met: 8 },
 		],
 	},
 	{
-		label: 'Kraft und Fitness',
+		label: 'Spielsport',
 		activities: [
-			{ label: 'Krafttraining, moderat', met: 3.5 },
-			{ label: 'Krafttraining, intensiv', met: 6 },
-			{ label: 'Zirkeltraining oder HIIT', met: 8 },
+			{ label: 'Fußball (locker)', met: 7 },
+			{ label: 'Fußball (Wettkampf)', met: 10 },
+			{ label: 'Handball (locker)', met: 8 },
+			{ label: 'Handball (Wettkampf)', met: 12 },
+			{ label: 'Basketball (locker)', met: 6 },
+			{ label: 'Basketball (Wettkampf)', met: 8 },
+			{ label: 'Badminton (Freizeit)', met: 4.5 },
+			{ label: 'Badminton (Wettkampf)', met: 7 },
+			{ label: 'Tennis (Doppel)', met: 6 },
+			{ label: 'Tennis (Einzel)', met: 8 },
+			{ label: 'Volleyball (Freizeit)', met: 4 },
+			{ label: 'Volleyball (Wettkampf)', met: 6 },
+			{ label: 'Tischtennis', met: 4 },
+		],
+	},
+	{
+		label: 'Mobilität',
+		activities: [
 			{ label: 'Yoga', met: 2.5 },
 			{ label: 'Pilates', met: 3 },
-		],
-	},
-	{
-		label: 'Ballsport',
-		activities: [
-			{ label: 'Fußball', met: 7 },
-			{ label: 'Basketball', met: 6.5 },
-			{ label: 'Tennis', met: 7.3 },
-			{ label: 'Tischtennis', met: 4 },
-			{ label: 'Volleyball', met: 4 },
-		],
-	},
-	{
-		label: 'Weitere',
-		activities: [
-			{ label: 'Tanzen', met: 4.5 },
-			{ label: 'Klettern oder Bouldern', met: 5.8 },
-			{ label: 'Kampfsport', met: 5.3 },
+			{ label: 'Dehnen / Mobility', met: 2.3 },
 		],
 	},
 ]

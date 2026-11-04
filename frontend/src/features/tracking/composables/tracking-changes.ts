@@ -10,7 +10,6 @@ export function useTrackingChanges(): Readonly<Ref<number>> {
 	return version
 }
 
-/** Call after an entry, a weight or a meal has been saved or deleted */
 export function notifyTrackingChanged(): void {
 	version.value++
 }

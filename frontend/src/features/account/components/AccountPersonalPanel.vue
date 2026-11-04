@@ -13,11 +13,8 @@ import { fetchWeightEntries } from '@features/tracking/tracking.api'
 import { formatRelativeDay } from '@shared/utils/date'
 import { formatKg } from '@shared/utils/number'
 
-// Details for the basal metabolic rate. The calorie calculator is prefilled with them; weight
-// comes from the diary.
 const auth = useAuthStore()
 
-// The latest diary entry, only with consent
 const latestWeight = ref<WeightEntry | undefined>(undefined)
 
 onMounted(async () => {
@@ -25,31 +22,31 @@ onMounted(async () => {
 
 	try {
 		latestWeight.value = (await fetchWeightEntries()).at(-1)
-	} catch {
-		// Without a weight, only the pointer to the diary is shown
-	}
+	} catch {}
 })
 </script>
 
 <template>
 	<AccountPanel title="Persönliches">
 		<div class="flex flex-col gap-2">
-			<p class="text-ink-soft">
+			<p class="text-foreground/80">
 				Damit rechnet der Kalorienrechner, du musst nichts doppelt eingeben. Die Angaben
 				sieht niemand außer dir.
 			</p>
 
-			<!-- Body data is health data: without consent the backend stores none, so there is no form -->
 			<p
 				v-if="!auth.hasDataConsent"
 				class="notice notice--info"
 			>
 				Körperdaten kannst du nur mit Einwilligung speichern. Du kannst sie im Bereich
+
 				<BaseLink
 					route-name="account-privacy"
 					variant="inline"
-					>Datenschutz</BaseLink
 				>
+					Datenschutz
+				</BaseLink>
+
 				erteilen.
 			</p>
 
@@ -61,7 +58,6 @@ onMounted(async () => {
 			</AccountSection>
 		</div>
 
-		<!-- Weight changes constantly, so it lives in the diary rather than here -->
 		<section
 			v-if="auth.hasDataConsent"
 			class="flex flex-col gap-0.5 pt-7 border-t border-divider"
@@ -76,17 +72,17 @@ onMounted(async () => {
 
 			<p
 				v-if="latestWeight"
-				class="text-ink-soft tabular-nums"
+				class="text-foreground/80 tabular-nums"
 			>
-				{{ formatKg(latestWeight.kg) }} - {{ formatRelativeDay(latestWeight.date) }}
+				{{ formatKg(latestWeight.kg) }} – {{ formatRelativeDay(latestWeight.date) }}
 			</p>
 
-			<p class="text-sm text-muted">
+			<p class="text-md text-muted-foreground">
 				Kommt aus deinem
 
-				<BaseLink route-name="diary-weight"> Gewichtstagebuch </BaseLink>
-
-				,dort trägst du es ein.
+				<BaseLink route-name="diary-weight">
+					Gewichtstagebuch
+				</BaseLink>, dort trägst du es ein.
 			</p>
 		</section>
 	</AccountPanel>

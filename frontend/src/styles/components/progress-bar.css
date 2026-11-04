@@ -5,11 +5,11 @@
 	}
 
 	.progress-bar--inverse {
-		@apply bg-surface/15;
+		@apply bg-forest-border;
 	}
 
 	.progress-bar__fill {
 		@apply h-full rounded-full;
-		background-color: var(--progress-bar-color, var(--color-leaf));
+		background-color: var(--progress-bar-color, var(--color-green-500));
 	}
 }

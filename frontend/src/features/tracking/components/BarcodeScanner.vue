@@ -83,7 +83,6 @@ async function start(): Promise<void> {
 	detected = false
 
 	try {
-		// Load the reader alongside the camera permission prompt, not after it
 		const readerPromise = reader ? Promise.resolve(reader) : createBarcodeReader()
 		const media = await navigator.mediaDevices.getUserMedia({
 			audio: false,
@@ -126,7 +125,6 @@ async function scan(current: number): Promise<void> {
 			return
 		}
 	} catch {
-		// A frame that cannot be read yet, e.g. right after the start. The next one will.
 	}
 
 	timer = setTimeout(() => scan(current), 120)
@@ -141,7 +139,6 @@ watch(open, async (isOpen) => {
 
 onBeforeUnmount(stop)
 
-// After a hit the parent moves focus on its own, e.g. to the amount
 function onCloseAutoFocus(event: Event): void {
 	if (detected) event.preventDefault()
 }
@@ -164,7 +161,9 @@ function onCloseAutoFocus(event: Event): void {
 				/>
 
 				<div class="scanner__text">
-					<DialogTitle class="scanner__title">{{ message.title }}</DialogTitle>
+					<DialogTitle class="scanner__title">
+						{{ message.title }}
+					</DialogTitle>
 
 					<DialogDescription
 						class="scanner__description"
@@ -216,10 +215,11 @@ function onCloseAutoFocus(event: Event): void {
 					</BaseButton>
 
 					<BaseButton
-						variant="outline"
+						:variant="status === 'failed' ? 'outline' : 'primary'"
 						@click="open = false"
-						>Zurück zur Suche</BaseButton
 					>
+						Zurück zur Suche
+					</BaseButton>
 				</div>
 
 				<DialogClose

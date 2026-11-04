@@ -14,9 +14,7 @@ import { formatKg } from '@shared/utils/number'
 
 interface Props {
 	entries: WeightEntry[]
-	/** Chart range in days */
 	days?: number
-	/** Number of latest entries in the list */
 	latestCount?: number
 }
 
@@ -36,13 +34,12 @@ const latestEntries = computed<WeightEntry[]>(() =>
 		size="lg"
 		aria-labelledby="weight-card-title"
 	>
-		<div class="grid grid-cols-12 gap-8 xl:gap-x-10">
-			<!-- min-w-0, otherwise the chart does not shrink when resizing -->
+		<div class="grid grid-cols-12 gap-y-8 xl:gap-x-10">
 			<div class="flex flex-col gap-6 col-span-12 min-w-0 xl:col-span-8">
 				<div class="flex flex-col gap-3">
 					<h2
 						id="weight-card-title"
-						class="text-2xl"
+						class="card__title"
 					>
 						Gewicht
 					</h2>
@@ -56,11 +53,11 @@ const latestEntries = computed<WeightEntry[]>(() =>
 				/>
 			</div>
 
-			<div
-				class="flex flex-col gap-4 col-span-12 pt-8 border-t border-divider xl:col-span-4 xl:pt-0 xl:pl-10 xl:border-t-0 xl:border-l"
-			>
+			<div class="flex flex-col gap-4 col-span-12 pt-8 border-t border-divider xl:col-span-4 xl:pt-0 xl:pl-10 xl:border-t-0 xl:border-l">
 				<div class="flex flex-col gap-2">
-					<h3 class="text-xl">Letzte Einträge</h3>
+					<h3 class="font-sans text-lg font-semibold tracking-normal">
+						Letzte Einträge
+					</h3>
 
 					<ul
 						v-if="latestEntries.length"
@@ -71,17 +68,21 @@ const latestEntries = computed<WeightEntry[]>(() =>
 							:key="entry.date"
 							class="data-list__row"
 						>
-							<span class="data-list__label">{{
-								formatDayMonth(new Date(toTime(entry.date)))
-							}}</span>
+							<span class="data-list__label">
+								{{
+									formatDayMonth(new Date(toTime(entry.date)))
+								}}
+							</span>
 
-							<span class="data-list__value">{{ formatKg(entry.kg) }}</span>
+							<span class="data-list__value">
+								{{ formatKg(entry.kg) }}
+							</span>
 						</li>
 					</ul>
 
 					<p
 						v-else
-						class="text-ink-soft"
+						class="text-foreground/80"
 					>
 						Noch keine Einträge.
 					</p>
@@ -89,9 +90,10 @@ const latestEntries = computed<WeightEntry[]>(() =>
 
 				<BaseLink
 					route-name="diary-weight"
-					class="self-start mt-auto text-brand-ink underline underline-offset-4"
+					class="self-start mt-auto"
 				>
 					Alle Einträge
+
 					<BaseIcon
 						:icon="ArrowRightIcon"
 						:size="16"

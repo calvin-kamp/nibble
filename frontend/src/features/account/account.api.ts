@@ -10,9 +10,6 @@ import { fetchCurrentUser, toPersonalProfile } from '@features/auth/auth.api'
 import { PRIVACY_POLICY_VERSION } from '@features/legal/legal.constants'
 import { apiRequest } from '@shared/api/client'
 
-// Every function throws ApiError, e.g. for a wrong password (400 with errors.current_password)
-// or a username that is already taken (409 username_taken).
-
 const GOAL_TO_API: Record<Goal, GoalResponse> = { diet: 'lose', maintain: 'maintain', gain: 'gain' }
 
 const GOAL_FROM_API: Record<GoalResponse, Goal> = {
@@ -39,7 +36,6 @@ export async function changeEmail(email: string, password: string): Promise<void
 	await apiRequest('/auth/email/change', { method: 'POST', body: { email, password } })
 }
 
-/** The token comes from the link in the email to the new address; works without signing in */
 export async function confirmEmailChange(token: string): Promise<void> {
 	await apiRequest('/auth/email/change/confirm', {
 		method: 'POST',
@@ -119,7 +115,6 @@ export async function saveNutritionSettings(settings: NutritionSettings): Promis
 	})
 }
 
-/** All data as a JSON file, see ExportDocument in the backend's openapi.yaml */
 export async function exportData(): Promise<Blob> {
 	const data = await apiRequest<unknown>('/account/export')
 

@@ -22,7 +22,6 @@ const toast = useToast()
 
 const { handleSubmit, isSubmitting } = useForm({ validationSchema: loginSchema })
 
-// API error, e.g. wrong password. Not tied to a single field.
 const submitError = ref<string | null>(null)
 
 const onSubmit = handleSubmit(
@@ -34,17 +33,15 @@ const onSubmit = handleSubmit(
 
 			auth.signIn(user)
 
-			// A requested deletion does not block signing in; it can be cancelled from the account
 			if (user.deletionScheduledFor) {
 				toast.show(
-					`Dein Konto wird am ${formatLongDate(new Date(user.deletionScheduledFor))} gelöscht. Unter Konto › Konto löschen kannst du das abbrechen.`,
+					`Dein Konto wird am ${formatLongDate(new Date(user.deletionScheduledFor))} gelöscht. Unter Einstellungen › Konto löschen kannst du das abbrechen.`,
 					'info',
 				)
 			} else {
 				toast.show('Schön, dass du wieder da bist.')
 			}
 
-			// Back to the page the user came from, e.g. after the session expired
 			await router.push(redirectTarget(route.query) ?? { name: 'dashboard' })
 		} catch (error) {
 			submitError.value =
@@ -89,8 +86,9 @@ const onSubmit = handleSubmit(
 			<BaseLink
 				route-name="auth-password-forgot"
 				class="self-start"
-				>Passwort vergessen?</BaseLink
 			>
+				Passwort vergessen?
+			</BaseLink>
 		</div>
 
 		<BaseButton

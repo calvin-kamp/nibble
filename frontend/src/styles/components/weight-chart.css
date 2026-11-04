@@ -1,23 +1,26 @@
 @layer components {
 	.weight-chart {
 		@apply flex flex-col gap-3;
-		--vis-color0: var(--color-leaf); /* Weight */
-		--vis-color1: var(--color-line-subtle); /* Weekly average */
-		--weight-chart-last-point: var(--color-lime);
+		--vis-color0: var(--color-green-500);
+		--vis-color1: var(--chart-2);
+		--weight-chart-last-point: var(--highlight);
 
 		--vis-font-family: var(--font-sans);
-		--vis-axis-grid-color: var(--color-divider);
+		--vis-axis-grid-color: var(--divider);
 		--vis-axis-grid-line-dasharray: 2 4;
-		--vis-axis-tick-label-color: var(--color-ink-soft);
-		--vis-axis-tick-label-font-size: 12px;
-		--vis-legend-label-color: var(--color-ink-soft);
+		--vis-axis-tick-label-color: color-mix(in oklab, var(--foreground) 80%, transparent);
+		--vis-axis-tick-label-font-size: var(--text-md);
+		--vis-legend-label-color: color-mix(in oklab, var(--foreground) 80%, transparent);
+		--vis-legend-label-font-size: var(--text-md);
+		--vis-legend-bullet-size: 10px;
+		--vis-tooltip-font-size: var(--text-md);
 	}
 
 	.weight-chart__legend {
-		@apply text-sm;
+		@apply text-md;
 	}
 
 	.weight-chart__empty {
-		@apply text-ink-soft;
+		@apply text-foreground/80;
 	}
 }

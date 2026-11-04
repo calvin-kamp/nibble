@@ -19,7 +19,6 @@ const toast = useToast()
 const state = ref<VerifyState>('pending')
 const isResending = ref<boolean>(false)
 
-// Link from the confirmation email, e.g. /verify-email?token=...
 onMounted(async () => {
 	const { token } = route.query
 
@@ -58,7 +57,11 @@ async function onResend(): Promise<void> {
 </script>
 
 <template>
-	<AuthLayout title="E-Mail bestätigen">
+	<AuthLayout
+		title="E-Mail bestätigen"
+		aside-title="Ein Klick, fertig."
+		aside-text="Mit der Bestätigung wissen wir, dass die Adresse zu dir gehört."
+	>
 		<p
 			v-if="state === 'pending'"
 			aria-live="polite"
@@ -100,7 +103,9 @@ async function onResend(): Promise<void> {
 			</BaseButton>
 
 			<p v-else-if="!auth.isLoggedIn">
-				<BaseLink route-name="auth-login">Melde dich an</BaseLink>, um dir einen neuen Link
+				<BaseLink route-name="auth-login">
+					Melde dich an
+				</BaseLink>, um dir einen neuen Link
 				schicken zu lassen.
 			</p>
 		</template>

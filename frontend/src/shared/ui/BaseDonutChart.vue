@@ -14,18 +14,14 @@ interface Props {
 	 * Without max, they share the whole ring (distribution, e.g. macros).
 	 */
 	max?: number
-	/** Description for screen readers, e.g. "1.240 von 1.940 Kilokalorien gegessen" */
 	label: string
 	centralLabel?: string
 	centralSubLabel?: string
 	height?: number
 	/** Ring width in px */
 	arcWidth?: number
-	/** Rounded segment ends */
 	rounded?: boolean
-	/** inverse for dark backgrounds */
 	variant?: 'default' | 'inverse'
-	/** sm for small rings, e.g. macros next to the large calorie ring */
 	size?: 'default' | 'sm'
 	class?: HTMLAttributes['class']
 }
@@ -91,7 +87,6 @@ const data = computed<DonutSegment[]>(() => {
 			/>
 		</VisSingleContainer>
 
-		<!-- As HTML instead of a Unovis label, so it can be styled with regular CSS -->
 		<p
 			v-if="props.centralLabel || props.centralSubLabel"
 			class="donut-chart__center"
@@ -99,8 +94,9 @@ const data = computed<DonutSegment[]>(() => {
 			<span
 				v-if="props.centralLabel"
 				class="donut-chart__label"
-				>{{ props.centralLabel }}</span
 			>
+				{{ props.centralLabel }}
+			</span>
 
 			<span
 				v-if="props.centralSubLabel"

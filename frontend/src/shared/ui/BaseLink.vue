@@ -8,13 +8,11 @@ import { RouterLink } from 'vue-router'
 import { buildModifierClasses } from '@shared/utils/classes'
 
 interface Props {
-	variant?: 'underlined' | 'inline' | 'no-decoration' | 'standalone'
+	variant?: 'underlined' | 'inline' | 'no-decoration' | 'standalone' | 'nav'
 	class?: HTMLAttributes['class']
 	href?: string
 	routeName?: string
-	/** Route params, e.g. { id: 'linsen-bowl' } */
 	params?: RouteParamsRawGeneric
-	/** Route query, e.g. active filters */
 	query?: LocationQueryRaw
 	hash?: string
 }

@@ -18,14 +18,19 @@ const listLocation = useRecipeListLocation()
 
 <template>
 	<div class="flex flex-col items-start gap-4 py-10">
-		<h1>{{ props.title }}</h1>
+		<h1>
+			{{ props.title }}
+		</h1>
 
-		<p class="max-w-2xl text-lg text-ink-soft">{{ props.message }}</p>
+		<p class="page__lead">
+			{{ props.message }}
+		</p>
 
 		<BaseButton
 			route-name="recipe-list"
 			:query="listLocation.query"
-			>Zu den Rezepten</BaseButton
 		>
+			Zu den Rezepten
+		</BaseButton>
 	</div>
 </template>

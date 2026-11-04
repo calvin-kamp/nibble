@@ -12,7 +12,6 @@ import { DateField, focusFirstError, NumberField } from '@shared/forms'
 import { toIsoDate } from '@shared/utils/date'
 
 interface Props {
-	/** Prefill, defaults to today */
 	date?: string
 }
 
@@ -84,14 +83,16 @@ const onSubmit = handleSubmit(
 			<BaseButton
 				type="submit"
 				:disabled="isSubmitting"
-				>Speichern</BaseButton
 			>
+				Speichern
+			</BaseButton>
 
 			<BaseButton
 				variant="outline"
 				@click="emit('cancel')"
-				>Abbrechen</BaseButton
 			>
+				Abbrechen
+			</BaseButton>
 		</BaseActions>
 	</form>
 </template>

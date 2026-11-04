@@ -5,6 +5,7 @@ import type {
 	ConsentStateResponse,
 	Credentials,
 	PersonalProfile,
+	RegisterRequest,
 } from '@features/auth/auth.types'
 
 import { apiRequest } from '@shared/api/client'
@@ -51,8 +52,6 @@ export async function withConsent(state: AccountStateResponse): Promise<AuthUser
 }
 
 // The backend sets the tokens as httpOnly cookies; only the account state is returned here.
-// Every function throws ApiError, e.g. for a wrong password (401 invalid_credentials) or an
-// email address that is already registered (409 email_taken).
 
 export async function login(credentials: Credentials): Promise<AuthUser> {
 	const state = await apiRequest<AccountStateResponse>('/auth/login', {
@@ -66,9 +65,13 @@ export async function login(credentials: Credentials): Promise<AuthUser> {
 
 /** Also signs the user in and sends the email with the confirmation link */
 export async function register(credentials: Credentials): Promise<AuthUser> {
+	const body: RegisterRequest = {
+		...credentials,
+		terms_accepted: true,
+	}
 	const state = await apiRequest<AccountStateResponse>('/auth/register', {
 		method: 'POST',
-		body: credentials,
+		body,
 		skipRefresh: true,
 	})
 
@@ -79,12 +82,10 @@ export async function logout(): Promise<void> {
 	await apiRequest('/auth/logout', { method: 'POST', skipRefresh: true })
 }
 
-/** Throws ApiError with status 401 when nobody is signed in */
 export async function fetchCurrentUser(): Promise<AuthUser> {
 	return withConsent(await apiRequest<AccountStateResponse>('/auth/me'))
 }
 
-/** The token comes from the link in the confirmation email */
 export async function verifyEmail(token: string): Promise<void> {
 	await apiRequest('/auth/email/verify', {
 		method: 'POST',

@@ -11,8 +11,6 @@ import { bodyDataSchema } from '@features/onboarding/onboarding.schema'
 import { DateField, focusFirstError, NumberField, RadioField } from '@shared/forms'
 import { toIsoDate } from '@shared/utils/date'
 
-// Only after consent. Every field is optional, Next also continues with nothing entered. The
-// details prefill the calculator and are saved to the account when onboarding completes.
 interface Props {
 	body?: BodyData
 }
@@ -22,7 +20,6 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-	/** undefined when nothing was entered: nothing is kept */
 	next: [body: BodyData | undefined]
 	back: []
 }>()
@@ -48,24 +45,22 @@ const onSubmit = handleSubmit(
 	<OnboardingStep
 		title="Erzähl uns etwas über dich"
 		lead="Damit füllen wir den Kalorienrechner vor, dein Gewicht wird der erste Eintrag im Gewichtstagebuch. Lass leer, was du nicht angeben möchtest: Du kannst alles später in den Einstellungen eintragen."
-		optional
 		@submit="onSubmit"
 	>
-		<!-- No hints on the fields: side by side, a hint would push its input below the other one -->
 		<div class="grid grid-cols-12 gap-5">
-			<DateField
-				class="col-span-12 sm:col-span-6"
-				name="birthDate"
-				label="Geburtsdatum"
-				:max="toIsoDate()"
-			/>
-
 			<RadioField
 				class="col-span-12 sm:col-span-6"
 				name="sex"
 				label="Geschlecht"
 				orientation="horizontal"
 				:options="SEX_OPTIONS"
+			/>
+
+			<DateField
+				class="col-span-12 sm:col-span-6"
+				name="birthDate"
+				label="Geburtsdatum"
+				:max="toIsoDate()"
 			/>
 
 			<NumberField

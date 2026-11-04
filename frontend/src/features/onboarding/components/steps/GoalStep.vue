@@ -39,13 +39,13 @@ const onSubmit = handleSubmit(
 	<OnboardingStep
 		title="Was ist dein Ziel?"
 		lead="Das ist nur die Richtung. Wenn du dich noch nicht festlegen möchtest, geh einfach weiter: Du kannst es jederzeit in den Einstellungen ändern."
-		optional
 		@submit="onSubmit"
 	>
 		<RadioField
 			name="goal"
 			label="Dein Ziel"
 			label-hidden
+			orientation="horizontal"
 			:options="GOAL_OPTIONS"
 		/>
 

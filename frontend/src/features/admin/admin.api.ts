@@ -38,7 +38,6 @@ function toDetail(submission: SubmissionDetailResponse): SubmissionDetail {
 	}
 }
 
-/** One page of submissions with this status, oldest first */
 export async function fetchSubmissions(
 	status: SubmissionStatus,
 	page: number,

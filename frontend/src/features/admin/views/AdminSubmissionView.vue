@@ -65,7 +65,6 @@ const content = computed(() => submission.value?.content)
 
 const facts = computed<RecipeFact[]>(() => (content.value ? recipeFacts(content.value) : []))
 
-// Revisions only: what differs from the version everyone currently sees
 const changes = computed<string>(() => {
 	const current = submission.value?.current
 
@@ -144,7 +143,7 @@ watch(rejectOpen, (open) => {
 <template>
 	<main
 		v-if="submission && content"
-		class="content-wrapper flex flex-col gap-6 pt-4 pb-10"
+		class="page page--compact"
 	>
 		<div class="flex flex-col gap-4">
 			<BaseBreadcrumb
@@ -153,7 +152,7 @@ watch(rejectOpen, (open) => {
 			/>
 
 			<RecipeMedia
-				class="aspect-4/3 rounded-xl bg-lime md:aspect-21/9"
+				class="recipe-media--2 aspect-4/3 rounded-xl md:aspect-21/9"
 				:image-url="submission.imageUrl"
 			/>
 		</div>
@@ -164,7 +163,7 @@ watch(rejectOpen, (open) => {
 					{{ content.title }}
 				</h1>
 
-				<p class="text-muted">
+				<p class="text-muted-foreground">
 					{{ meta }}
 				</p>
 			</div>
@@ -174,6 +173,7 @@ watch(rejectOpen, (open) => {
 				class="notice notice--info"
 			>
 				Änderung an einem freigegebenen Rezept.
+
 				{{ changes ? `Geändert: ${changes}.` : 'Nur das Foto ist neu.' }}
 
 				<RouterLink
@@ -196,14 +196,17 @@ watch(rejectOpen, (open) => {
 				:class="submission.status === 'rejected' ? 'notice--danger' : 'notice--info'"
 			>
 				{{ SUBMISSION_STATUS_LABELS[submission.status] }}
+
 				{{ submission.reviewedBy ? `von ${submission.reviewedBy}` : '' }}
+
 				{{ submission.reviewedAt ? `am ${formatTimestamp(submission.reviewedAt)}` : '' }}.
+
 				{{ submission.rejectionReason ? `Begründung: ${submission.rejectionReason}` : '' }}
 			</p>
 
 			<p
 				v-if="content.description"
-				class="max-w-3xl text-lg text-ink-soft"
+				class="page__lead"
 			>
 				{{ content.description }}
 			</p>
@@ -214,7 +217,7 @@ watch(rejectOpen, (open) => {
 					:key="fact.label"
 					class="flex flex-col gap-0.5 min-w-0 md:flex-1"
 				>
-					<dt class="text-sm text-muted">
+					<dt class="text-md text-muted-foreground">
 						{{ fact.label }}
 					</dt>
 
@@ -235,7 +238,7 @@ watch(rejectOpen, (open) => {
 			}"
 		/>
 
-		<div class="grid grid-cols-12 gap-10 xl:items-start xl:gap-6">
+		<div class="grid grid-cols-12 gap-y-10 xl:items-start xl:gap-6">
 			<BaseCard
 				as="section"
 				class="col-span-12 xl:col-span-5"
@@ -250,8 +253,9 @@ watch(rejectOpen, (open) => {
 							Zutaten
 						</h2>
 
-						<p class="text-muted">
+						<p class="text-muted-foreground">
 							Für {{ content.servings }}
+
 							{{ content.servings === 1 ? 'Portion' : 'Portionen' }}
 						</p>
 					</div>
@@ -262,7 +266,9 @@ watch(rejectOpen, (open) => {
 							:key="index"
 							class="data-list__row"
 						>
-							<span class="data-list__label">{{ ingredient.name }}</span>
+							<span class="data-list__label">
+								{{ ingredient.name }}
+							</span>
 
 							<span class="data-list__value">
 								{{
@@ -290,7 +296,7 @@ watch(rejectOpen, (open) => {
 					Zubereitung
 				</h2>
 
-				<ol class="flex flex-col gap-4 pl-6 list-decimal marker:font-bold marker:text-leaf">
+				<ol class="flex flex-col gap-4 pl-6 list-decimal marker:font-bold marker:text-green-500">
 					<li
 						v-for="(step, index) in content.steps"
 						:key="index"
@@ -312,6 +318,7 @@ watch(rejectOpen, (open) => {
 				@click="approveOpen = true"
 			>
 				<BaseIcon :icon="CheckIcon" />
+
 				Freigeben
 			</BaseButton>
 
@@ -322,6 +329,7 @@ watch(rejectOpen, (open) => {
 				@click="rejectOpen = true"
 			>
 				<BaseIcon :icon="XIcon" />
+
 				Ablehnen
 			</BaseButton>
 		</BaseActions>
@@ -375,11 +383,15 @@ watch(rejectOpen, (open) => {
 
 	<main
 		v-else-if="submission === null"
-		class="content-wrapper flex flex-col gap-4 pt-6 pb-10"
+		class="page"
 	>
-		<h1>Einreichung nicht gefunden</h1>
+		<h1>
+			Einreichung nicht gefunden
+		</h1>
 
-		<p class="text-lg text-muted">Vielleicht wurde das Rezept inzwischen gelöscht.</p>
+		<p class="text-lg text-muted-foreground">
+			Vielleicht wurde das Rezept inzwischen gelöscht.
+		</p>
 
 		<BaseButton
 			class="self-start"

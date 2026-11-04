@@ -1,0 +1,43 @@
+@layer components {
+	.auth {
+		@apply grid grid-cols-12 grid-rows-[auto_1fr] min-h-[calc(100svh-var(--site-header-height))];
+		@apply xl:grid-rows-none;
+	}
+
+	.auth__main {
+		@apply flex flex-col col-span-12 px-4 py-8;
+		@apply md:py-10;
+		@apply xl:justify-center xl:col-span-7 xl:px-8;
+	}
+
+	.auth__panel {
+		@apply flex flex-col gap-6 w-full max-w-md mx-auto;
+		@apply md:p-8 md:rounded-lg md:border md:border-divider md:bg-card;
+	}
+
+	.auth__title {
+		@apply text-3xl md:text-4xl;
+	}
+
+	.auth__aside {
+		@apply relative overflow-hidden order-first col-span-12;
+		@apply flex flex-col gap-3 px-4 py-6;
+		@apply bg-forest text-forest-muted-foreground;
+		@apply xl:col-span-5 xl:justify-center xl:gap-5 xl:px-12;
+	}
+
+	.auth__statement {
+		@apply relative max-w-sm font-display text-2xl font-bold leading-tight tracking-tighter text-forest-foreground;
+		@apply xl:text-5xl xl:leading-tighter;
+	}
+
+	.auth__text {
+		@apply relative hidden max-w-sm text-lg;
+		@apply xl:block;
+	}
+
+	.auth__mark {
+		@apply absolute hidden h-1/3 w-auto -left-8 -bottom-8 text-forest-muted;
+		@apply xl:block;
+	}
+}

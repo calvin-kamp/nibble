@@ -11,7 +11,6 @@ import { BaseIcon } from '@shared/ui'
 
 import { useFieldIds } from './field-ids'
 
-// Multiple choice as checkboxes, e.g. for recipe properties. The value is an array.
 interface Props extends BaseFieldProps<string[] | undefined> {
 	options: FieldOption[]
 }
@@ -24,7 +23,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const ids = useFieldIds(() => props.hint)
 
-// Validates immediately on selection
 const { value, errorMessage } = useField<string[] | undefined>(
 	() => props.name,
 	toRef(props, 'rules'),
@@ -45,7 +43,9 @@ const selected = computed<AcceptableValue[]>({
 		class="checkbox-group"
 		:class="{ 'checkbox-group--invalid': errorMessage }"
 	>
-		<legend class="checkbox-group__legend">{{ props.label }}</legend>
+		<legend class="checkbox-group__legend">
+			{{ props.label }}
+		</legend>
 
 		<p
 			v-if="props.hint"
@@ -55,7 +55,6 @@ const selected = computed<AcceptableValue[]>({
 			{{ props.hint }}
 		</p>
 
-		<!-- rovingFocus off: every checkbox is reachable with Tab as usual -->
 		<CheckboxGroupRoot
 			v-model="selected"
 			class="checkbox-group__options"
@@ -68,7 +67,6 @@ const selected = computed<AcceptableValue[]>({
 				class="checkbox-group__option"
 				:for="`${ids.id}-${index}`"
 			>
-				<!-- Same box as in CheckboxField -->
 				<CheckboxRoot
 					:id="`${ids.id}-${index}`"
 					class="checkbox-field__box"

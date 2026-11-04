@@ -11,11 +11,8 @@ import {
 
 import BaseIcon from './BaseIcon.vue'
 
-// Panel that slides in from the side, e.g. as a menu. Technically a dialog: focus stays
-// inside, Escape and an outside click close it, and the rest of the page is inert meanwhile.
 interface Props {
 	title: string
-	/** Title for screen readers only, e.g. when a logo sits at the top */
 	titleHidden?: boolean
 	side?: 'left' | 'right'
 }
@@ -49,7 +46,6 @@ const open = defineModel<boolean>('open')
 						{{ props.title }}
 					</DialogTitle>
 
-					<!-- E.g. a logo next to the close button -->
 					<slot name="header" />
 
 					<DialogClose

@@ -1,0 +1,52 @@
+@layer components {
+	:is(.button, .link, .data-list__row--link, .help-hub__card, .sidebar__link, .popover__item)
+		:is(
+			.lucide-arrow-right,
+			.lucide-arrow-left,
+			.lucide-arrow-up,
+			.lucide-arrow-down,
+			.lucide-chevron-right,
+			.lucide-chevron-left,
+			.lucide-chevron-down,
+			.lucide-download,
+			.lucide-log-out
+		) {
+		@apply transition-[translate,rotate] duration-200 ease-out;
+	}
+
+	@media (hover: hover) {
+		:is(
+				.button,
+				.link,
+				.data-list__row--link,
+				.help-hub__card,
+				.sidebar__link,
+				.popover__item
+			):is(:hover, :focus-visible):not(:disabled)
+			:is(.lucide-arrow-right, .lucide-chevron-right, .lucide-log-out) {
+			@apply translate-x-1;
+		}
+
+		:is(.button, .link, .data-list__row--link):is(:hover, :focus-visible):not(:disabled)
+			:is(.lucide-arrow-left, .lucide-chevron-left) {
+			@apply -translate-x-1;
+		}
+
+		:is(.button, .link):is(:hover, :focus-visible):not(:disabled) .lucide-arrow-up {
+			@apply -translate-y-0.5;
+		}
+
+		:is(.button, .link):is(:hover, :focus-visible):not(:disabled)
+			:is(.lucide-arrow-down, .lucide-download) {
+			@apply translate-y-0.5;
+		}
+	}
+
+	button .lucide-chevron-down {
+		@apply transition-[rotate] duration-500 ease-in-out;
+	}
+
+	button:is([data-state='open'], [aria-expanded='true']) .lucide-chevron-down {
+		@apply rotate-180;
+	}
+}

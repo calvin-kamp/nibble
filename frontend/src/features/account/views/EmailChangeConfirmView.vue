@@ -16,7 +16,6 @@ const auth = useAuthStore()
 
 const state = ref<EmailChangeState>('pending')
 
-// Link from the email to the new address, e.g. /email-aendern?token=...
 onMounted(async () => {
 	const { token } = route.query
 
@@ -39,7 +38,11 @@ onMounted(async () => {
 </script>
 
 <template>
-	<AuthLayout title="E-Mail-Adresse ändern">
+	<AuthLayout
+		title="E-Mail-Adresse ändern"
+		aside-title="Neue Adresse, gleiches Konto."
+		aside-text="Nach der Bestätigung meldest du dich mit der neuen Adresse an."
+	>
 		<p
 			v-if="state === 'pending'"
 			aria-live="polite"
@@ -77,7 +80,10 @@ onMounted(async () => {
 
 			<p>
 				In den
-				<BaseLink route-name="account-profile">Einstellungen</BaseLink> kannst du die
+
+				<BaseLink route-name="account-profile">
+					Einstellungen
+				</BaseLink> kannst du die
 				Änderung noch einmal anfordern.
 			</p>
 		</template>

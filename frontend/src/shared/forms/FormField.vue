@@ -3,18 +3,18 @@ import type { FieldIds } from './field-ids'
 
 import { Label } from 'reka-ui'
 
-// Frame for fields with the label above the input. Checkbox and radio have their own
-// markup because label and control are arranged differently there.
 interface Props {
 	ids: FieldIds
 	label: string
 	hint?: string
 	error?: string
+	labelHidden?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
 	hint: undefined,
 	error: undefined,
+	labelHidden: false,
 })
 </script>
 
@@ -27,6 +27,7 @@ const props = withDefaults(defineProps<Props>(), {
 			:id="props.ids.labelId"
 			:for="props.ids.id"
 			class="field__label"
+			:class="{ 'sr-only': props.labelHidden }"
 		>
 			{{ props.label }}
 		</Label>

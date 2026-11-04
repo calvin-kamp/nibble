@@ -83,14 +83,16 @@ const onSubmit = handleSubmit(
 			<BaseButton
 				type="submit"
 				:disabled="isSubmitting"
-				>Passwort ändern</BaseButton
 			>
+				Passwort ändern
+			</BaseButton>
 
 			<BaseButton
 				variant="ghost"
 				@click="emit('cancel')"
-				>Abbrechen</BaseButton
 			>
+				Abbrechen
+			</BaseButton>
 		</BaseActions>
 	</form>
 </template>

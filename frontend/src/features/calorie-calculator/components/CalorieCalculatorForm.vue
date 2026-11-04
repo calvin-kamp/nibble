@@ -24,7 +24,12 @@ import { focusFirstError, NumberField, RadioField, SelectField } from '@shared/f
 interface Props {
 	initialValues?: Partial<CalorieCalculatorValues>
 	/**
-	 * Show only one section (index in CALCULATOR_SECTIONS), e.g. step by step on phones.
+	 * Sections this form asks for. Left out sections must already be valid in initialValues,
+	 * e.g. when onboarding has asked for them before.
+	 */
+	sections?: readonly CalculatorSection[]
+	/**
+	 * Show only one section (index in sections), e.g. step by step on phones.
 	 * Without part, all sections are shown in one form.
 	 */
 	part?: number
@@ -32,17 +37,15 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
 	initialValues: () => ({}),
+	sections: () => CALCULATOR_SECTIONS,
 	part: undefined,
 })
 
 const emit = defineEmits<{
 	calculate: [values: CalorieCalculatorValues]
 	reset: []
-	/** The visible section is valid and the next one follows. Carries the intermediate values. */
 	'part-complete': [values: Partial<CalorieCalculatorValues>]
-	/** Back to the previous section */
 	back: []
-	/** On submit, there is an error in another section */
 	'go-to-part': [part: number]
 }>()
 
@@ -58,16 +61,26 @@ const { handleSubmit, resetForm, validateField, errors, values } = useForm({
 const { fields: workouts, push, remove } = useFieldArray<Workout>('exercises')
 
 const visibleSections = computed<readonly CalculatorSection[]>(() =>
-	props.part === undefined ? CALCULATOR_SECTIONS : [CALCULATOR_SECTIONS[props.part]!],
+	props.part === undefined ? props.sections : [props.sections[props.part]!],
 )
 
 const isLastPart = computed<boolean>(
-	() => props.part === undefined || props.part === CALCULATOR_SECTIONS.length - 1,
+	() => props.part === undefined || props.part === props.sections.length - 1,
 )
 
 function isVisible(section: CalculatorSection): boolean {
 	return visibleSections.value.includes(section)
 }
+
+// Errors of left out sections, e.g. the safety rules on a goal chosen earlier in onboarding
+const hiddenErrors = computed<string[]>(() =>
+	CALCULATOR_SECTIONS.filter((section) => !props.sections.includes(section)).flatMap(
+		(section) =>
+			fieldsOf(section)
+				.map((field) => errors.value[field as keyof typeof errors.value])
+				.filter((message): message is string => !!message),
+	),
+)
 
 function fieldsOf(section: CalculatorSection): string[] {
 	if (section === 'basal') return ['sex', 'age', 'height', 'weight']
@@ -87,8 +100,6 @@ function sectionOf(path: string): CalculatorSection {
 	)!
 }
 
-// When switching sections, the new section's heading receives focus. After an error in another
-// section, the first invalid field receives it instead.
 const headings = ref<Partial<Record<CalculatorSection, HTMLElement>>>({})
 const form = ref<InstanceType<typeof BaseCard> | null>(null)
 let focusErrorAfterSwitch = false
@@ -106,14 +117,13 @@ watch(
 			element?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
 			focusErrorAfterSwitch = false
 		} else {
-			headings.value[CALCULATOR_SECTIONS[part]!]?.focus()
+			headings.value[props.sections[part]!]?.focus()
 		}
 	},
 )
 
-/** Focus the heading of the visible section, e.g. after going back from the result */
 function focusHeading(): void {
-	headings.value[CALCULATOR_SECTIONS[props.part ?? 0]!]?.focus()
+	headings.value[props.sections[props.part ?? 0]!]?.focus()
 }
 
 defineExpose({ focusHeading })
@@ -128,11 +138,9 @@ const submitAll = handleSubmit(
 		const firstPath = Object.keys(invalid)[0]
 		const section = firstPath ? sectionOf(firstPath) : undefined
 
-		// If the error is in another section, go back there. The watcher on part then sets focus once
-		// the section is visible.
-		if (props.part !== undefined && section && !isVisible(section)) {
+		if (props.part !== undefined && section && props.sections.includes(section) && !isVisible(section)) {
 			focusErrorAfterSwitch = true
-			emit('go-to-part', CALCULATOR_SECTIONS.indexOf(section))
+			emit('go-to-part', props.sections.indexOf(section))
 			return
 		}
 
@@ -145,12 +153,11 @@ async function onSubmit(event: Event): Promise<void> {
 
 	event.preventDefault()
 
-	const section = CALCULATOR_SECTIONS[props.part!]!
+	const section = props.sections[props.part!]!
 	const results = await Promise.all(
 		fieldsOf(section).map((field) => validateField(field as never)),
 	)
 
-	// Intermediate values: only the sections so far have been validated
 	if (results.every((result) => result.valid)) {
 		emit('part-complete', { ...values } as Partial<CalorieCalculatorValues>)
 	} else {
@@ -173,7 +180,6 @@ function onReset(): void {
 		@submit="onSubmit"
 	>
 		<div class="flex flex-col gap-6">
-			<!-- E.g. the progress indicator when the calculator runs section by section -->
 			<slot name="header" />
 
 			<div class="flex flex-col gap-8">
@@ -186,13 +192,13 @@ function onReset(): void {
 						<h2
 							id="calculator-bmr-title"
 							:ref="(el) => (headings.basal = el as HTMLElement)"
-							class="text-2xl outline-none"
+							class="outline-none wrap-break-word hyphens-auto"
 							tabindex="-1"
 						>
 							Grundumsatz
 						</h2>
 
-						<p class="text-muted">
+						<p class="text-muted-foreground">
 							Diese vier Angaben bestimmen, was dein Körper in Ruhe verbraucht.
 						</p>
 					</div>
@@ -226,6 +232,8 @@ function onReset(): void {
 						name="weight"
 						label="Gewicht"
 						unit="kg"
+						:step="0.1"
+						:format-options="{ maximumFractionDigits: 1 }"
 					/>
 				</section>
 
@@ -237,7 +245,7 @@ function onReset(): void {
 					<h2
 						id="calculator-steps-title"
 						:ref="(el) => (headings.steps = el as HTMLElement)"
-						class="text-2xl outline-none"
+						class="outline-none wrap-break-word hyphens-auto"
 						tabindex="-1"
 					>
 						Alltagsbewegung
@@ -249,9 +257,9 @@ function onReset(): void {
 						hint="Dein Handy zählt schon mit, schau in der Health-App nach deinem Tagesdurchschnitt. Zum Schätzen: rund 4.000 bei überwiegend sitzendem Alltag, rund 7.000 bei gemischtem, rund 10.000, wenn du viel auf den Beinen bist."
 						stepper
 						:min="0"
-						:step="1000"
-						increment-label="1.000 Schritte mehr"
-						decrement-label="1.000 Schritte weniger"
+						:step="100"
+						increment-label="100 Schritte mehr"
+						decrement-label="100 Schritte weniger"
 						:format-options="{ maximumFractionDigits: 0 }"
 					/>
 				</section>
@@ -265,16 +273,16 @@ function onReset(): void {
 						<h2
 							id="calculator-training-title"
 							:ref="(el) => (headings.training = el as HTMLElement)"
-							class="text-2xl outline-none"
+							class="outline-none wrap-break-word hyphens-auto"
 							tabindex="-1"
 						>
 							Training
 						</h2>
 
-						<p class="text-muted">
-							Optional. Nur gezielter Sport, Spaziergänge und Wege stecken schon in
-							deinen Schritten. Hat dein Handy beim Laufen oder Wandern mitgezählt,
-							trag die Einheit nicht zusätzlich ein.
+						<p class="text-muted-foreground">
+							Optional und nur für gezielten Sport: Spaziergänge und Wege stecken
+							schon in deinen Schritten. Hat dein Handy beim Laufen oder Wandern
+							mitgezählt, trag die Einheit nicht zusätzlich ein.
 						</p>
 					</div>
 
@@ -287,37 +295,39 @@ function onReset(): void {
 						Wir rechnen dann nur mit Grundumsatz und Alltagsbewegung.
 
 						<template #actions>
-							<BaseButton @click="addWorkout">
+							<BaseButton
+								variant="outline"
+								@click="addWorkout"
+							>
 								<BaseIcon :icon="PlusIcon" />
+
 								Training hinzufügen
 							</BaseButton>
 						</template>
 					</BaseEmptyState>
 
 					<template v-else>
-						<!-- Each workout as its own surface with a heading. role="group" groups the fields
-                     without the look of a fieldset with border and legend. -->
 						<ul class="flex flex-col gap-4">
 							<li
 								v-for="(workout, index) in workouts"
 								:key="workout.key"
 							>
 								<div
-									class="flex flex-col gap-4 p-4 rounded-lg bg-surface-muted md:p-5"
+									class="repeat-group"
 									role="group"
 									:aria-labelledby="`workout-${workout.key}-title`"
 								>
-									<div class="flex items-center justify-between gap-3">
+									<div class="repeat-group__header">
 										<h3
 											:id="`workout-${workout.key}-title`"
-											class="font-sans text-md font-bold tracking-normal"
+											class="repeat-group__title font-sans text-md tracking-normal"
 										>
 											Training {{ index + 1 }}
 										</h3>
 
 										<BaseButton
-											variant="outline"
-											size="sm"
+											variant="danger-soft"
+											size="icon-sm"
 											:aria-label="`Training ${index + 1} entfernen`"
 											@click="remove(index)"
 										>
@@ -325,7 +335,6 @@ function onReset(): void {
 												:icon="TrashIcon"
 												:size="16"
 											/>
-											Entfernen
 										</BaseButton>
 									</div>
 
@@ -362,16 +371,18 @@ function onReset(): void {
 
 						<p
 							v-if="errors.exercises"
-							class="text-sm font-semibold text-danger"
+							class="text-md font-semibold text-destructive"
 						>
 							{{ errors.exercises }}
 						</p>
 
 						<BaseButton
 							class="self-center"
+							variant="outline"
 							@click="addWorkout"
 						>
 							<BaseIcon :icon="PlusIcon" />
+
 							Weiteres Training hinzufügen
 						</BaseButton>
 					</template>
@@ -385,7 +396,7 @@ function onReset(): void {
 					<h2
 						id="calculator-goal-title"
 						:ref="(el) => (headings.goal = el as HTMLElement)"
-						class="text-2xl outline-none"
+						class="outline-none wrap-break-word hyphens-auto"
 						tabindex="-1"
 					>
 						Dein Ziel
@@ -399,17 +410,27 @@ function onReset(): void {
 					/>
 				</section>
 
-				<!-- Custom actions, e.g. back and next in onboarding -->
+				<p
+					v-if="isLastPart && hiddenErrors.length"
+					class="notice notice--danger"
+					role="alert"
+				>
+					{{ hiddenErrors.join(' ') }}
+				</p>
+
 				<slot
 					name="actions"
 					:is-last-part="isLastPart"
 				>
 					<BaseActions class="pt-8 border-t border-divider">
 						<BaseButton type="submit">
-							<template v-if="isLastPart">Bedarf berechnen</template>
+							<template v-if="isLastPart">
+								Bedarf berechnen
+							</template>
 
 							<template v-else>
 								Weiter
+
 								<BaseIcon :icon="ArrowRightIcon" />
 							</template>
 						</BaseButton>
@@ -420,6 +441,7 @@ function onReset(): void {
 							@click="emit('back')"
 						>
 							<BaseIcon :icon="ArrowLeftIcon" />
+
 							Zurück
 						</BaseButton>
 
@@ -427,8 +449,9 @@ function onReset(): void {
 							v-else
 							variant="ghost"
 							@click="onReset"
-							>Zurücksetzen</BaseButton
 						>
+							Zurücksetzen
+						</BaseButton>
 					</BaseActions>
 				</slot>
 			</div>

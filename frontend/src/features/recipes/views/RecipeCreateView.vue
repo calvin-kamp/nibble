@@ -18,7 +18,6 @@ const listLocation = useRecipeListLocation()
 
 const form = ref<InstanceType<typeof RecipeForm> | null>(null)
 
-// Confirm on "Abbrechen" and in the breadcrumbs once something has been entered
 const {
 	open: leaveDialogOpen,
 	leave,
@@ -48,8 +47,7 @@ async function onSubmit(values: RecipeFormValues): Promise<void> {
 </script>
 
 <template>
-	<main class="content-wrapper pt-4 pb-10">
-		<!-- Form centered in the page, header and form at the same width -->
+	<main class="page">
 		<div class="content-column content-column--form gap-6">
 			<BaseBreadcrumb
 				:items="[{ label: 'Rezepte', routeName: 'recipe-list', query: listLocation.query }]"
@@ -58,9 +56,11 @@ async function onSubmit(values: RecipeFormValues): Promise<void> {
 			/>
 
 			<div class="flex flex-col gap-3">
-				<h1>Rezept anlegen</h1>
+				<h1>
+					Rezept anlegen
+				</h1>
 
-				<p class="max-w-3xl text-lg text-muted">
+				<p class="page__lead">
 					Teile ein Rezept, das dir schmeckt. Nach einer kurzen Prüfung ist es für alle
 					sichtbar.
 				</p>

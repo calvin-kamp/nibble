@@ -1,71 +1,98 @@
 @layer components {
 	.button {
-		@apply relative inline-flex justify-center items-center gap-2 min-h-11 px-6;
-		@apply border-2 border-transparent rounded-md;
-		@apply font-semibold;
-		@apply transition-interactive;
-		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
+		@apply relative inline-flex justify-center items-center gap-2 min-h-11 px-5 py-1;
+		@apply border border-transparent rounded-md;
+		@apply text-md font-semibold leading-snug text-center select-none;
+		@apply transition-[color,background-color,border-color,scale] ease-out;
+		@apply active:not-disabled:scale-97;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
 		@apply disabled:opacity-50 disabled:cursor-not-allowed;
 	}
 
 	.button--primary {
-		@apply bg-brand;
-		@apply text-on-brand;
-		@apply hover:bg-brand-hover;
+		@apply bg-primary text-primary-foreground;
+		@apply hover:bg-primary-hover;
 	}
 
 	.button--secondary {
-		@apply bg-lime;
-		@apply text-ink;
-		@apply hover:bg-lime-hover;
+		@apply bg-highlight text-highlight-foreground;
+		@apply hover:bg-highlight-hover;
 	}
 
 	.button--outline {
-		@apply border-current bg-transparent;
-		@apply hover:bg-current/10;
+		@apply border-2 border-accent-border bg-transparent text-primary;
+		@apply hover:border-primary hover:bg-accent;
+	}
+
+	.card--inverse .button--outline,
+	.on-forest .button--outline {
+		@apply border-forest-muted-foreground text-forest-foreground;
+		@apply hover:border-forest-foreground hover:bg-forest-muted;
 	}
 
 	.button--ghost {
-		@apply bg-transparent;
-		@apply hover:bg-surface-muted;
+		@apply bg-transparent text-primary;
+		@apply hover:bg-accent;
+	}
+
+	.button--ghost.button--icon,
+	.button--ghost.button--icon-sm {
+		@apply text-foreground/80;
+		@apply hover:bg-accent hover:text-primary;
+	}
+
+	.card--inverse .button--ghost,
+	.on-forest .button--ghost {
+		@apply text-forest-foreground hover:bg-forest-muted;
 	}
 
 	.button--muted {
-		@apply bg-surface-muted;
-		@apply text-ink;
-		@apply hover:bg-surface-muted-hover;
+		@apply bg-muted text-foreground;
+		@apply hover:bg-muted-hover;
 	}
 
 	.button--selected {
-		@apply border-brand bg-brand-soft;
-		@apply text-brand-ink;
-		@apply hover:bg-brand-soft-hover;
+		@apply border-accent-border bg-accent text-primary;
+		@apply hover:bg-accent-hover;
 	}
 
 	.button--danger {
-		@apply bg-danger;
-		@apply text-white;
+		@apply bg-destructive text-destructive-foreground;
+		@apply hover:bg-destructive-hover;
+	}
+
+	.button--danger,
+	.button--danger-soft {
+		@apply focus-visible:outline-destructive;
+	}
+
+	.button--danger-soft {
+		@apply bg-destructive-soft text-destructive;
+		@apply hover:bg-destructive-soft-hover hover:text-destructive-soft-foreground;
 	}
 
 	.button--lg {
-		@apply gap-4 py-4;
+		@apply min-h-13 px-6 text-base;
 	}
 
-	/* Small, e.g. for inline row actions. Visually 32px tall; ::after enlarges the hit area to
-     44px so it is still easy to hit on phones. */
 	.button--sm {
-		@apply gap-1.5 min-h-8 px-3;
-		@apply rounded-sm text-sm;
+		@apply gap-1.5 min-h-9 px-3 whitespace-nowrap;
+		@apply rounded-sm;
 	}
 
 	.button--icon-sm {
-		@apply size-8 min-h-8 px-0;
+		@apply size-9 min-h-9 px-0;
 		@apply rounded-full;
 	}
 
-	.button--sm,
+	/* The hit area is its own 44px box, centred on the button. An inset would be measured from
+     inside the border and come out 2px short. */
+	.button--sm {
+		@apply after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2;
+	}
+
 	.button--icon-sm {
-		@apply after:absolute after:-inset-1.5;
+		@apply after:absolute after:top-1/2 after:left-1/2 after:size-11 after:-translate-1/2;
 	}
 
 	.button--icon {
@@ -74,7 +101,7 @@
 	}
 
 	.button--icon-lg {
-		@apply size-13 px-0;
+		@apply size-14 px-0;
 		@apply rounded-full;
 	}
 }

@@ -1,13 +1,16 @@
 @layer components {
-	/* Empty list or search without results. Actions after the text get some extra room. */
 	.empty-state {
 		@apply flex flex-col items-center gap-5 px-6 py-12;
-		@apply border-2 border-dashed border-line rounded-lg text-center;
+		@apply border border-divider rounded-lg bg-card text-center;
 	}
 
-	/* Icon, title and text */
 	.empty-state__intro {
 		@apply flex flex-col items-center gap-2;
+	}
+
+	.empty-state__icon {
+		@apply grid place-items-center size-12 mb-1;
+		@apply rounded-full bg-accent text-primary;
 	}
 
 	.empty-state--sm {
@@ -19,14 +22,14 @@
 	}
 
 	.empty-state--sm .empty-state__title {
-		@apply font-semibold text-lg;
+		@apply font-sans font-semibold text-lg tracking-normal;
 	}
 
 	.empty-state__text {
-		@apply max-w-md text-muted;
+		@apply max-w-md text-foreground/80;
 	}
 
 	.empty-state--sm .empty-state__text {
-		@apply text-sm;
+		@apply text-md;
 	}
 }

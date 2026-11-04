@@ -1,0 +1,47 @@
+@layer components {
+	.recipe-card {
+		@apply relative transition-[border-color];
+		@apply hover:border-input;
+		@apply has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-offset-2 has-[a:focus-visible]:outline-ring;
+	}
+
+	.recipe-card .recipe-media > img {
+		@apply transition-[scale] duration-300 ease-out;
+	}
+
+	.recipe-card:hover .recipe-media > img {
+		@apply scale-103;
+	}
+
+	.recipe-card__title {
+		@apply text-xl;
+	}
+
+	.recipe-media {
+		@apply relative flex items-center justify-center overflow-hidden;
+	}
+
+	.recipe-media__plate {
+		@apply grid place-items-center h-3/4 aspect-square rounded-full bg-surface;
+	}
+
+	.recipe-media__plate::after {
+		@apply content-[''] size-3/4 rounded-full bg-background;
+	}
+
+	.recipe-media--1 {
+		@apply bg-amber-200;
+	}
+
+	.recipe-media--2 {
+		@apply bg-green-200;
+	}
+
+	.recipe-media--3 {
+		@apply bg-coral-100;
+	}
+
+	.recipe-media--4 {
+		@apply bg-lime-100;
+	}
+}

@@ -5,7 +5,6 @@ import RecipeFilterGroup from '@features/recipes/components/RecipeFilterGroup.vu
 
 import { FILTER_GROUPS } from '@features/recipes/recipes.constants'
 
-// All filter groups stacked, for the drawer on phone and tablet
 const filters = defineModel<RecipeFilterValues>({ required: true })
 </script>
 

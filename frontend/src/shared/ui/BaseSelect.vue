@@ -19,8 +19,6 @@ import {
 
 import BaseIcon from './BaseIcon.vue'
 
-// Select without a form, e.g. for a time range or as navigation. In forms it is wrapped by
-// SelectField. Attributes such as id or aria-label end up on the trigger.
 defineOptions({ inheritAttrs: false })
 
 const props = withDefaults(defineProps<Props>(), {
@@ -37,9 +35,7 @@ const emit = defineEmits<{
 const model = defineModel<string | undefined>()
 
 interface Props {
-	/** Options without groups */
 	options?: SelectOption[]
-	/** Options with group headings, instead of options */
 	groups?: SelectOptionGroup[]
 	placeholder?: string
 	disabled?: boolean
@@ -80,7 +76,9 @@ interface Props {
 						:value="option.value"
 						:disabled="option.disabled"
 					>
-						<SelectItemText>{{ option.label }}</SelectItemText>
+						<SelectItemText>
+							{{ option.label }}
+						</SelectItemText>
 
 						<SelectItemIndicator>
 							<BaseIcon :icon="CheckIcon" />
@@ -92,7 +90,9 @@ interface Props {
 						:key="group.label"
 						class="select__group"
 					>
-						<SelectLabel class="select__group-label">{{ group.label }}</SelectLabel>
+						<SelectLabel class="select__group-label">
+							{{ group.label }}
+						</SelectLabel>
 
 						<SelectItem
 							v-for="option in group.options"
@@ -101,7 +101,9 @@ interface Props {
 							:value="option.value"
 							:disabled="option.disabled"
 						>
-							<SelectItemText>{{ option.label }}</SelectItemText>
+							<SelectItemText>
+								{{ option.label }}
+							</SelectItemText>
 
 							<SelectItemIndicator>
 								<BaseIcon :icon="CheckIcon" />

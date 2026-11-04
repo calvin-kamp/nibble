@@ -20,6 +20,7 @@ import { notifyTrackingChanged } from '@features/tracking/composables/tracking-c
 
 import { isBarcode, normalizeBarcode, toQuantity } from '@features/tracking/tracking.utils'
 import { ApiError, apiRequest, toQuery, type Paginated } from '@shared/api/client'
+import { addDays, toIsoDate } from '@shared/utils/date'
 
 // Entries, days and weight live in the backend. Everything under /tracking requires consent;
 // without it the API responds with 403 consent_required. The functions throw ApiError.
@@ -53,7 +54,6 @@ export function toApiAmount(
 	return { amount: value, unit }
 }
 
-/** Amount from the backend for display, e.g. 2 servings that equal 80 g */
 export function fromApiAmount(
 	amount: number,
 	unit: FoodUnitResponse,
@@ -91,6 +91,17 @@ function toFoodEntry(entry: TrackingEntryResponse): FoodEntry {
 				? fromApiAmount(entry.amount, entry.unit, entry.serving_quantity, baseUnit)
 				: undefined,
 		productCode: entry.off_code ?? undefined,
+		product:
+			entry.source === 'off' && entry.nutrition_per_100
+				? {
+						code: entry.off_code ?? '',
+						name: entry.food_name,
+						brand: entry.brand ?? undefined,
+						unit: baseUnit,
+						per100: entry.nutrition_per_100,
+						serving: entry.serving_quantity ?? undefined,
+					}
+				: undefined,
 	}
 }
 
@@ -98,15 +109,57 @@ function toWeightEntry(entry: WeightEntryResponse): WeightEntry {
 	return { id: String(entry.id), date: entry.measured_on, kg: entry.weight_kg }
 }
 
-export async function fetchDay(date: string): Promise<TrackedDay> {
-	const day = await apiRequest<DaySummaryResponse>(`/tracking/days/${date}`)
-
+function toTrackedDay(day: DaySummaryResponse): TrackedDay {
 	return { date: day.date, goals: day.targets, entries: day.entries.map(toFoodEntry) }
 }
 
-/** Several days at once, e.g. a week in the diary. One request per day. */
-export function fetchDays(dates: string[]): Promise<TrackedDay[]> {
-	return Promise.all(dates.map(fetchDay))
+export async function fetchDay(date: string): Promise<TrackedDay> {
+	return toTrackedDay(await apiRequest<DaySummaryResponse>(`/tracking/days/${date}`))
+}
+
+/** The backend returns at most this many days per request */
+const MAX_DAYS_PER_REQUEST = 92
+
+/**
+ * Every day from first to last, newest first, e.g. five weeks of the diary. One request per
+ * 92 days instead of one per day, which would soon reach the API's rate limit.
+ */
+export async function fetchDayRange(first: string, last: string): Promise<TrackedDay[]> {
+	const chunks: [string, string][] = []
+
+	for (let end = last; end >= first; end = addDays(end, -MAX_DAYS_PER_REQUEST)) {
+		const start = addDays(end, -(MAX_DAYS_PER_REQUEST - 1))
+
+		chunks.push([start < first ? first : start, end])
+	}
+
+	const pages = await Promise.all(
+		chunks.map(([from, to]) =>
+			apiRequest<DaySummaryResponse[]>(`/tracking/days${toQuery({ from, to })}`),
+		),
+	)
+
+	return pages.flat().map(toTrackedDay)
+}
+
+const RECENT_DAYS = 14
+
+/**
+ * Foods from the search logged in the last two weeks, newest first, each product once. For the
+ * quick selection in the food dialog; entries without a barcode cannot be looked up again.
+ */
+export async function fetchRecentFoods(limit: number): Promise<FoodEntry[]> {
+	const today = toIsoDate()
+	const days = await fetchDayRange(addDays(today, -(RECENT_DAYS - 1)), today)
+	const recent = new Map<string, FoodEntry>()
+
+	for (const entry of days.flatMap((day) => [...day.entries].reverse())) {
+		if (entry.productCode && !recent.has(entry.productCode)) {
+			recent.set(entry.productCode, entry)
+		}
+	}
+
+	return [...recent.values()].slice(0, limit)
 }
 
 /** Daily needs valid today, null while none are set */
@@ -135,7 +188,6 @@ export async function addProductEntry(
 	return toFoodEntry(entry)
 }
 
-/** A saved meal as one serving with its stored nutrition values */
 export async function addSavedMealEntry(
 	target: EntryTarget & { mealId: string },
 ): Promise<FoodEntry> {
@@ -149,12 +201,34 @@ export async function addSavedMealEntry(
 	return toFoodEntry(entry)
 }
 
+/**
+ * Changes day, meal and, for foods from the search, the amount. The backend recalculates the
+ * nutrition values from the values per 100 stored in the entry.
+ */
+export async function updateFoodEntry(
+	entry: FoodEntry,
+	changes: EntryTarget & { amount?: number; unit?: FoodUnit },
+): Promise<FoodEntry> {
+	const amount =
+		entry.product && changes.amount !== undefined && changes.unit
+			? toApiAmount(entry.product, changes.amount, changes.unit)
+			: {}
+
+	const updated = await apiRequest<TrackingEntryResponse>(`/tracking/entries/${entry.id}`, {
+		method: 'PATCH',
+		body: { consumed_on: changes.date, meal_type: changes.meal, ...amount },
+	})
+
+	notifyTrackingChanged()
+
+	return toFoodEntry(updated)
+}
+
 export async function deleteFoodEntry(id: string): Promise<void> {
 	await apiRequest(`/tracking/entries/${id}`, { method: 'DELETE' })
 	notifyTrackingChanged()
 }
 
-/** The whole history, oldest first */
 export async function fetchWeightEntries(): Promise<WeightEntry[]> {
 	const { results } = await apiRequest<{ results: WeightEntryResponse[] }>(
 		'/tracking/weights?range=all',

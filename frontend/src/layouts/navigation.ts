@@ -8,6 +8,7 @@ import {
 	CalculatorIcon,
 	ClipboardCheckIcon,
 	HouseIcon,
+	LifeBuoyIcon,
 	LayoutDashboardIcon,
 	UtensilsIcon,
 	WeightIcon,
@@ -29,8 +30,6 @@ export interface NavItem {
 	visibility: NavVisibility
 }
 
-// Navigation for the sidebar (desktop) and menu (phone, tablet). The bottom bar on phones
-// only shows the most important items.
 export const MAIN_NAV: NavItem[] = [
 	{ routeName: 'home', label: 'Start', icon: HouseIcon, visibility: 'guest' },
 	{ routeName: 'dashboard', label: 'Übersicht', icon: LayoutDashboardIcon, visibility: 'user' },
@@ -50,16 +49,21 @@ export const MAIN_NAV: NavItem[] = [
 	},
 ]
 
-// Tracking. Without consent these pages do not exist, so the group is dropped.
 export const TRACKING_NAV: NavItem[] = [
 	{
 		routeName: 'diary-food',
-		label: 'Ernährung',
+		label: 'Essen',
 		icon: AppleIcon,
 		activeOn: ['diary-food-day'],
 		visibility: 'consent',
 	},
-	{ routeName: 'diary-weight', label: 'Gewicht', icon: WeightIcon, visibility: 'consent' },
+	{
+		routeName: 'diary-weight',
+		label: 'Gewicht',
+		icon: WeightIcon,
+		activeOn: ['diary-weight-week'],
+		visibility: 'consent',
+	},
 ]
 
 export const DISCOVER_NAV: NavItem[] = [
@@ -72,7 +76,6 @@ export const DISCOVER_NAV: NavItem[] = [
 	},
 ]
 
-// Moderation. For everyone without staff status the group is dropped.
 export const ADMIN_NAV: NavItem[] = [
 	{
 		routeName: 'admin',
@@ -81,6 +84,36 @@ export const ADMIN_NAV: NavItem[] = [
 		activeOn: ['admin-submission'],
 		visibility: 'staff',
 	},
+]
+
+export const HELP_NAV: NavItem[] = [
+	{
+		routeName: 'help',
+		label: 'Hilfe',
+		icon: LifeBuoyIcon,
+		activeOn: ['help-guide', 'help-faq', 'help-accessibility'],
+		visibility: 'always',
+	},
+]
+
+export const HELP_TOPICS_NAV: NavItem[] = [
+	{ routeName: 'help-guide', label: 'So nutzt du nibble', visibility: 'always' },
+	{ routeName: 'help-faq', label: 'Häufige Fragen', visibility: 'always' },
+	{ routeName: 'help-accessibility', label: 'Barrierefreiheit', visibility: 'always' },
+	{ routeName: 'help', hash: '#kontakt', label: 'Kontakt', visibility: 'always' },
+]
+
+export const FOOTER_APP_NAV: NavItem[] = [
+	{ routeName: 'home', label: 'Start', visibility: 'guest' },
+	{ routeName: 'dashboard', label: 'Übersicht', visibility: 'user' },
+	{
+		routeName: 'diary-food',
+		label: 'Tagebuch',
+		activeOn: ['diary-food-day'],
+		visibility: 'consent',
+	},
+	{ routeName: 'recipe-list', label: 'Rezepte', visibility: 'always' },
+	{ routeName: 'calorie-calculator', label: 'Kalorienrechner', visibility: 'always' },
 ]
 
 export const LEGAL_NAV: NavItem[] = [
@@ -94,6 +127,7 @@ const ALL_NAV: NavItem[] = [
 	...TRACKING_NAV,
 	...DISCOVER_NAV,
 	...ADMIN_NAV,
+	...HELP_NAV,
 	...LEGAL_NAV,
 ]
 
@@ -127,7 +161,6 @@ export function navItemLocation(item: NavItem): {
 	return { name: item.routeName, query: item.query, hash: item.hash }
 }
 
-/** Filters items by sign-in and consent */
 export function useNavVisibility(): (item: NavItem) => boolean {
 	const auth = useAuthStore()
 

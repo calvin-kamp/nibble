@@ -10,7 +10,6 @@ import { useFieldIds } from './field-ids'
 interface Props extends BaseFieldProps<string | undefined> {
 	options: FieldOption[]
 	orientation?: 'vertical' | 'horizontal'
-	/** Legend for screen readers only, when a heading already asks the question */
 	labelHidden?: boolean
 }
 
@@ -24,7 +23,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const ids = useFieldIds(() => props.hint)
 
-// Validates immediately on selection
 const { value, errorMessage } = useField<string | undefined>(
 	() => props.name,
 	toRef(props, 'rules'),
@@ -33,7 +31,6 @@ const { value, errorMessage } = useField<string | undefined>(
 </script>
 
 <template>
-	<!-- fieldset and legend group the options under one shared question -->
 	<fieldset
 		class="radio-field"
 		:class="{ 'radio-field--invalid': errorMessage }"
@@ -61,7 +58,6 @@ const { value, errorMessage } = useField<string | undefined>(
 			:aria-invalid="!!errorMessage || undefined"
 			:aria-describedby="ids.describedBy(errorMessage)"
 		>
-			<!-- The label wraps the radio button, so the text is clickable too -->
 			<Label
 				v-for="(option, index) in props.options"
 				:key="option.value"
@@ -79,6 +75,7 @@ const { value, errorMessage } = useField<string | undefined>(
 
 				<span class="radio-field__text">
 					{{ option.label }}
+
 					<span
 						v-if="option.description"
 						class="radio-field__description"

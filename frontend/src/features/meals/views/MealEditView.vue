@@ -23,7 +23,6 @@ const props = defineProps<Props>()
 const router = useRouter()
 const toast = useToast()
 
-// undefined: still loading, null: does not exist
 const meal = ref<SavedMeal | null | undefined>(undefined)
 
 watch(
@@ -42,7 +41,6 @@ watch(
 
 const form = ref<InstanceType<typeof MealForm> | null>(null)
 
-// Confirm on "Abbrechen" and in the breadcrumbs once something has changed
 const {
 	open: leaveDialogOpen,
 	leave,
@@ -74,9 +72,8 @@ async function onSubmit(values: MealFormValues): Promise<void> {
 <template>
 	<main
 		v-if="meal"
-		class="content-wrapper pt-4 pb-10"
+		class="page"
 	>
-		<!-- Form centered in the page, header and form at the same width -->
 		<div class="content-column content-column--form gap-6">
 			<BaseBreadcrumb
 				:items="[
@@ -87,7 +84,9 @@ async function onSubmit(values: MealFormValues): Promise<void> {
 				@click.capture="interceptLink"
 			/>
 
-			<h1>Mahlzeit bearbeiten</h1>
+			<h1>
+				Mahlzeit bearbeiten
+			</h1>
 
 			<p
 				v-if="submitError"
@@ -97,7 +96,6 @@ async function onSubmit(values: MealFormValues): Promise<void> {
 				{{ submitError }}
 			</p>
 
-			<!-- key: switching to another meal restarts the form -->
 			<MealForm
 				:key="meal.id"
 				ref="form"

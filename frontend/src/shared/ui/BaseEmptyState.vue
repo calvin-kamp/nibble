@@ -5,8 +5,6 @@ import { computed } from 'vue'
 
 import BaseIcon from './BaseIcon.vue'
 
-// Placeholder for an empty list or a search without results: icon, title, a sentence and
-// optionally an action. The text goes into the default slot, the action into #actions.
 interface Props {
 	icon: Component
 	title: string
@@ -27,11 +25,15 @@ const isSmall = computed<boolean>(() => props.size === 'sm')
 		:class="{ 'empty-state--sm': isSmall }"
 	>
 		<div class="empty-state__intro">
-			<BaseIcon
-				class="text-muted"
-				:icon="props.icon"
-				:size="isSmall ? 24 : 32"
-			/>
+			<span
+				class="empty-state__icon"
+				aria-hidden="true"
+			>
+				<BaseIcon
+					:icon="props.icon"
+					:size="isSmall ? 20 : 24"
+				/>
+			</span>
 
 			<component
 				:is="isSmall ? 'p' : 'h2'"

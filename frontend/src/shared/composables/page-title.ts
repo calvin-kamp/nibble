@@ -4,15 +4,62 @@ import { readonly, ref, toValue, watchEffect } from 'vue'
 
 const APP_NAME = 'nibble'
 
-// Text of the live region in App.vue. One list for the whole app, like the toasts.
+/** Public address, for canonical links and social previews. index.html has the same values. */
+export const SITE_URL = 'https://www.nibble-tracking.de'
+
+const DEFAULT_TITLE = `${APP_NAME} – Ernährungstagebuch und Rezepte`
+
+const DEFAULT_DESCRIPTION =
+	'Ernährungstagebuch, Kalorienrechner und Rezepte mit Nährwerten. Lebensmittel per Barcode scannen, Gewicht im 7-Tage-Schnitt verfolgen. Kostenlos und ohne Werbung.'
+
 const announcement = ref<string>('')
 
-/** Document title, e.g. "Rezepte · nibble". Without a page name only the app name. */
-export function setPageTitle(title: string | undefined): void {
-	document.title = title ? `${title} · ${APP_NAME}` : APP_NAME
+function setMeta(attribute: 'name' | 'property', key: string, content: string): void {
+	let tag = document.head.querySelector<HTMLMetaElement>(`meta[${attribute}="${key}"]`)
+
+	if (!tag) {
+		tag = document.createElement('meta')
+		tag.setAttribute(attribute, key)
+		document.head.append(tag)
+	}
+
+	tag.content = content
 }
 
-/** Tells screen readers which page is now shown, after a client-side navigation */
+export function setPageTitle(title: string | undefined): void {
+	document.title = title ? `${title} – ${APP_NAME}` : DEFAULT_TITLE
+
+	setMeta('property', 'og:title', document.title)
+	setMeta('name', 'twitter:title', document.title)
+}
+
+export function setPageDescription(description: string | undefined): void {
+	const text = description ?? DEFAULT_DESCRIPTION
+
+	setMeta('name', 'description', text)
+	setMeta('property', 'og:description', text)
+	setMeta('name', 'twitter:description', text)
+}
+
+/**
+ * Canonical address without query or hash, so filters and form steps count as one page.
+ * Pages behind the login are kept out of search results.
+ */
+export function setPageAddress(path: string, indexable: boolean): void {
+	const url = `${SITE_URL}${path === '/' ? '/' : path.replace(/\/$/, '')}`
+	let link = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
+
+	if (!link) {
+		link = document.createElement('link')
+		link.rel = 'canonical'
+		document.head.append(link)
+	}
+
+	link.href = url
+	setMeta('property', 'og:url', url)
+	setMeta('name', 'robots', indexable ? 'index, follow' : 'noindex, nofollow')
+}
+
 export function announcePage(title: string | undefined): void {
 	announcement.value = ''
 
@@ -27,14 +74,18 @@ export function usePageAnnouncement() {
 	return readonly(announcement)
 }
 
-/**
- * Replaces the generic title from the route with the loaded content, e.g. the recipe's name.
- * Until the content is there, the route's title stays.
- */
 export function usePageTitle(title: MaybeRefOrGetter<string | undefined>): void {
 	watchEffect(() => {
 		const value = toValue(title)
 
 		if (value) setPageTitle(value)
+	})
+}
+
+export function usePageDescription(description: MaybeRefOrGetter<string | undefined>): void {
+	watchEffect(() => {
+		const value = toValue(description)
+
+		if (value) setPageDescription(value)
 	})
 }

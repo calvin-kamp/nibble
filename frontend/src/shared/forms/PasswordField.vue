@@ -11,7 +11,6 @@ import { BaseIcon } from '@shared/ui'
 import { useFieldIds } from './field-ids'
 
 interface Props extends BaseFieldProps<string> {
-	/** current-password for signing in, new-password for registering */
 	autocomplete?: 'current-password' | 'new-password'
 }
 
@@ -24,7 +23,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const ids = useFieldIds(() => props.hint)
 
-// Validates on blur, and on every keystroke once there is an error
 const { value, errorMessage, handleBlur, validate } = useField<string>(
 	() => props.name,
 	toRef(props, 'rules'),
@@ -45,7 +43,6 @@ const visible = ref<boolean>(false)
 		:hint="props.hint"
 		:error="errorMessage"
 	>
-		<!-- Own element so the button can sit inside the field -->
 		<div class="password-field">
 			<input
 				:id="ids.id"
@@ -62,7 +59,6 @@ const visible = ref<boolean>(false)
 				@blur="handleBlur($event, true)"
 			/>
 
-			<!-- Constant label with aria-pressed, so screen readers say "on" or "off" -->
 			<button
 				type="button"
 				class="password-field__toggle"

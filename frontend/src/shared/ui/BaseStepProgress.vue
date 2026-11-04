@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import BaseProgressBar from './BaseProgressBar.vue'
 
-// "Schritt 2 von 4" with a bar, for forms that run in steps on phones
 interface Props {
 	/** Counted from 1 */
 	current: number
@@ -13,7 +12,7 @@ const props = defineProps<Props>()
 
 <template>
 	<div class="flex flex-col gap-2">
-		<p class="text-sm font-semibold text-muted">
+		<p class="text-md font-semibold text-muted-foreground">
 			Schritt {{ props.current }} von {{ props.total }}
 		</p>
 

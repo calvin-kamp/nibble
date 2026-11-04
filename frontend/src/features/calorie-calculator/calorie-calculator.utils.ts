@@ -204,6 +204,50 @@ export function calculateMacros(data: MacroInput): Macro[] {
 	]
 }
 
+/**
+ * Calorie shares in whole percent from the grams as shown (rounded). The shares always add up
+ * to 100: the largest rounding remainders get the leftover points. All zero without calories.
+ */
+export function macroShares(macros: MacroGrams): MacroGrams {
+	const grams = {
+		protein: Math.round(macros.protein),
+		carbs: Math.round(macros.carbs),
+		fat: Math.round(macros.fat),
+	}
+	const total = macrosToKcal(grams)
+	const keys = ['protein', 'carbs', 'fat'] as const
+
+	if (total <= 0) return { protein: 0, carbs: 0, fat: 0 }
+
+	const exact = keys.map((key) => ((grams[key] * KCAL_PER_GRAM[key]) / total) * 100)
+	const shares = exact.map(Math.floor)
+	const leftover = 100 - shares.reduce((sum, share) => sum + share, 0)
+
+	keys.map((_, index) => index)
+		.sort((a, b) => exact[b]! - shares[b]! - (exact[a]! - shares[a]!))
+		.slice(0, leftover)
+		.forEach((index) => (shares[index]! += 1))
+
+	return { protein: shares[0]!, carbs: shares[1]!, fat: shares[2]! }
+}
+
+/** Shares of a known calorie total when only that is known: protein, carbs, fat */
+export const DEFAULT_MACRO_SPLIT = { protein: 0.3, carbs: 0.4, fat: 0.3 } as const
+
+/**
+ * Splits a calorie total into whole grams. Carbs take the rounding remainder, so the macros
+ * add up to the total within ±2 kcal.
+ */
+export function splitKcal(kcal: number): MacroGrams {
+	const protein = Math.round((kcal * DEFAULT_MACRO_SPLIT.protein) / KCAL_PER_GRAM.protein)
+	const fat = Math.round((kcal * DEFAULT_MACRO_SPLIT.fat) / KCAL_PER_GRAM.fat)
+	const carbs = Math.round(
+		(kcal - protein * KCAL_PER_GRAM.protein - fat * KCAL_PER_GRAM.fat) / KCAL_PER_GRAM.carbs,
+	)
+
+	return { protein, carbs: Math.max(carbs, 0), fat }
+}
+
 export function macrosToKcal(macros: MacroGrams): number {
 	return (
 		macros.protein * KCAL_PER_GRAM.protein +

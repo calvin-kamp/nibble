@@ -10,9 +10,7 @@ import { BaseSelect } from '@shared/ui'
 import { useFieldIds } from './field-ids'
 
 interface Props extends BaseFieldProps<string | undefined> {
-	/** Options without groups */
 	options?: FieldOption[]
-	/** Options with group headings, instead of options */
 	groups?: FieldOptionGroup[]
 	placeholder?: string
 }
@@ -28,7 +26,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const ids = useFieldIds(() => props.hint)
 
-// Validates immediately on selection
 const { value, errorMessage, handleBlur } = useField<string | undefined>(
 	() => props.name,
 	toRef(props, 'rules'),

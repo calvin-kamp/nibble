@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /einrichten
+Disallow: /einstellungen
+Disallow: /verwaltung
+Disallow: /uebersicht
+Disallow: /tagebuch
+Disallow: /mahlzeiten
+Disallow: /anmeldung
+Disallow: /registrieren
+
+Sitemap: https://www.nibble-tracking.de/sitemap.xml

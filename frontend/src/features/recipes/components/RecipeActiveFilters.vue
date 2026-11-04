@@ -10,12 +10,9 @@ import { EMPTY_FILTERS } from '@features/recipes/recipes.constants'
 import { activeFilters } from '@features/recipes/recipes.utils'
 
 const emit = defineEmits<{
-	/** No filters left, the chips are gone. The page moves focus elsewhere. */
 	cleared: []
 }>()
 
-// Active filters as removable chips, on every screen size. That way the user can see why
-// the list is shorter even while the drawer is closed.
 const filters = defineModel<RecipeFilterValues>({ required: true })
 
 const items = computed<ActiveFilter[]>(() => activeFilters(filters.value))
@@ -65,11 +62,12 @@ function reset(): void {
 		>
 			<button
 				type="button"
-				class="chip border-brand bg-brand-soft text-brand-ink"
+				class="chip border-primary bg-accent text-primary"
 				:aria-label="`Filter ${filter.label} entfernen`"
 				@click="remove(filter, index)"
 			>
 				{{ filter.label }}
+
 				<BaseIcon
 					:icon="XIcon"
 					:size="18"

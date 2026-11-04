@@ -46,7 +46,6 @@ export async function loadCalculatorPrefill(user: AuthUser): Promise<CalculatorP
 		labels.push('Gewicht')
 	}
 
-	// Without a saved goal, the calculator's preselection stays
 	if (settings?.goal) {
 		values.goal = settings.goal
 		labels.push('Ziel')

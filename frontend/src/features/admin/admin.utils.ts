@@ -11,14 +11,12 @@ export function statusFromQuery(query: LocationQuery): SubmissionStatus {
 	return 'pending'
 }
 
-/** Fields in which a revision differs from the live version, in display order */
 export function changedFields(content: RecipeContent, current: RecipeContent): SubmissionChange[] {
 	return (Object.keys(CONTENT_LABELS) as (keyof RecipeContent)[])
 		.filter((key) => JSON.stringify(content[key]) !== JSON.stringify(current[key]))
 		.map((key) => ({ key, label: CONTENT_LABELS[key] }))
 }
 
-/** E.g. "27. Oktober 2026, 14:05" */
 export function formatTimestamp(iso: string): string {
 	return new Date(iso).toLocaleString('de-DE', {
 		day: 'numeric',

@@ -12,7 +12,7 @@ import { BaseActions, BaseButton, BaseCard } from '@shared/ui'
 
 import { mealSchema } from '@features/meals/meals.schema'
 import { draftNutrition, sumNutrition } from '@features/meals/meals.utils'
-import { focusFirstError, TextareaField, TextField } from '@shared/forms'
+import { focusFirstError, TextField } from '@shared/forms'
 
 interface Props {
 	initialValues?: MealFormValues
@@ -37,7 +37,6 @@ const { handleSubmit, meta, errors, values, submitCount } = useForm({
 
 const items = useFieldArray<MealItemDraft>('items')
 
-// A new food moves focus to "Menge"; after removing one, focus returns to the search
 const list = ref<HTMLElement | null>(null)
 const addSection = ref<HTMLElement | null>(null)
 
@@ -46,7 +45,6 @@ async function focusLastItem(): Promise<void> {
 	list.value?.lastElementChild?.querySelector<HTMLElement>('input')?.focus()
 }
 
-/** Suggestion: one serving if known, otherwise 100 g or ml */
 function addProduct(product: FoodProduct): void {
 	const unit = product.serving ? 'serving' : product.unit
 
@@ -61,14 +59,12 @@ async function removeItem(index: number): Promise<void> {
 	addSection.value?.querySelector<HTMLElement>('input')?.focus()
 }
 
-// Sum of all items that already have an amount
 const total = computed<Nutrition>(() =>
 	sumNutrition(
 		(values.items ?? []).map(draftNutrition).filter((nutrition) => nutrition !== null),
 	),
 )
 
-// Without items, the error is attached to the search, where the first item is added
 const itemsError = computed<string | undefined>(() =>
 	submitCount.value ? errors.value.items : undefined,
 )
@@ -82,8 +78,6 @@ defineExpose({ isDirty: computed<boolean>(() => meta.value.dirty) })
 </script>
 
 <template>
-	<!-- Same structure as the recipe form. max-w-4xl: on wide screens the rows would otherwise be
-       too long to fill in. -->
 	<BaseCard
 		as="form"
 		size="lg"
@@ -108,13 +102,6 @@ defineExpose({ isDirty: computed<boolean>(() => meta.value.dirty) })
 					label="Name"
 					autocomplete="off"
 				/>
-
-				<TextareaField
-					name="note"
-					label="Notiz (optional)"
-					hint="Z. B. wie du sie zubereitest. Steht auf der Seite der Mahlzeit."
-					:rows="2"
-				/>
 			</section>
 
 			<section
@@ -129,7 +116,7 @@ defineExpose({ isDirty: computed<boolean>(() => meta.value.dirty) })
 						Lebensmittel
 					</h2>
 
-					<p class="text-muted">
+					<p class="text-muted-foreground">
 						Was gehört dazu und wie viel davon? Die Nährwerte rechnen wir zusammen.
 					</p>
 				</div>
@@ -156,8 +143,6 @@ defineExpose({ isDirty: computed<boolean>(() => meta.value.dirty) })
 				</div>
 			</section>
 
-			<!-- Meal total, in the same card as on the recipe and meal pages. aria-live: announced after
-             every change. -->
 			<div class="flex flex-col gap-3 pt-8 border-t border-divider">
 				<NutritionCard
 					title="Nährwerte der Mahlzeit"
@@ -165,21 +150,25 @@ defineExpose({ isDirty: computed<boolean>(() => meta.value.dirty) })
 					aria-live="polite"
 				/>
 
-				<p class="text-muted">Die Summe aller Lebensmittel. So landet sie im Tagebuch.</p>
+				<p class="text-muted-foreground">
+					Die Summe aller Lebensmittel. So landet sie im Tagebuch.
+				</p>
 			</div>
 
 			<BaseActions class="pt-8 border-t border-divider">
 				<BaseButton
 					type="submit"
 					:disabled="props.submitting"
-					>{{ props.submitLabel }}</BaseButton
 				>
+					{{ props.submitLabel }}
+				</BaseButton>
 
 				<BaseButton
 					variant="ghost"
 					@click="emit('cancel')"
-					>Abbrechen</BaseButton
 				>
+					Abbrechen
+				</BaseButton>
 			</BaseActions>
 		</div>
 	</BaseCard>

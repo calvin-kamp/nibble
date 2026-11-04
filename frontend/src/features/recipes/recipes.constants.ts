@@ -9,10 +9,12 @@ import type {
 	RecipeListView,
 	RecipeMealType,
 	RecipeTag,
+	RecipeSort,
 } from '@features/recipes/recipes.types'
 
-/** The backend always returns 20 recipes per page */
-export const RECIPES_PAGE_SIZE = 20
+import { PAGE_SIZE } from '@shared/constants'
+
+export const RECIPES_PAGE_SIZE = PAGE_SIZE
 
 /** null means: show no tag */
 export const DIET_LABELS: Record<Diet, string | null> = {
@@ -49,7 +51,6 @@ export const MEAL_TYPE_LABELS: Record<RecipeMealType, string> = {
 	dessert: 'Dessert',
 }
 
-/** German unit names; the values themselves come from the backend */
 export const INGREDIENT_UNIT_LABELS: Record<IngredientUnit, string> = {
 	g: 'g',
 	kg: 'kg',
@@ -72,7 +73,6 @@ export const INGREDIENT_UNITS = Object.keys(INGREDIENT_UNIT_LABELS) as Ingredien
 export const MIN_SERVINGS = 1
 export const MAX_SERVINGS = 12
 
-/** Recipe form sections in order. On phones, each one is a separate step. */
 export const RECIPE_FORM_SECTIONS: readonly RecipeFormSection[] = [
 	'basics',
 	'nutrition',
@@ -89,6 +89,17 @@ export const EMPTY_FILTERS: RecipeFilterValues = {
 	tags: [],
 }
 
+/** Order in the address, e.g. ?sortierung=beliebteste. Newest is the default and not written. */
+export const SORT_QUERY: Record<RecipeSort, string | undefined> = {
+	newest: undefined,
+	popular: 'beliebteste',
+}
+
+export const SORT_OPTIONS: { value: RecipeSort; label: string }[] = [
+	{ value: 'newest', label: 'Neueste' },
+	{ value: 'popular', label: 'Beliebteste' },
+]
+
 export const VIEW_QUERY: Record<RecipeListView, string | undefined> = {
 	all: undefined,
 	own: 'eigene',
@@ -97,12 +108,6 @@ export const VIEW_QUERY: Record<RecipeListView, string | undefined> = {
 
 /** The filters in order. Drawer, desktop bar and active filters all read from here. */
 export const FILTER_GROUPS: FilterGroup[] = [
-	{
-		id: 'tags',
-		legend: 'Eigenschaften',
-		type: 'checkbox',
-		options: Object.entries(TAG_LABELS).map(([value, label]) => ({ value, label })),
-	},
 	{
 		id: 'diet',
 		legend: 'Ernährungsform',
@@ -126,5 +131,11 @@ export const FILTER_GROUPS: FilterGroup[] = [
 		legend: 'Küchengeräte',
 		type: 'checkbox',
 		options: Object.entries(EQUIPMENT_LABELS).map(([value, label]) => ({ value, label })),
+	},
+	{
+		id: 'tags',
+		legend: 'Eigenschaften',
+		type: 'checkbox',
+		options: Object.entries(TAG_LABELS).map(([value, label]) => ({ value, label })),
 	},
 ]

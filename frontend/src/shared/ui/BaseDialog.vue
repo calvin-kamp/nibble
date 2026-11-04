@@ -58,7 +58,9 @@ function onOpenAutoFocus(event: Event): void {
 			>
 				<div class="dialog__intro">
 					<div class="dialog__header">
-						<DialogTitle class="dialog__title">{{ props.title }}</DialogTitle>
+						<DialogTitle class="dialog__title">
+							{{ props.title }}
+						</DialogTitle>
 
 						<DialogClose
 							class="dialog__close"

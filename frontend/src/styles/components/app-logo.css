@@ -1,0 +1,13 @@
+@layer components {
+	.app-logo {
+		@apply text-forest;
+	}
+
+	.app-logo__svg {
+		@apply h-7 w-auto;
+	}
+
+	.app-logo--lg .app-logo__svg {
+		@apply h-12 md:h-14;
+	}
+}

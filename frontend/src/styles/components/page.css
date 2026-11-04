@@ -1,0 +1,39 @@
+@layer components {
+	.page {
+		@apply flex flex-col gap-12 w-full max-w-7xl px-4 pt-6 pb-16 mx-auto;
+		@apply md:px-8;
+		@apply md:pt-10;
+	}
+
+	.page--compact {
+		@apply gap-8 md:pt-6;
+	}
+
+	.page__header {
+		@apply flex flex-wrap items-end justify-between gap-x-6 gap-y-4;
+	}
+
+	.page__intro {
+		@apply flex flex-col flex-1 gap-3 min-w-0 basis-80;
+	}
+
+	.page__lead {
+		@apply max-w-prose text-lg text-foreground/80;
+	}
+
+	.section {
+		@apply flex flex-col gap-6;
+	}
+
+	.section__header {
+		@apply flex flex-wrap items-end justify-between gap-x-6 gap-y-3;
+	}
+
+	.section__intro {
+		@apply flex flex-col gap-2 max-w-2xl;
+	}
+
+	.section__lead {
+		@apply text-foreground/80;
+	}
+}

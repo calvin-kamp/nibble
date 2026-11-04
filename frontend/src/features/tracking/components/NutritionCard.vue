@@ -8,7 +8,6 @@ import { BaseCard } from '@shared/ui'
 import { formatAmount } from '@features/tracking/tracking.utils'
 import { formatNumber } from '@shared/utils/number'
 
-// Green card with nutrition values, e.g. per serving of a recipe or for a whole meal
 interface Props {
 	title: string
 	nutrition: Nutrition
@@ -19,15 +18,17 @@ const props = defineProps<Props>()
 const titleId = useId()
 
 const macros = computed(() => [
-	{ label: 'Protein', grams: props.nutrition.protein, color: 'var(--color-macro-protein)' },
-	{ label: 'Kohlenhydrate', grams: props.nutrition.carbs, color: 'var(--color-macro-carbs)' },
-	{ label: 'Fett', grams: props.nutrition.fat, color: 'var(--color-macro-fat)' },
+	{ label: 'Protein', grams: props.nutrition.protein, color: 'var(--macro-protein)' },
+	{
+		label: 'Kohlen\u00ADhydrate',
+		grams: props.nutrition.carbs,
+		color: 'var(--macro-carbs)',
+	},
+	{ label: 'Fett', grams: props.nutrition.fat, color: 'var(--macro-fat)' },
 ])
 </script>
 
 <template>
-	<!-- @container: the card is sometimes full width (recipe), sometimes in the narrow column
-       (meal). It adapts to its own space, not to the screen. -->
 	<BaseCard
 		as="section"
 		class="@container"
@@ -39,41 +40,37 @@ const macros = computed(() => [
 			<div class="flex flex-col gap-1 shrink-0">
 				<h2
 					:id="titleId"
-					class="text-xl text-white"
+					class="text-xl text-forest-foreground"
 				>
 					{{ props.title }}
 				</h2>
 
-				<p
-					class="font-display text-6xl font-extrabold leading-none tracking-tighter tabular-nums text-lime"
-				>
+				<p class="figure figure--2xl flex flex-wrap items-baseline gap-x-2 text-highlight">
 					{{ formatNumber(props.nutrition.kcal) }}
 
-					<span class="font-sans text-lg font-bold tracking-normal text-on-forest-muted"
-						>kcal</span
-					>
+					<span class="font-sans text-lg font-bold tracking-normal text-forest-muted-foreground">
+						kcal
+					</span>
 				</p>
 			</div>
 
-			<!-- Narrow: one row per macro. Wider: three columns with dividers -->
 			<dl class="flex-1 @md:grid @md:grid-cols-12 @md:gap-6">
 				<div
 					v-for="macro in macros"
 					:key="macro.label"
-					class="flex justify-between gap-4 py-2.5 border-t border-white/20 @md:col-span-4 @md:flex-col @md:gap-0.5 @md:py-1 @md:pl-5 @md:border-t-0 @md:border-l @md:first:pl-0 @md:first:border-l-0 @4xl:first:pl-5 @4xl:first:border-l"
+					class="flex flex-col gap-0.5 py-2.5 border-t border-forest-border @md:col-span-4 @md:py-1 @md:pl-5 @md:border-t-0 @md:border-l @md:first:pl-0 @md:first:border-l-0 @4xl:first:pl-5 @4xl:first:border-l"
 				>
-					<dt class="flex items-center gap-2">
+					<dt class="flex items-center gap-2 min-w-0">
 						<span
 							class="size-2.5 shrink-0 rounded-full"
 							:style="{ backgroundColor: macro.color }"
 							aria-hidden="true"
 						/>
+
 						{{ macro.label }}
 					</dt>
 
-					<dd
-						class="font-bold whitespace-nowrap tabular-nums text-white @md:font-display @md:text-3xl @md:font-extrabold @md:tracking-tighter"
-					>
+					<dd class="font-bold whitespace-nowrap tabular-nums text-forest-foreground @md:font-display @md:text-3xl @md:font-bold @md:tracking-tighter">
 						{{ formatAmount(macro.grams) }} g
 					</dd>
 				</div>

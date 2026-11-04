@@ -7,7 +7,7 @@ import OnboardingNav from '@features/onboarding/components/OnboardingNav.vue'
 import OnboardingStep from '@features/onboarding/components/OnboardingStep.vue'
 import { BaseIcon, BaseLink } from '@shared/ui'
 
-import { CONSENT_LABEL } from '@features/legal/legal.constants'
+import { ONBOARDING_CONSENT_LABEL } from '@features/legal/legal.constants'
 import { consentSchema } from '@features/onboarding/onboarding.schema'
 import { CheckboxField, focusFirstError } from '@shared/forms'
 
@@ -37,7 +37,7 @@ const COMPARISON = [
 		items: [
 			'Gewicht und Verlauf festhalten',
 			'Mahlzeiten eintragen',
-			'Tagesbedarf speichern und im Dashboard sehen',
+			'Tagesbedarf speichern und in der Übersicht sehen',
 		],
 	},
 ]
@@ -57,11 +57,10 @@ const onSubmit = handleSubmit(
 
 <template>
 	<OnboardingStep
-		title="Darf Nibble deine Daten speichern?"
+		title="Darf nibble deine Daten speichern?"
 		lead="Gewicht, Körperdaten, Ziele, Tagebuch und eigene Mahlzeiten können Gesundheitsdaten sein. Wir speichern sie nur mit deiner ausdrücklichen Einwilligung. Sie ist freiwillig und jederzeit widerrufbar."
 		@submit="onSubmit"
 	>
-		<!-- Stacked: the step is never wider than max-w-3xl, side by side the columns get too narrow -->
 		<div class="flex flex-col gap-6">
 			<section
 				v-for="column in COMPARISON"
@@ -82,13 +81,13 @@ const onSubmit = handleSubmit(
 						:key="item"
 						class="flex gap-3 py-3 border-b border-divider last:border-b-0"
 					>
-						<!-- As high as a line of text, so the icon sits centered on the first line -->
 						<span class="flex items-center shrink-0 h-lh">
 							<BaseIcon
-								class="text-brand"
+								class="text-primary"
 								:icon="CheckIcon"
 							/>
 						</span>
+
 						{{ item }}
 					</li>
 				</ul>
@@ -97,7 +96,7 @@ const onSubmit = handleSubmit(
 
 		<CheckboxField
 			name="consent"
-			:label="CONSENT_LABEL"
+			:label="ONBOARDING_CONSENT_LABEL"
 		/>
 
 		<p>
@@ -106,7 +105,10 @@ const onSubmit = handleSubmit(
 				target="_blank"
 			>
 				Datenschutzerklärung lesen
-				<span class="sr-only">(öffnet in neuem Tab)</span>
+
+				<span class="sr-only">
+					(öffnet in neuem Tab)
+				</span>
 			</BaseLink>
 		</p>
 

@@ -1,22 +1,21 @@
 @layer components {
-	/* Above the bottom navigation, bottom right from tablet up */
 	.toast-viewport {
-		@apply fixed inset-x-4 bottom-22 z-[60];
-		@apply flex flex-col gap-2;
-		@apply md:left-auto md:right-6 md:w-96;
+		@apply fixed inset-x-4 bottom-22 z-60;
+		@apply flex flex-col items-center gap-2;
 		@apply xl:bottom-6;
 	}
 
-	/* Without navigation (sign-in, onboarding) at the very bottom */
 	#app:not(:has(> nav)) .toast-viewport {
 		@apply bottom-4;
 	}
 
+	/* One row: icon, message, close. The message wraps on its own, the close button keeps its
+	   44px target without adding a row of its own. */
 	.toast {
-		@apply flex items-start gap-3 py-3 pr-2 pl-4;
-		@apply rounded-md bg-forest text-white shadow-lg;
-		/* Light ring so it stands out over dark cards too */
-		@apply ring-1 ring-white/30;
+		@apply grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 w-full max-w-md;
+		@apply py-1.5 pr-1.5 pl-4;
+		@apply rounded-md bg-forest text-forest-foreground shadow-overlay;
+		@apply ring-1 ring-forest-border;
 		@apply data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-2;
 		@apply data-[state=closed]:animate-out data-[state=closed]:fade-out-0;
 		@apply data-[swipe=move]:translate-x-(--reka-toast-swipe-move-x);
@@ -25,11 +24,11 @@
 	}
 
 	.toast__icon {
-		@apply mt-0.5;
+		@apply shrink-0;
 	}
 
 	.toast--success .toast__icon {
-		@apply text-lime;
+		@apply text-highlight;
 	}
 
 	.toast--info .toast__icon {
@@ -37,22 +36,22 @@
 	}
 
 	.toast--danger {
-		@apply bg-danger-strong;
+		@apply bg-red-800;
 	}
 
 	.toast--danger .toast__icon {
-		@apply text-danger-soft;
+		@apply text-red-100;
 	}
 
 	.toast__title {
-		@apply flex-1 pt-0.5 font-semibold;
+		@apply py-2 text-md/snug font-semibold text-pretty wrap-break-word;
 	}
 
 	.toast__close {
-		@apply grid place-items-center shrink-0 size-8 -my-0.5;
-		@apply rounded-full text-on-forest-muted;
+		@apply grid place-items-center shrink-0 size-11;
+		@apply rounded-full text-forest-muted-foreground;
 		@apply transition-interactive;
-		@apply hover:bg-surface/10 hover:text-white;
-		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-lime;
+		@apply hover:bg-forest-muted hover:text-forest-foreground;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight;
 	}
 }

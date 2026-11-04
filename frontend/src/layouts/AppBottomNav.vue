@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import type { NavItem } from '@layouts/navigation'
+
 import {
 	CalculatorIcon,
 	ChefHatIcon,
 	HomeIcon,
 	LayoutDashboardIcon,
+	NotebookPenIcon,
 	PlusIcon,
 	UserRoundIcon,
 } from '@lucide/vue'
 import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 
 import AccountDrawer from '@features/account/components/AccountDrawer.vue'
 import { BaseButton, BaseIcon } from '@shared/ui'
@@ -16,59 +19,46 @@ import { BaseButton, BaseIcon } from '@shared/ui'
 import { useTrackingDialogs } from '@features/tracking/composables/tracking-dialogs'
 
 import { useAuthStore } from '@features/auth/auth.store'
+import { isNavItemActive, navItemLocation, useNavVisibility } from '@layouts/navigation'
 
 const auth = useAuthStore()
+const route = useRoute()
+const isVisible = useNavVisibility()
 const { openChooser } = useTrackingDialogs()
 
-const mainNavigation = [
+// With tracking, the diary takes the calculator's place: the calculator is a one-off tool and
+// stays in the menu. Without tracking there is no diary, so the calculator stays here.
+const mainNavigation: NavItem[] = [
+	{ routeName: 'dashboard', label: 'Start', icon: LayoutDashboardIcon, visibility: 'user' },
+	{ routeName: 'home', label: 'Start', icon: HomeIcon, visibility: 'guest' },
 	{
-		routeName: 'dashboard',
-		label: 'Übersicht',
-		icon: LayoutDashboardIcon,
-		visibility: 'user',
+		routeName: 'diary-food',
+		label: 'Tagebuch',
+		icon: NotebookPenIcon,
+		activeOn: ['diary-food-day', 'diary-weight', 'diary-weight-week'],
+		visibility: 'consent',
 	},
-	{
-		routeName: 'home',
-		label: 'Start',
-		icon: HomeIcon,
-		visibility: 'guest',
-	},
-	{
-		routeName: 'recipe-list',
-		label: 'Rezepte',
-		icon: ChefHatIcon,
-		visibility: 'always',
-	},
-	{
-		routeName: 'calorie-calculator',
-		label: 'Rechner',
-		icon: CalculatorIcon,
-		visibility: 'always',
-	},
-	{
-		routeName: 'auth-login',
-		label: 'Anmelden',
-		icon: UserRoundIcon,
-		visibility: 'guest',
-	},
+	{ routeName: 'recipe-list', label: 'Rezepte', icon: ChefHatIcon, visibility: 'always' },
+	{ routeName: 'calorie-calculator', label: 'Rechner', icon: CalculatorIcon, visibility: 'always' },
+	{ routeName: 'auth-login', label: 'Anmelden', icon: UserRoundIcon, visibility: 'guest' },
 ]
 
-const filteredNavigation = computed(() =>
+const hasTracking = computed<boolean>(() => auth.isLoggedIn && auth.hasDataConsent)
+
+const filteredNavigation = computed<NavItem[]>(() =>
 	mainNavigation.filter(
 		(item) =>
-			item.visibility === 'always' ||
-			item.visibility === (auth.isLoggedIn ? 'user' : 'guest'),
+			isVisible(item) && !(hasTracking.value && item.routeName === 'calorie-calculator'),
 	),
 )
 
-// The tracking button sits in the middle of the bar
 const splitIndex = computed<number>(() => Math.ceil(filteredNavigation.value.length / 2))
 </script>
 
 <template>
 	<nav
 		aria-label="Hauptnavigation"
-		class="fixed inset-x-0 bottom-0 z-30 pb-[env(safe-area-inset-bottom)] border-t border-line bg-surface xl:hidden"
+		class="fixed inset-x-0 bottom-0 z-30 pb-[env(safe-area-inset-bottom)] border-t border-border bg-surface xl:hidden"
 	>
 		<ul class="flex max-w-xl py-2 mx-auto">
 			<template
@@ -76,7 +66,7 @@ const splitIndex = computed<number>(() => Math.ceil(filteredNavigation.value.len
 				:key="navItem.routeName"
 			>
 				<li
-					v-if="index === splitIndex && auth.isLoggedIn && auth.hasDataConsent"
+					v-if="index === splitIndex && hasTracking"
 					class="flex-1 -mt-5 text-center"
 				>
 					<BaseButton
@@ -94,16 +84,19 @@ const splitIndex = computed<number>(() => Math.ceil(filteredNavigation.value.len
 
 				<li class="flex-1">
 					<RouterLink
-						:to="{ name: navItem.routeName }"
+						:to="navItemLocation(navItem)"
 						class="nav-item"
-						active-class="nav-item--active"
+						:class="{ 'nav-item--active': isNavItemActive(navItem, route) }"
+						:aria-current="isNavItemActive(navItem, route) ? 'page' : undefined"
 					>
 						<BaseIcon
-							:icon="navItem.icon"
+							:icon="navItem.icon!"
 							:size="24"
 						/>
 
-						<span class="sr-only md:not-sr-only">{{ navItem.label }}</span>
+						<span class="text-md leading-none max-[359px]:sr-only">
+							{{ navItem.label }}
+						</span>
 					</RouterLink>
 				</li>
 			</template>

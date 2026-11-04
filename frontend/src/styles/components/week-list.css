@@ -1,0 +1,52 @@
+@layer components {
+	.week-list {
+		@apply flex flex-col px-5 border border-divider rounded-lg bg-card;
+		@apply md:px-6;
+	}
+
+	.week-list__week {
+		@apply flex flex-col gap-2 py-5 border-b border-divider last:border-b-0;
+	}
+
+	.week-list__header {
+		@apply flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1;
+	}
+
+	.week-list__title {
+		@apply font-sans text-lg font-bold tracking-normal outline-none;
+	}
+
+	.week-list__meta {
+		@apply text-md text-muted-foreground;
+	}
+
+	/* A week that opens on click: details cannot be a flex container everywhere, so it is a
+     block with the toggle row on top */
+	.week-list__week--collapsible {
+		@apply block py-3;
+	}
+
+	.week-list__toggle {
+		@apply flex items-center gap-4 min-h-11 -mx-2 px-2 rounded-sm;
+		@apply cursor-pointer list-none select-none;
+		@apply transition-[background-color];
+		@apply hover:bg-background;
+		@apply focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring;
+	}
+
+	.week-list__toggle::-webkit-details-marker {
+		@apply hidden;
+	}
+
+	.week-list__chevron {
+		@apply shrink-0 text-muted-foreground transition-[rotate,color] duration-500 ease-in-out;
+	}
+
+	.week-list__toggle:hover .week-list__chevron {
+		@apply text-primary;
+	}
+
+	.week-list__week[open] .week-list__chevron {
+		@apply rotate-180;
+	}
+}

@@ -28,7 +28,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const ids = useFieldIds(() => props.hint)
 
-// Validates on blur, and on every keystroke once there is an error
 const { value, errorMessage, handleBlur, validate } = useField<string>(
 	() => props.name,
 	toRef(props, 'rules'),

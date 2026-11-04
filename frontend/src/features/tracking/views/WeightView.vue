@@ -2,12 +2,19 @@
 import type { WeightEntry, WeightPoint } from '@features/tracking/tracking.types'
 import type { SelectOption } from '@shared/ui/types'
 
-import { PlusIcon, TrashIcon } from '@lucide/vue'
+import { ArrowRightIcon, ChevronDownIcon, PlusIcon, TrashIcon } from '@lucide/vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import WeightChart from '@features/tracking/components/WeightChart.vue'
-import { BaseAlertDialog, BaseButton, BaseIcon, BasePagination, BaseSelect } from '@shared/ui'
+import {
+	BaseAlertDialog,
+	BaseButton,
+	BaseIcon,
+	BaseLink,
+	BasePagination,
+	BaseSelect,
+} from '@shared/ui'
 
 import { useTrackingChanges } from '@features/tracking/composables/tracking-changes'
 import { useTrackingDialogs } from '@features/tracking/composables/tracking-dialogs'
@@ -19,13 +26,16 @@ import {
 	buildWeightPoints,
 	formatKgChange,
 	formatPeriodChange,
+	formatCalendarWeekTitle,
 	getPeriodChange,
 	limitToDays,
+	weekSlug,
+	weekStart,
 } from '@features/tracking/tracking.utils'
+import { PAGE_SIZE } from '@shared/constants'
 import { formatRelativeDay, formatWeekdayDate } from '@shared/utils/date'
 import { formatKg, formatNumber } from '@shared/utils/number'
 
-const PAGE_SIZE = 10
 const DEFAULT_PERIOD = '30'
 
 const route = useRoute()
@@ -33,8 +43,6 @@ const router = useRouter()
 const toast = useToast()
 const { openEntry } = useTrackingDialogs()
 
-// Range and page in the address, e.g. ?zeitraum=90. A new range replaces the history entry
-// and starts again on page 1.
 const PERIOD_OPTIONS: SelectOption[] = WEIGHT_PERIODS.map((period) => ({
 	value: period.value,
 	label: period.label,
@@ -64,7 +72,6 @@ const page = computed<number>({
 	},
 })
 
-// The whole history; range and pages derive from it. Reload after new entries.
 const entries = ref<WeightEntry[]>([])
 const loadError = ref<boolean>(false)
 
@@ -85,7 +92,6 @@ const points = computed<WeightPoint[]>(() => buildWeightPoints(entries.value))
 const latest = computed<WeightPoint | undefined>(() => points.value[points.value.length - 1])
 const change = computed<number | null>(() => getPeriodChange(points.value, period.value.days))
 
-// Entries within the chosen range, newest first, with the difference to the previous entry
 const periodEntries = computed(() => {
 	const visible = limitToDays(points.value, period.value.days)
 
@@ -99,9 +105,33 @@ const periodEntries = computed(() => {
 		.toReversed()
 })
 
-const visibleEntries = computed(() =>
-	periodEntries.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE),
+type PeriodEntry = (typeof periodEntries.value)[number]
+
+const weeks = computed(() => {
+	const result: { start: string; entries: PeriodEntry[]; average: number }[] = []
+
+	for (const entry of periodEntries.value) {
+		const start = weekStart(entry.date)
+		const week = result[result.length - 1]
+
+		if (week?.start === start) week.entries.push(entry)
+		else result.push({ start, entries: [entry], average: 0 })
+	}
+
+	for (const week of result) {
+		week.average = week.entries.reduce((sum, entry) => sum + entry.kg, 0) / week.entries.length
+	}
+
+	return result
+})
+
+const visibleWeeks = computed(() =>
+	weeks.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE),
 )
+
+function entryCountLabel(count: number): string {
+	return count === 1 ? '1 Eintrag' : `${count} Einträge`
+}
 
 const entriesHeading = ref<HTMLElement | null>(null)
 
@@ -136,41 +166,43 @@ async function confirmDelete(): Promise<void> {
 </script>
 
 <template>
-	<main class="content-wrapper flex flex-col gap-8 pt-6 pb-10">
-		<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-			<h1>Gewicht</h1>
+	<main class="page">
+		<div class="page__header">
+			<h1>
+				Gewicht
+			</h1>
 
 			<BaseButton @click="openEntry('weight')">
 				<BaseIcon :icon="PlusIcon" />
+
 				Gewicht eintragen
 			</BaseButton>
 		</div>
 
-		<!-- The only surface on the page: the chart needs a calm background -->
 		<section
-			class="flex flex-col gap-6 px-5 py-6 rounded-xl bg-surface md:p-8"
+			class="card card__body flex flex-col gap-6 rounded-xl md:p-8"
 			aria-labelledby="weight-history-title"
 		>
 			<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
 				<div class="flex flex-col gap-2">
 					<h2
 						id="weight-history-title"
-						class="text-2xl"
+						class="card__title"
 					>
 						Verlauf
 					</h2>
 
 					<p
 						v-if="latest"
-						class="font-display text-6xl font-extrabold leading-none tracking-[-0.03em] tabular-nums"
+						class="figure figure--2xl"
 					>
-						{{ formatNumber(latest.kg, 1)
-						}}<span class="ml-1 font-sans text-xl tracking-normal">kg</span>
+						{{ formatNumber(latest.kg, 1) }}<span class="figure__unit">
+							kg
+						</span>
 					</p>
 
-					<!-- When the range changes, screen readers announce the new change -->
 					<p
-						class="font-semibold text-ink-soft"
+						class="font-semibold text-foreground/80"
 						role="status"
 					>
 						{{
@@ -185,8 +217,9 @@ async function confirmDelete(): Promise<void> {
 					<label
 						for="weight-period"
 						class="field__label"
-						>Zeitraum</label
 					>
+						Zeitraum
+					</label>
 
 					<BaseSelect
 						id="weight-period"
@@ -211,68 +244,116 @@ async function confirmDelete(): Promise<void> {
 			/>
 		</section>
 
-		<!-- Narrower and centered: day and weight stay close enough together. Same structure as every list. -->
 		<section
-			class="content-column content-column--narrow gap-6"
+			class="content-column gap-6"
 			aria-labelledby="weight-entries-title"
 		>
-			<div class="flex flex-col gap-2">
+			<div class="flex flex-col gap-4">
 				<h2
 					id="weight-entries-title"
 					ref="entriesHeading"
-					class="text-2xl outline-none"
+					class="outline-none"
 					tabindex="-1"
 				>
 					Einträge
 				</h2>
 
-				<ol
-					v-if="visibleEntries.length"
-					class="data-list"
+				<div
+					v-if="visibleWeeks.length"
+					class="week-list"
 				>
-					<li
-						v-for="entry in visibleEntries"
-						:key="entry.date"
-						class="data-list__row"
+					<details
+						v-for="(week, index) in visibleWeeks"
+						:key="week.start"
+						class="week-list__week week-list__week--collapsible"
+						:open="index === 0"
 					>
-						<span class="data-list__label">{{ formatRelativeDay(entry.date) }}</span>
+						<summary class="week-list__toggle">
+							<span class="flex flex-col flex-1 min-w-0 py-1">
+								<span class="week-list__title">
+									{{
+										formatCalendarWeekTitle(week.start)
+									}}
+								</span>
 
-						<span
-							v-if="entry.difference !== null"
-							class="data-list__aside"
-							>{{ formatKgChange(entry.difference) }}</span
-						>
+								<span class="week-list__meta">
+									Schnitt {{ formatKg(week.average) }},
 
-						<span class="data-list__value">{{ formatKg(entry.kg) }}</span>
+									{{ entryCountLabel(week.entries.length) }}
+								</span>
+							</span>
 
-						<BaseButton
-							class="-my-1"
-							variant="ghost"
-							size="icon-sm"
-							:aria-label="`Eintrag vom ${formatWeekdayDate(entry.date)} löschen`"
-							@click="askDelete(entry)"
-						>
 							<BaseIcon
-								:icon="TrashIcon"
+								class="week-list__chevron"
+								:icon="ChevronDownIcon"
+							/>
+						</summary>
+
+						<ol class="data-list mt-2">
+							<li
+								v-for="entry in week.entries"
+								:key="entry.date"
+								class="data-list__row"
+							>
+								<span class="data-list__label">
+									{{ formatRelativeDay(entry.date) }}
+
+									<span
+										v-if="entry.difference !== null"
+										class="data-list__meta"
+									>
+										{{ formatKgChange(entry.difference) }} zum Eintrag
+										davor
+									</span>
+								</span>
+
+								<span class="data-list__value">
+									{{ formatKg(entry.kg) }}
+								</span>
+
+								<BaseButton
+									class="-my-1"
+									variant="danger-soft"
+									size="icon-sm"
+									:aria-label="`Eintrag vom ${formatWeekdayDate(entry.date)} löschen`"
+									@click="askDelete(entry)"
+								>
+									<BaseIcon
+										:icon="TrashIcon"
+										:size="18"
+									/>
+								</BaseButton>
+							</li>
+						</ol>
+
+						<BaseLink
+							class="mt-1"
+							route-name="diary-weight-week"
+							:params="{ week: weekSlug(week.start) }"
+						>
+							Woche ansehen
+
+							<BaseIcon
+								:icon="ArrowRightIcon"
 								:size="18"
 							/>
-						</BaseButton>
-					</li>
-				</ol>
+						</BaseLink>
+					</details>
+				</div>
 
 				<p
 					v-else
-					class="py-3 text-muted"
+					class="py-3 text-muted-foreground"
 				>
 					Keine Einträge {{ period.phrase }}.
 				</p>
 			</div>
 
 			<BasePagination
-				v-if="periodEntries.length > PAGE_SIZE"
+				v-if="weeks.length > PAGE_SIZE"
 				v-model:page="page"
 				label="Seiten der Gewichtseinträge"
-				:total="periodEntries.length"
+				:total="weeks.length"
 				:items-per-page="PAGE_SIZE"
 			/>
 		</section>

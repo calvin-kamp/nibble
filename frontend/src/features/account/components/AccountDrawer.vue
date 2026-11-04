@@ -6,7 +6,6 @@ import { BaseButton, BaseDrawer, BaseIcon } from '@shared/ui'
 
 import { useLogout } from '@features/auth/composables/logout'
 
-// Account entry in the bottom navigation (phone, tablet). AccountMenu takes over on desktop.
 const open = ref<boolean>(false)
 
 const logout = useLogout()
@@ -32,7 +31,9 @@ async function onLogout(): Promise<void> {
 			:size="24"
 		/>
 
-		<span class="sr-only md:not-sr-only"> Konto </span>
+		<span class="text-md leading-none max-[359px]:sr-only">
+			Konto
+		</span>
 	</button>
 
 	<BaseDrawer

@@ -61,10 +61,10 @@ export const recipeSchema = toTypedSchema(
 				.max(80, { message: 'Der Titel darf höchstens 80 Zeichen haben.' }),
 
 			description: z
-				.string({ message: 'Beschreib dein Rezept in ein, zwei Sätzen.' })
+				.string()
 				.trim()
-				.min(1, { message: 'Beschreib dein Rezept in ein, zwei Sätzen.' })
-				.max(280, { message: 'Die Beschreibung darf höchstens 280 Zeichen haben.' }),
+				.max(280, { message: 'Die Beschreibung darf höchstens 280 Zeichen haben.' })
+				.default(''),
 
 			image: z
 				.union([z.instanceof(File), z.string(), z.null()])
@@ -105,7 +105,7 @@ export const recipeSchema = toTypedSchema(
 					(ingredients) =>
 						ingredients.some((ingredient) => !isEmptyIngredient(ingredient)),
 					{
-						message: 'Füge mindestens eine Zutat hinzu.',
+						message: 'Trag mindestens eine Zutat ein.',
 					},
 				),
 

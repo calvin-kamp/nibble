@@ -34,9 +34,7 @@ import { useFieldIds } from './field-ids'
 // The form stores the date as a string in the format YYYY-MM-DD;
 // reka-ui works with DateValue internally.
 interface Props extends BaseFieldProps<string | undefined> {
-	/** Earliest date, YYYY-MM-DD */
 	min?: string
-	/** Latest date, YYYY-MM-DD */
 	max?: string
 }
 
@@ -53,6 +51,14 @@ const ids = useFieldIds(() => props.hint)
 // reka-ui names the segments in English ("day,"), regardless of the locale
 const SEGMENT_LABELS: Partial<Record<string, string>> = { day: 'Tag', month: 'Monat', year: 'Jahr' }
 
+function segmentText(segment: { part: string; value: string }): string {
+	const isNumber = /^\d$/.test(segment.value)
+
+	return (segment.part === 'day' || segment.part === 'month') && isNumber
+		? segment.value.padStart(2, '0')
+		: segment.value
+}
+
 function toDateValue(date: unknown): DateValue | undefined {
 	if (typeof date !== 'string' || !date) return undefined
 
@@ -63,7 +69,6 @@ function toDateValue(date: unknown): DateValue | undefined {
 	}
 }
 
-// Validates immediately on selection
 const { value, errorMessage, handleBlur } = useField<string | undefined>(
 	() => props.name,
 	toRef(props, 'rules'),
@@ -117,7 +122,7 @@ function onOpenChange(open: boolean): void {
 					:class="segment.part === 'literal' ? 'date__literal' : 'date__segment'"
 					:aria-label="SEGMENT_LABELS[segment.part]"
 				>
-					{{ segment.value }}
+					{{ segmentText(segment) }}
 				</DatePickerInput>
 
 				<DatePickerTrigger

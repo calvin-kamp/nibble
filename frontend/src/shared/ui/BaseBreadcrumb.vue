@@ -6,7 +6,6 @@ import { ChevronRightIcon } from '@lucide/vue'
 import BaseIcon from './BaseIcon.vue'
 import BaseLink from './BaseLink.vue'
 
-// Path to the current page. The last level is the page itself and not a link.
 interface Props {
 	items: BreadcrumbItem[]
 	current: string

@@ -9,6 +9,7 @@ import type {
 	RecipeListView,
 	RecipePage,
 	RecipeSummary,
+	RecipeSort,
 } from '@features/recipes/recipes.types'
 
 import { kcalOf } from '@features/recipes/recipes.utils'
@@ -119,6 +120,7 @@ export async function searchRecipes(
 	view: RecipeListView,
 	filters: RecipeFilterValues,
 	page: number,
+	sort: RecipeSort = 'newest',
 ): Promise<RecipePage> {
 	const query = toQuery({
 		page: page > 1 ? page : undefined,
@@ -129,6 +131,7 @@ export async function searchRecipes(
 		equipment: filters.equipment,
 		mine: view === 'own',
 		saved: view === 'saved',
+		sort: sort === 'newest' ? undefined : sort,
 	})
 	const { count, results } = await apiRequest<Paginated<RecipeListItemResponse>>(
 		`/recipes${query}`,
@@ -141,7 +144,6 @@ export async function fetchRecipe(id: string): Promise<Recipe> {
 	return toRecipe(await apiRequest<RecipeDetailResponse>(`/recipes/${id}`))
 }
 
-/** Upload, replace or remove the image, depending on what the form contains */
 async function syncImage(
 	recipe: RecipeDetailResponse,
 	image: RecipeFormValues['image'],

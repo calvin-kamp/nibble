@@ -8,11 +8,8 @@ import { buildModifierClasses } from '@shared/utils/classes'
 interface Props {
 	value: number
 	max: number
-	/** For screen readers. If a visible label is already next to it, prefer aria-labelledby. */
 	label?: string
-	/** CSS color of the fill, e.g. 'var(--color-macro-protein)' */
 	color?: string
-	/** inverse for dark backgrounds */
 	variant?: 'default' | 'inverse'
 	class?: HTMLAttributes['class']
 }
@@ -28,7 +25,6 @@ const modifierClasses = computed<string[]>(() => {
 	return buildModifierClasses('progress-bar', [props.variant])
 })
 
-// Without a target, e.g. macros before daily needs are set, there is nothing to measure against
 const hasMax = computed<boolean>(() => props.max > 0)
 
 const percent = computed<number>(() => {

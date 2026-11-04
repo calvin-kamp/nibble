@@ -18,7 +18,6 @@ import { useAuthStore } from '@features/auth/auth.store'
 
 const auth = useAuthStore()
 
-// Signed-in users already have an account, so the call to action leads to their overview
 const cta = computed(() =>
 	auth.isLoggedIn
 		? { routeName: 'dashboard', label: 'Zur Übersicht' }
@@ -44,36 +43,36 @@ const FEATURES = [
 	{
 		icon: ChartLineIcon,
 		title: 'Gewicht im Blick',
-		text: 'Wochenschnitt statt Tagesschwankung. So siehst du, ob es in die richtige Richtung geht.',
+		text: '7-Tage-Schnitt statt Tagesschwankung. So siehst du, ob es in die richtige Richtung geht.',
 	},
 ]
 </script>
 
 <template>
-	<main class="content-wrapper flex flex-col gap-16 pt-4 pb-16 md:gap-24 md:pt-6">
-		<!-- Hero: what nibble is, one action. The preview shows a day in the app. -->
+	<main class="landing">
 		<section
-			class="card card--lg card--inverse grid grid-cols-12 items-center gap-10 px-6 py-10 sm:px-10 md:py-14 xl:px-14"
+			class="landing__hero on-forest"
 			aria-labelledby="landing-title"
 		>
-			<div class="flex flex-col items-start gap-6 col-span-12 lg:col-span-6">
-				<p class="px-3 py-1 rounded-full bg-lime text-sm font-bold text-ink">
-					Ernährungstagebuch &amp; Rezepte
-				</p>
-
+			<div class="landing__hero-text">
 				<h1
 					id="landing-title"
-					class="text-white"
+					class="landing__title"
 				>
-					Iss gut. Wir rechnen mit.
+					Iss gut. <br />
+
+					Wir rechnen mit.
 				</h1>
 
-				<p class="max-w-xl text-lg md:text-xl">
+				<p class="landing__lead">
+					<strong class="block mb-2 text-highlight">
+						Ernährungstagebuch &amp; Rezepte
+					</strong>
+
 					nibble zeigt dir jeden Tag, wie viel du gegessen hast und was noch übrig ist.
 					Lebensmittel scannst du einfach ein, Rezepte bringen die Nährwerte gleich mit.
 				</p>
 
-				<!-- Stacked at full width on phones, so neither label has to wrap -->
 				<div class="flex flex-col gap-3 w-full sm:flex-row sm:flex-wrap sm:w-auto">
 					<BaseButton
 						variant="secondary"
@@ -81,6 +80,7 @@ const FEATURES = [
 						:route-name="cta.routeName"
 					>
 						{{ cta.label }}
+
 						<BaseIcon :icon="ArrowRightIcon" />
 					</BaseButton>
 
@@ -95,75 +95,83 @@ const FEATURES = [
 
 				<p
 					v-if="!auth.isLoggedIn"
-					class="text-sm text-on-forest-muted"
+					class="text-md text-forest-muted-foreground"
 				>
 					Kostenlos. In zwei Minuten eingerichtet.
 				</p>
 			</div>
 
-			<LandingPreview class="col-span-12 lg:col-span-6" />
+			<LandingPreview class="landing__hero-preview" />
 		</section>
 
 		<LandingStats />
 
 		<section
-			class="flex flex-col gap-8"
+			class="landing__features"
 			aria-labelledby="landing-features-title"
 		>
-			<div class="flex flex-col gap-2 max-w-2xl">
-				<h2 id="landing-features-title">Alles, was du brauchst. Nicht mehr.</h2>
+			<div class="landing__features-intro">
+				<div class="flex flex-col gap-3">
+					<h2 id="landing-features-title">
+						Alles, was du brauchst. Nicht mehr.
+					</h2>
 
-				<p class="text-lg text-ink-soft">
-					Kein Punktesystem, keine Verbote. Nur ehrliche Zahlen und Werkzeuge, die dir
-					Arbeit abnehmen.
-				</p>
+					<p class="text-lg text-foreground/80">
+						Kein Punktesystem, keine Verbote. Nur ehrliche Zahlen und Werkzeuge, die dir
+						Arbeit abnehmen.
+					</p>
+				</div>
+
+				<div class="landing__privacy">
+					<span
+						class="landing__privacy-icon"
+						aria-hidden="true"
+					>
+						<BaseIcon :icon="ShieldCheckIcon" />
+					</span>
+
+					<p class="text-lg text-foreground/80">
+						<strong class="landing__privacy-title">
+							Deine Daten gehören dir.
+						</strong>
+
+						Gewicht, Körperdaten und Tagebuch speichern wir nur mit deiner Einwilligung.
+						Du kannst alles jederzeit exportieren oder löschen, und die Kamera liest
+						Barcodes direkt auf deinem Gerät.
+					</p>
+				</div>
 			</div>
 
-			<ul class="grid grid-cols-12 gap-4">
+			<ul class="landing__feature-list">
 				<li
 					v-for="feature in FEATURES"
 					:key="feature.title"
-					class="flex flex-col gap-3 col-span-12 p-6 rounded-lg bg-surface sm:col-span-6 md:p-8"
+					class="landing__feature"
 				>
 					<span
-						class="grid place-items-center size-12 rounded-md bg-brand-soft text-brand-ink"
+						class="landing__feature-icon"
+						aria-hidden="true"
 					>
-						<BaseIcon
-							:icon="feature.icon"
-							:size="24"
-						/>
+						<BaseIcon :icon="feature.icon" />
 					</span>
 
-					<h3>{{ feature.title }}</h3>
+					<div class="flex flex-col gap-2">
+						<h3>
+							{{ feature.title }}
+						</h3>
 
-					<p class="text-ink-soft">{{ feature.text }}</p>
+						<p class="text-foreground/80">
+							{{ feature.text }}
+						</p>
+					</div>
 				</li>
 			</ul>
-
-			<!-- Privacy gets its own band: for a food diary it is a reason to sign up, not small print -->
-			<div
-				class="flex flex-col gap-4 p-6 rounded-lg border-2 border-divider sm:flex-row sm:items-center md:p-8"
-			>
-				<span class="grid place-items-center shrink-0 size-12 rounded-md bg-lime text-ink">
-					<BaseIcon
-						:icon="ShieldCheckIcon"
-						:size="24"
-					/>
-				</span>
-
-				<p class="text-ink-soft">
-					<strong class="text-ink">Deine Daten gehören dir.</strong>
-					Getrackt wird nur mit deiner Einwilligung. Du kannst alles jederzeit exportieren
-					oder löschen, und die Kamera liest Barcodes direkt auf deinem Gerät.
-				</p>
-			</div>
 		</section>
 
 		<LandingRecipes />
 
-		<!-- Closing call to action, same target as in the hero -->
 		<section
-			class="flex flex-col items-start gap-6 px-6 py-10 rounded-xl bg-lime sm:px-10 md:flex-row md:items-center md:justify-between md:py-12 xl:px-14"
+			class="landing__cta"
 			aria-labelledby="landing-cta-title"
 		>
 			<div class="flex flex-col gap-2">
@@ -186,6 +194,7 @@ const FEATURES = [
 				:route-name="cta.routeName"
 			>
 				{{ auth.isLoggedIn ? cta.label : 'Konto erstellen' }}
+
 				<BaseIcon :icon="ArrowRightIcon" />
 			</BaseButton>
 		</section>

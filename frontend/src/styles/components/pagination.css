@@ -5,17 +5,17 @@
 
 	.pagination__link {
 		@apply inline-flex items-center justify-center gap-1.5 min-w-11 min-h-11 px-3;
-		@apply border-2 border-line-strong rounded-full;
-		@apply font-bold tabular-nums text-ink;
+		@apply border border-transparent rounded-full;
+		@apply font-bold tabular-nums text-foreground;
 		@apply transition-interactive;
-		@apply hover:border-muted hover:bg-surface-muted;
-		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand;
-		@apply aria-[current=page]:border-brand aria-[current=page]:bg-brand aria-[current=page]:text-on-brand;
-		@apply aria-[current=page]:hover:border-brand-hover aria-[current=page]:hover:bg-brand-hover;
+		@apply hover:bg-accent hover:text-primary;
+		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
+		@apply aria-[current=page]:border-primary aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground;
+		@apply aria-[current=page]:hover:border-primary-hover aria-[current=page]:hover:bg-primary-hover;
 		@apply disabled:opacity-40 disabled:cursor-not-allowed;
 	}
 
 	.pagination__gap {
-		@apply inline-block min-w-6 text-center text-muted;
+		@apply inline-block min-w-6 text-center text-muted-foreground;
 	}
 }

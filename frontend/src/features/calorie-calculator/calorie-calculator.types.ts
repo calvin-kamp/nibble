@@ -11,7 +11,6 @@ export interface Workout {
 	frequency: number
 }
 
-/** Form input — matches calorieCalculatorSchema */
 export interface CalorieCalculatorValues {
 	sex: Sex
 	age: number
@@ -24,7 +23,6 @@ export interface CalorieCalculatorValues {
 	exercises: Workout[]
 }
 
-/** Derived from the form values plus the already capped target */
 export type MacroInput = Pick<CalorieCalculatorValues, 'weight' | 'height' | 'sex' | 'goal'> & {
 	targetCalories: number
 }
@@ -54,7 +52,6 @@ export interface MacroChartEntry {
 	color: string
 }
 
-/** Calculator sections in order. On phones, each one is a separate step. */
 export type CalculatorSection = 'basal' | 'steps' | 'training' | 'goal'
 
 export interface MacroGrams {
@@ -65,7 +62,6 @@ export interface MacroGrams {
 
 export interface CalculatorPrefill {
 	values: Partial<CalorieCalculatorValues>
-	/** What was prefilled, for the notice above the form, e.g. ["Alter", "Größe"] */
 	labels: string[]
 }
 

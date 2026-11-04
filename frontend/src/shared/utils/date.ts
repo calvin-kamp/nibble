@@ -1,3 +1,5 @@
+const DAY_MS = 24 * 60 * 60 * 1000
+
 /** Calendar day in local time in the format YYYY-MM-DD */
 export function toIsoDate(date: Date = new Date()): string {
 	const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -6,7 +8,23 @@ export function toIsoDate(date: Date = new Date()): string {
 	return `${date.getFullYear()}-${month}-${day}`
 }
 
-/** YYYY-MM-DD as a local date; invalid values return null */
+/**
+ * ISO calendar week and its year, e.g. { week: 45, year: 2026 }. Weeks start on Monday; week 1
+ * is the one with the year's first Thursday, so early January can belong to the year before.
+ */
+export function calendarWeek(iso: string): { week: number; year: number } {
+	const date = parseIsoDate(iso) ?? new Date()
+	// UTC, so a change to or from summer time does not shift the day count
+	const thursday = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+
+	thursday.setUTCDate(thursday.getUTCDate() + 3 - ((thursday.getUTCDay() + 6) % 7))
+
+	const yearStart = Date.UTC(thursday.getUTCFullYear(), 0, 1)
+	const week = Math.floor((thursday.getTime() - yearStart) / DAY_MS / 7) + 1
+
+	return { week, year: thursday.getUTCFullYear() }
+}
+
 export function parseIsoDate(iso: string): Date | null {
 	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
 
@@ -17,7 +35,6 @@ export function parseIsoDate(iso: string): Date | null {
 	return toIsoDate(date) === iso ? date : null
 }
 
-/** Calendar day plus or minus days, e.g. addDays('2026-10-26', -1) for yesterday */
 export function addDays(iso: string, days: number): string {
 	const date = parseIsoDate(iso) ?? new Date()
 
@@ -26,7 +43,6 @@ export function addDays(iso: string, days: number): string {
 	return toIsoDate(date)
 }
 
-/** Weekday and date, e.g. "Montag, 26. Oktober 2026" */
 export function formatWeekdayDate(iso: string): string {
 	return (parseIsoDate(iso) ?? new Date()).toLocaleDateString('de-DE', {
 		weekday: 'long',
@@ -36,7 +52,6 @@ export function formatWeekdayDate(iso: string): string {
 	})
 }
 
-/** "Heute", "Gestern" or short with weekday, e.g. "Sa., 24. Okt.". Other years include the year. */
 export function formatRelativeDay(iso: string): string {
 	const today = toIsoDate()
 
@@ -53,7 +68,6 @@ export function formatRelativeDay(iso: string): string {
 	})
 }
 
-/** Short date range, e.g. "13.–19. Okt." or "28. Sep. – 4. Okt." */
 export function formatDayRange(from: string, to: string): string {
 	const start = parseIsoDate(from) ?? new Date()
 	const end = parseIsoDate(to) ?? new Date()
@@ -67,17 +81,14 @@ export function formatDayRange(from: string, to: string): string {
 	return `${start.toLocaleDateString('de-DE', options)} – ${end.toLocaleDateString('de-DE', options)}`
 }
 
-/** Date spelled out, e.g. "22. Oktober 2026" */
 export function formatLongDate(date: Date): string {
 	return date.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-/** Day and month, e.g. "22.10." */
 export function formatDayMonth(date: Date): string {
 	return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', timeZone: 'UTC' })
 }
 
-/** Age in whole years on a given day (default today), e.g. for the calorie calculator */
 export function ageOn(birthDate: string, on: string = toIsoDate()): number | null {
 	const birth = parseIsoDate(birthDate)
 	const day = parseIsoDate(on)

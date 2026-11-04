@@ -5,15 +5,10 @@ import { computed } from 'vue'
 
 import { buildModifierClasses } from '@shared/utils/classes'
 
-// Only the surface: background, radius, padding. Headings and layout are up to the
-// component using the card.
 interface Props {
-	/** inverse for the dark card */
 	variant?: 'default' | 'inverse'
-	/** lg for larger cards with more padding */
 	size?: 'default' | 'lg'
 	as?: 'div' | 'article' | 'section' | 'form'
-	/** As tall as the available space, e.g. in a grid. The content is a column; mt-auto pushes down. */
 	stretch?: boolean
 	class?: HTMLAttributes['class']
 }
@@ -41,7 +36,6 @@ const modifierClasses = computed<string[]>(() => {
 		class="card"
 		:class="[modifierClasses, props.class]"
 	>
-		<!-- Edge to edge across the full width, e.g. for images -->
 		<slot name="media" />
 
 		<div class="card__body">

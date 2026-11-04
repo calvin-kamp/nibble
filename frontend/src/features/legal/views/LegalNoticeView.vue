@@ -11,17 +11,19 @@ const SECTIONS = {
 	contact: { id: 'kontakt', title: 'Kontakt' },
 	tax: { id: 'umsatzsteuer', title: 'Umsatzsteuer' },
 	editorial: { id: 'verantwortlich', title: 'Verantwortlich für den Inhalt' },
-	dispute: { id: 'streitbeilegung', title: 'Verbraucherstreitbeilegung' },
+	dispute: { id: 'streitbeilegung', title: 'Verbraucher­streit­beilegung' },
 	content: { id: 'haftung', title: 'Haftung für Inhalte und Links' },
 	sources: { id: 'datenquellen', title: 'Datenquellen' },
 }
 </script>
 
 <template>
-	<main class="content-wrapper pt-6 pb-10">
+	<main class="page">
 		<article class="legal">
 			<div class="legal__header">
-				<h1>Impressum</h1>
+				<h1>
+					Impressum
+				</h1>
 			</div>
 
 			<PolicySection :section="SECTIONS.provider">
@@ -29,22 +31,31 @@ const SECTIONS = {
 			</PolicySection>
 
 			<PolicySection :section="SECTIONS.contact">
-				<dl class="grid grid-cols-12 gap-x-4 gap-y-1">
-					<dt class="col-span-3 font-bold sm:col-span-2">E-Mail</dt>
+				<dl class="flex flex-col gap-1">
+					<div class="flex flex-wrap gap-x-4">
+						<dt class="w-20 font-bold">
+							E-Mail
+						</dt>
 
-					<dd class="col-span-9 sm:col-span-10">
-						<BaseLink
-							:href="`mailto:${OPERATOR.email}`"
-							variant="inline"
-						>
-							{{ OPERATOR.email }}
-						</BaseLink>
-					</dd>
+						<dd class="min-w-0">
+							<BaseLink
+								:href="`mailto:${OPERATOR.email}`"
+								variant="inline"
+							>
+								{{ OPERATOR.email }}
+							</BaseLink>
+						</dd>
+					</div>
 
-					<template v-if="OPERATOR.phone">
-						<dt class="col-span-3 font-bold sm:col-span-2">Telefon</dt>
+					<div
+						v-if="OPERATOR.phone"
+						class="flex flex-wrap gap-x-4"
+					>
+						<dt class="w-20 font-bold">
+							Telefon
+						</dt>
 
-						<dd class="col-span-9 sm:col-span-10">
+						<dd class="min-w-0">
 							<BaseLink
 								:href="`tel:${OPERATOR.phone.replace(/[^\d+]/g, '')}`"
 								variant="inline"
@@ -52,7 +63,7 @@ const SECTIONS = {
 								{{ OPERATOR.phone }}
 							</BaseLink>
 						</dd>
-					</template>
+					</div>
 				</dl>
 			</PolicySection>
 
@@ -62,12 +73,15 @@ const SECTIONS = {
 			>
 				<p>
 					Umsatzsteuer-Identifikationsnummer gemäß § 27a Umsatzsteuergesetz:
+
 					{{ OPERATOR.vatId }}
 				</p>
 			</PolicySection>
 
 			<PolicySection :section="SECTIONS.editorial">
-				<p>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV:</p>
+				<p>
+					Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV:
+				</p>
 
 				<OperatorAddress />
 			</PolicySection>
@@ -103,6 +117,7 @@ const SECTIONS = {
 			<PolicySection :section="SECTIONS.sources">
 				<p>
 					Die Lebensmitteldaten stammen von
+
 					<BaseLink
 						href="https://world.openfoodfacts.org"
 						variant="inline"
@@ -117,9 +132,7 @@ const SECTIONS = {
 						variant="inline"
 					>
 						Open Database License
-					</BaseLink>
-
-					.
+					</BaseLink>.
 				</p>
 			</PolicySection>
 		</article>

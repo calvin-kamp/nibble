@@ -9,7 +9,6 @@ import { useOnboardingStore } from '@features/onboarding/onboarding.store'
 
 export const useAuthStore = defineStore('auth', () => {
 	const user = ref<AuthUser | null>(null)
-	/** Whether init() has finished. Until then it is unknown whether anyone is signed in. */
 	const isReady = ref<boolean>(false)
 
 	// For the navigation guards: they already run at startup, before init() has finished
@@ -21,9 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
 	const hasCompletedOnboarding = computed<boolean>(
 		() => user.value?.hasCompletedOnboarding ?? false,
 	)
-	/** Moderation: approves or rejects submitted recipes on the admin page */
 	const isStaff = computed<boolean>(() => user.value?.isStaff ?? false)
-	/** Consent from onboarding: without it there is no tracking and no saved meals */
 	const hasDataConsent = computed<boolean>(() => user.value?.hasDataConsent ?? false)
 
 	/** On app start: the cookies are httpOnly, so the API has to be asked who is signed in */
@@ -39,12 +36,10 @@ export const useAuthStore = defineStore('auth', () => {
 		}
 	}
 
-	/** Resolves once it is known whether anyone is signed in */
 	function whenReady(): Promise<void> {
 		return ready
 	}
 
-	/** Reloads the state, e.g. after the email address has been confirmed */
 	async function refreshUser(): Promise<void> {
 		user.value = await fetchCurrentUser()
 	}
@@ -60,7 +55,6 @@ export const useAuthStore = defineStore('auth', () => {
 		usePendingCalculationStore().clear()
 	}
 
-	/** New state from an API response, e.g. after onboarding */
 	function setUser(updatedUser: AuthUser): void {
 		user.value = updatedUser
 	}

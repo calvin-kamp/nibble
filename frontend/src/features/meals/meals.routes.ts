@@ -1,6 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-// Saved meals: list, detail page, create and edit
 export const mealsRoutes: RouteRecordRaw[] = [
 	{
 		path: '/mahlzeiten',

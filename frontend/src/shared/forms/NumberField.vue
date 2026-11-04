@@ -17,7 +17,6 @@ import { BaseIcon } from '@shared/ui'
 import { useFieldIds } from './field-ids'
 
 interface Props extends BaseFieldProps<number | undefined> {
-	/** Unit after the value, e.g. "kg". Announced as well. */
 	unit?: string
 	/**
 	 * Limits that reka-ui silently clamps the value to. For plausibility checks, prefer the schema,
@@ -26,9 +25,7 @@ interface Props extends BaseFieldProps<number | undefined> {
 	min?: number
 	max?: number
 	step?: number
-	/** Show plus and minus buttons */
 	stepper?: boolean
-	/** Announced button labels, e.g. "1.000 Schritte mehr" */
 	incrementLabel?: string
 	decrementLabel?: string
 	formatOptions?: Intl.NumberFormatOptions
@@ -51,7 +48,6 @@ const props = withDefaults(defineProps<Props>(), {
 const ids = useFieldIds(() => props.hint)
 const unitId = `${ids.id}-unit`
 
-// Validates once a value is committed (on blur, with Enter or via the buttons)
 const { value, errorMessage, handleBlur } = useField<number | undefined>(
 	() => props.name,
 	toRef(props, 'rules'),
@@ -66,7 +62,6 @@ const numberValue = computed<number | undefined>({
 	},
 })
 
-// The unit is part of the description, otherwise users only hear "Gewicht" without "kg"
 const describedBy = computed<string | undefined>(() => {
 	const describedByIds = [props.unit ? unitId : null, ids.describedBy(errorMessage.value)]
 
@@ -92,6 +87,7 @@ const describedBy = computed<string | undefined>(() => {
 			:min="props.min"
 			:max="props.max"
 			:step="props.step"
+			:step-snapping="false"
 			:format-options="props.formatOptions"
 			:disabled="props.disabled"
 		>
@@ -119,8 +115,9 @@ const describedBy = computed<string | undefined>(() => {
 				v-if="props.unit"
 				:id="unitId"
 				class="number-field__unit"
-				>{{ props.unit }}</span
 			>
+				{{ props.unit }}
+			</span>
 
 			<NumberFieldIncrement
 				v-if="props.stepper"

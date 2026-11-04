@@ -5,6 +5,7 @@ export const landingRoutes: RouteRecordRaw[] = [
 		path: '/',
 		name: 'home',
 		component: () => import('@features/landing/views/HomeView.vue'),
-		meta: { title: 'Start' },
+		// No title of its own: the start page carries the full name, see page-title.ts
+		meta: {},
 	},
 ]

@@ -2,28 +2,27 @@
 import type {
 	DiaryDay,
 	DiaryDayWeek,
-	DiaryWeek,
 	NutritionGoals,
 	TrackedDay,
 } from '@features/tracking/tracking.types'
 
-import { ChevronRightIcon, PlusIcon } from '@lucide/vue'
+import { ArrowRightIcon, ChevronRightIcon, PlusIcon } from '@lucide/vue'
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 
-import { BaseButton, BaseIcon } from '@shared/ui'
+import DaySummaryCard from '@features/tracking/components/DaySummaryCard.vue'
+import { BaseButton, BaseIcon, BaseLink } from '@shared/ui'
 
 import { useTrackingChanges } from '@features/tracking/composables/tracking-changes'
 import { useTrackingDialogs } from '@features/tracking/composables/tracking-dialogs'
 
-import { fetchCurrentGoals, fetchDays } from '@features/tracking/tracking.api'
-import { averageKcal, weekStart } from '@features/tracking/tracking.utils'
-import { addDays, formatDayRange, formatRelativeDay, toIsoDate } from '@shared/utils/date'
+import { fetchCurrentGoals, fetchDayRange } from '@features/tracking/tracking.api'
+import { averageKcal, formatCalendarWeekTitle, weekStart } from '@features/tracking/tracking.utils'
+import { addDays, formatRelativeDay, toIsoDate } from '@shared/utils/date'
 import { formatNumber } from '@shared/utils/number'
 
-// The backend only returns entries per day, so the list loads two weeks at once and older ones
-// via "Ältere Wochen laden".
-const WEEKS_PER_LOAD = 2
+// Five weeks at once and five more per click, each load one request for the whole range
+const WEEKS_PER_LOAD = 5
 
 const { openEntry } = useTrackingDialogs()
 
@@ -36,17 +35,10 @@ const weekCount = ref<number>(WEEKS_PER_LOAD)
 const loading = ref<boolean>(true)
 const loadError = ref<boolean>(false)
 
-/** Days from today back to the Monday of the oldest loaded week, newest first */
-function datesOf(count: number): string[] {
-	const oldest = addDays(thisWeek, -7 * (count - 1))
-	const dates: string[] = []
-
-	for (let date = today; date >= oldest; date = addDays(date, -1)) dates.push(date)
-
-	return dates
+function oldestDay(count: number): string {
+	return addDays(thisWeek, -7 * (count - 1))
 }
 
-// After new or deleted entries, e.g. from the dialog, reload everything already loaded
 watch(
 	[weekCount, useTrackingChanges()],
 	async () => {
@@ -55,7 +47,7 @@ watch(
 		try {
 			const [current, loaded] = await Promise.all([
 				fetchCurrentGoals(),
-				fetchDays(datesOf(weekCount.value)),
+				fetchDayRange(oldestDay(weekCount.value), today),
 			])
 
 			goals.value = current
@@ -68,6 +60,10 @@ watch(
 		}
 	},
 	{ immediate: true },
+)
+
+const todayDay = computed<TrackedDay | null>(
+	() => days.value.find((day) => day.date === today) ?? null,
 )
 
 function toOverview(day: TrackedDay): DiaryDay {
@@ -85,7 +81,6 @@ function toOverview(day: TrackedDay): DiaryDay {
 	}
 }
 
-// Days with entries grouped by week. Today is always on top, even without an entry.
 const weeks = computed<DiaryDayWeek[]>(() => {
 	const result: DiaryDayWeek[] = []
 
@@ -119,84 +114,113 @@ function goalNote(day: DiaryDay): string | null {
 	return null
 }
 
-function weekTitle(week: DiaryWeek): string {
-	if (week.start === thisWeek) return 'Diese Woche'
-	if (week.start === addDays(thisWeek, -7)) return 'Letzte Woche'
-
-	return formatDayRange(week.start, addDays(week.start, 6))
-}
-
 function loadMore(): void {
 	weekCount.value += WEEKS_PER_LOAD
 }
+
+// The API knows no oldest entry, and entries may be dated before registration. So more weeks
+// are only offered while the last loaded batch had entries before today: a new account, or
+// five empty weeks in a row, ends the list. Single days stay reachable via the day view.
+const hasOlderEntries = computed<boolean>(() => {
+	const from = oldestDay(weekCount.value)
+	const until =
+		weekCount.value === WEEKS_PER_LOAD ? today : oldestDay(weekCount.value - WEEKS_PER_LOAD)
+
+	return days.value.some((day) => day.date >= from && day.date < until && day.entries.length)
+})
 </script>
 
 <template>
-	<main class="content-wrapper pt-6 pb-10">
-		<!-- Reading width like every diary page: date and calories stay close enough together -->
-		<div class="content-column content-column--narrow gap-8">
-			<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-				<div class="flex flex-col gap-3">
-					<h1>Ernährung</h1>
+	<main class="page">
+		<div class="page__header">
+			<div class="page__intro">
+				<h1>
+					Essen
+				</h1>
 
-					<p
-						v-if="goals"
-						class="text-lg text-muted"
-					>
-						Dein Tagesbedarf:
-						<strong class="text-ink tabular-nums"
-							>{{ formatNumber(goals.kcal) }} kcal</strong
-						>
-					</p>
-				</div>
+				<p
+					v-if="goals"
+					class="page__lead"
+				>
+					Dein Tagesbedarf:
 
-				<BaseButton @click="openEntry('food')">
-					<BaseIcon :icon="PlusIcon" />
-					Essen eintragen
-				</BaseButton>
+					<strong class="whitespace-nowrap text-foreground tabular-nums">
+						{{ formatNumber(goals.kcal) }} kcal
+					</strong>
+				</p>
 			</div>
 
-			<p
-				v-if="loadError"
-				class="notice notice--danger"
-				role="alert"
-			>
-				Dein Tagebuch konnte nicht geladen werden. Lad die Seite bitte neu.
-			</p>
+			<BaseButton @click="openEntry('food')">
+				<BaseIcon :icon="PlusIcon" />
 
-			<!-- Weeks instead of one long list: the heading carries the average, the days are quiet rows -->
+				Essen eintragen
+			</BaseButton>
+		</div>
+
+		<p
+			v-if="loadError"
+			class="notice notice--danger"
+			role="alert"
+		>
+			Dein Tagebuch konnte nicht geladen werden. Lad die Seite bitte neu.
+		</p>
+
+		<DaySummaryCard
+			v-if="todayDay"
+			:entries="todayDay.entries"
+			:goals="todayDay.goals"
+			:date="today"
+			title="Heute"
+		>
+			<template #actions>
+				<BaseLink
+					route-name="diary-food-day"
+					:params="{ date: today }"
+					variant="no-decoration"
+					class="text-highlight"
+				>
+					Zum Tag
+
+					<BaseIcon
+						:icon="ArrowRightIcon"
+						:size="18"
+					/>
+				</BaseLink>
+			</template>
+		</DaySummaryCard>
+
+		<div class="content-column gap-12">
 			<div
-				class="flex flex-col gap-8"
+				class="week-list"
 				:aria-busy="loading"
 			>
 				<section
 					v-for="week in weeks"
 					:key="week.start"
-					class="flex flex-col gap-2"
+					class="week-list__week"
 					:aria-labelledby="`week-${week.start}-title`"
 				>
-					<div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+					<div class="week-list__header">
 						<h2
 							:id="`week-${week.start}-title`"
-							class="text-2xl outline-none"
+							class="week-list__title"
 							tabindex="-1"
 						>
-							{{ weekTitle(week) }}
+							{{ formatCalendarWeekTitle(week.start) }}
 						</h2>
 
 						<p
 							v-if="week.averageKcal !== null"
-							class="text-sm text-muted"
+							class="week-list__meta"
 						>
 							Schnitt
-							<strong class="text-ink tabular-nums"
-								>{{ formatNumber(Math.round(week.averageKcal)) }} kcal</strong
-							>
+
+							<strong class="whitespace-nowrap text-foreground tabular-nums">
+								{{ formatNumber(Math.round(week.averageKcal)) }} kcal
+							</strong>
 						</p>
 					</div>
 
-					<!-- A bar per day would just be noise across 28 rows. The number is enough; a note is only
-               added where it says something. The arrow shows that every row leads to its day. -->
 					<ol class="data-list">
 						<li
 							v-for="day in week.days"
@@ -206,32 +230,42 @@ function loadMore(): void {
 								:to="{ name: 'diary-food-day', params: { date: day.date } }"
 								class="data-list__row data-list__row--link"
 							>
-								<span class="data-list__label">{{
-									formatRelativeDay(day.date)
-								}}</span>
+								<!-- The day keeps its width, the note beside it wraps instead -->
+								<span class="data-list__label flex-none">
+									{{ formatRelativeDay(day.date) }}
+
+									<span
+										v-if="day.entryCount && goalNote(day)"
+										class="data-list__meta md:hidden"
+									>
+										{{ goalNote(day) }}
+									</span>
+								</span>
 
 								<span
 									v-if="day.entryCount && goalNote(day)"
-									class="data-list__aside"
-									>{{ goalNote(day) }}</span
+									class="data-list__aside max-md:hidden"
 								>
+									{{ goalNote(day) }}
+								</span>
 
-								<!-- The arrow sits closer to the value than the row gap -->
-								<span class="flex items-center gap-2">
+								<span class="flex flex-1 items-center justify-end gap-2 min-w-0">
 									<span
 										v-if="day.entryCount"
 										class="data-list__value"
-										>{{ formatNumber(day.kcal) }} kcal</span
 									>
+										{{ formatNumber(day.kcal) }} kcal
+									</span>
 
 									<span
 										v-else
-										class="data-list__aside"
-										>Nichts eingetragen</span
+										class="data-list__aside text-right whitespace-normal"
 									>
+										Nichts eingetragen
+									</span>
 
 									<BaseIcon
-										class="shrink-0 text-muted"
+										class="shrink-0 text-muted-foreground"
 										:icon="ChevronRightIcon"
 										:size="18"
 									/>
@@ -243,13 +277,20 @@ function loadMore(): void {
 			</div>
 
 			<BaseButton
-				class="self-start"
-				variant="outline"
+				v-if="hasOlderEntries || (loading && weekCount > WEEKS_PER_LOAD)"
+				class="self-center"
 				:disabled="loading"
 				@click="loadMore"
 			>
-				Ältere Wochen laden
+				{{ WEEKS_PER_LOAD }} weitere Wochen laden
 			</BaseButton>
+
+			<p
+				v-else-if="!loading && !loadError"
+				class="self-center text-muted-foreground"
+			>
+				Keine älteren Einträge.
+			</p>
 		</div>
 	</main>
 </template>

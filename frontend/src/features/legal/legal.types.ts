@@ -1,10 +1,8 @@
 export interface PolicySection {
-	/** Jump mark, e.g. /datenschutz#cookies */
 	id: string
 	title: string
 }
 
-/** Provider details for Impressum, privacy policy and terms */
 export interface Operator {
 	name: string
 	street: string

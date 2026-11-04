@@ -13,7 +13,7 @@ import type {
 } from '@features/tracking/tracking.types'
 
 import { MEAL_LABELS, MEAL_ORDER } from '@features/tracking/tracking.constants'
-import { addDays, parseIsoDate } from '@shared/utils/date'
+import { addDays, calendarWeek, parseIsoDate, toIsoDate } from '@shared/utils/date'
 import { formatNumber } from '@shared/utils/number'
 
 function sum(entries: FoodEntry[], key: 'kcal' | 'protein' | 'carbs' | 'fat'): number {
@@ -53,12 +53,18 @@ export function averageKcal(days: DayOverview[]): number | null {
 	return tracked.reduce((total, day) => total + day.kcal, 0) / tracked.length
 }
 
-/** Short macros, e.g. "P 14 g · K 58 g · F 10 g" */
-export function formatMacrosShort(macros: Pick<FoodEntry, 'protein' | 'carbs' | 'fat'>): string {
-	return `P ${Math.round(macros.protein)} g · K ${Math.round(macros.carbs)} g · F ${Math.round(macros.fat)} g`
+export function formatMacrosShort(
+	macros: Pick<FoodEntry, 'protein' | 'carbs' | 'fat'>,
+	separator = ', ',
+): string {
+	// Non-breaking spaces: a line may break between the macros, never inside one
+	const part = (letter: string, grams: number) => `${letter}\u00a0${Math.round(grams)}\u00a0g`
+
+	return [part('P', macros.protein), part('K', macros.carbs), part('F', macros.fat)].join(
+		separator,
+	)
 }
 
-/** Number with up to one decimal place, e.g. "1,5" or "2" */
 export function formatAmount(value: number): string {
 	return value.toLocaleString('de-DE', { maximumFractionDigits: 1 })
 }
@@ -68,7 +74,6 @@ const COUNTED_UNITS = {
 	package: ['Packung', 'Packungen'],
 } as const
 
-/** Label of a unit in the select, e.g. "Portion (40 g)" */
 export function formatUnitOption(product: FoodProduct, unit: FoodUnit): string {
 	if (unit === 'serving') return `Portion (${formatNumber(product.serving!)} ${product.unit})`
 	if (unit === 'package') return `Packung (${formatNumber(product.packageSize!)} ${product.unit})`
@@ -76,7 +81,6 @@ export function formatUnitOption(product: FoodProduct, unit: FoodUnit): string {
 	return unit === 'g' ? 'Gramm' : 'Milliliter'
 }
 
-/** Amount of an entry, e.g. "80 g" or "2 Portionen (80 g)" */
 export function formatQuantity(quantity: FoodQuantity): string {
 	const base = `${formatAmount(quantity.base)} ${quantity.baseUnit}`
 
@@ -87,14 +91,42 @@ export function formatQuantity(quantity: FoodQuantity): string {
 	return `${formatAmount(quantity.value)} ${quantity.value === 1 ? one : many} (${base})`
 }
 
-/** Monday of the week the day falls in */
 export function weekStart(iso: string): string {
 	const weekday = ((parseIsoDate(iso)?.getDay() ?? 1) + 6) % 7
 
 	return addDays(iso, -weekday)
 }
 
-/** Barcode without spaces and hyphens, e.g. "4 260556 635439" becomes "4260556635439" */
+/** Path segment of a week page, e.g. "2026-kw-1" for the week starting 29 December 2025 */
+export function weekSlug(start: string): string {
+	const { week, year } = calendarWeek(start)
+
+	return `${year}-kw-${week}`
+}
+
+/** Monday of the week named by weekSlug, null for a week that does not exist */
+export function weekStartFromSlug(slug: string): string | null {
+	const match = /^(\d{4})-kw-(\d{1,2})$/.exec(slug)
+
+	if (!match) return null
+
+	// 4 January always lies in calendar week 1
+	const start = addDays(weekStart(`${match[1]}-01-04`), (Number(match[2]) - 1) * 7)
+
+	return weekSlug(start) === slug ? start : null
+}
+
+export function formatCalendarWeekTitle(start: string, today: string = toIsoDate()): string {
+	const thisWeek = weekStart(today)
+
+	if (start === thisWeek) return 'Diese Woche'
+	if (start === addDays(thisWeek, -7)) return 'Letzte Woche'
+
+	const { week, year } = calendarWeek(start)
+
+	return year === calendarWeek(today).year ? `KW ${week}` : `KW ${week} ${year}`
+}
+
 export function normalizeBarcode(query: string): string {
 	return query.replace(/[\s-]/g, '')
 }
@@ -104,7 +136,6 @@ export function isBarcode(query: string): boolean {
 	return /^\d{8,14}$/.test(normalizeBarcode(query))
 }
 
-/** The units a product offers: always g or ml, plus serving and package when known */
 export function unitsOf(product: FoodProduct): FoodUnit[] {
 	return [
 		product.unit,
@@ -113,7 +144,6 @@ export function unitsOf(product: FoodProduct): FoodUnit[] {
 	]
 }
 
-/** Converts an amount to the product's base unit, e.g. 2 servings to 80 g */
 export function toQuantity(product: FoodProduct, value: number, unit: FoodUnit): FoodQuantity {
 	const factor =
 		unit === 'serving' ? product.serving! : unit === 'package' ? product.packageSize! : 1
@@ -158,7 +188,6 @@ export function buildWeightPoints(entries: WeightEntry[]): WeightPoint[] {
 		}))
 		.toSorted((a, b) => a.time - b.time)
 
-	// sorted holds fresh copies, so they can take the average directly
 	return sorted.map((point) =>
 		Object.assign(point, {
 			weeklyAverage: average(inWeekEndingAt(sorted, point.time).map((entry) => entry.kg)),
@@ -196,12 +225,16 @@ export function getWeeklyBalance(points: WeightPoint[]): WeeklyBalance | null {
 
 const TICK_STEPS = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20]
 
-/** Round axis values, e.g. 75,0 / 75,5 / 76,0, that enclose all values */
+// A single weight or an unchanged one would otherwise get an axis of 120,0 to 120,1 with the
+// point on the bottom line. At least one kilogram around the middle keeps it centered.
+const MIN_TICK_SPAN = 1
+
 export function getNiceTicks(values: number[], maxTicks = 4): number[] {
 	if (!values.length) return []
 
-	const min = Math.min(...values)
-	const max = Math.max(...values)
+	const middle = (Math.min(...values) + Math.max(...values)) / 2
+	const min = Math.min(...values, middle - MIN_TICK_SPAN / 2)
+	const max = Math.max(...values, middle + MIN_TICK_SPAN / 2)
 	const step =
 		TICK_STEPS.find((candidate) => (max - min) / candidate <= maxTicks - 1) ??
 		TICK_STEPS[TICK_STEPS.length - 1]!
@@ -216,18 +249,17 @@ export function getNiceTicks(values: number[], maxTicks = 4): number[] {
 	)
 }
 
-/** Weekly balance as text, e.g. "Minus 0,7 kg seit letzter Woche" */
 export function formatWeeklyBalance(balance: number): string {
 	const rounded = Math.round(balance * 10) / 10
 
-	if (rounded === 0) return 'Unverändert seit letzter Woche'
+	if (rounded === 0) return 'Unverändert zu den 7 Tagen davor'
 
 	const amount = Math.abs(rounded).toLocaleString('de-DE', {
 		minimumFractionDigits: 1,
 		maximumFractionDigits: 1,
 	})
 
-	return `${rounded < 0 ? 'Minus' : 'Plus'} ${amount} kg seit letzter Woche`
+	return `${rounded < 0 ? 'Minus' : 'Plus'} ${amount} kg zu den 7 Tagen davor`
 }
 
 /** Change from the first to the last entry in the range, null with fewer than two entries */
@@ -241,7 +273,6 @@ export function getPeriodChange(points: WeightPoint[], days: number): number | n
 	return last.kg - first.kg
 }
 
-/** Signed, e.g. "−0,5 kg" or "+0,3 kg". 0 has no sign. */
 export function formatKgChange(change: number): string {
 	const rounded = Math.round(change * 10) / 10
 	const amount = Math.abs(rounded).toLocaleString('de-DE', {
@@ -254,7 +285,6 @@ export function formatKgChange(change: number): string {
 	return `${rounded < 0 ? '−' : '+'}${amount} kg`
 }
 
-/** E.g. "−0,5 kg in den letzten 30 Tagen" */
 export function formatPeriodChange(change: number, period: WeightPeriod): string {
 	if (Math.round(change * 10) === 0) return `Unverändert ${period.phrase}`
 

@@ -4,6 +4,7 @@ import { RouterView, useRoute } from 'vue-router'
 
 import TrackingDialogs from '@features/tracking/components/TrackingDialogs.vue'
 import AppBottomNav from '@layouts/AppBottomNav.vue'
+import AppFooter from '@layouts/AppFooter.vue'
 import AppHeader from '@layouts/AppHeader.vue'
 import AppSideBar from '@layouts/AppSideBar.vue'
 import { BaseToaster } from '@shared/ui'
@@ -18,7 +19,6 @@ const announcement = usePageAnnouncement()
 
 const navigation = computed(() => route.meta.navigation ?? 'full')
 
-// Every view renders exactly one main. It gets focus without becoming part of the tab order.
 function skipToContent(): void {
 	const main = document.querySelector<HTMLElement>('main')
 
@@ -34,8 +34,9 @@ function skipToContent(): void {
 		href="#"
 		class="skip-link"
 		@click.prevent="skipToContent"
-		>Zum Inhalt springen</a
 	>
+		Zum Inhalt springen
+	</a>
 
 	<AppSideBar v-if="navigation === 'full'" />
 
@@ -45,6 +46,8 @@ function skipToContent(): void {
 	/>
 
 	<RouterView />
+
+	<AppFooter v-if="navigation !== 'none'" />
 
 	<TrackingDialogs v-if="auth.isLoggedIn && auth.hasDataConsent" />
 

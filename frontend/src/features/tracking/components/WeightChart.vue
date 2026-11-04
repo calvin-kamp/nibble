@@ -36,7 +36,7 @@ const LAST_POINT_COLOR = 'var(--weight-chart-last-point)'
 
 const legendItems = [
 	{ name: 'Gewicht', color: WEIGHT_COLOR },
-	{ name: 'Wochenschnitt', color: AVERAGE_COLOR },
+	{ name: '7-Tage-Schnitt', color: AVERAGE_COLOR },
 ]
 
 const x = (point: WeightPoint): number => point.time
@@ -47,8 +47,6 @@ const weeklyAverage = (point: WeightPoint): number => point.weeklyAverage
 // range it already takes the preceding days into account.
 const allPoints = computed<WeightPoint[]>(() => buildWeightPoints(props.entries))
 
-// With many entries the dots would merge into a thick line,
-// so only the last dot remains.
 const MAX_VISIBLE_POINTS = 31
 
 // Whether a point is the last one and how large it is drawn is stored on the data point.
@@ -99,7 +97,6 @@ const yFractionDigits = computed<number>(() => {
 	return Number.isInteger(Math.round(step * 1000) / 1000) ? 0 : 1
 })
 
-// First, middle and last day
 const xTicks = computed<number[]>(() => {
 	const first = points.value[0]?.time
 	const last = lastPoint.value?.time
@@ -116,7 +113,7 @@ const ariaLabel = computed<string>(() => {
 
 	return (
 		`Gewichtsverlauf von ${formatKg(first.kg)} auf ${formatKg(lastPoint.value.kg)}, ` +
-		`Wochenschnitt zuletzt ${formatKg(lastPoint.value.weeklyAverage)}`
+		`7-Tage-Schnitt zuletzt ${formatKg(lastPoint.value.weeklyAverage)}`
 	)
 })
 
@@ -132,14 +129,14 @@ function tooltipTemplate(point: WeightPoint): string {
 	return [
 		formatDayMonth(new Date(point.time)),
 		`Gewicht: ${formatKg(point.kg)}`,
-		`Wochenschnitt: ${formatKg(point.weeklyAverage)}`,
-	].join('<br>')
+		`7-Tage-Schnitt: ${formatKg(point.weeklyAverage)}`,
+	].join('<br />')
 }
 </script>
 
 <template>
 	<div
-		v-if="lastPoint"
+		v-if="points.length > 1"
 		class="weight-chart"
 	>
 		<VisXYContainer
@@ -204,6 +201,13 @@ function tooltipTemplate(point: WeightPoint): string {
 			:items="legendItems"
 		/>
 	</div>
+
+	<p
+		v-else-if="lastPoint"
+		class="weight-chart__empty"
+	>
+		Ab dem zweiten Eintrag siehst du hier deinen Verlauf.
+	</p>
 
 	<p
 		v-else
