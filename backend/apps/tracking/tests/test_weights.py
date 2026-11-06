@@ -90,7 +90,7 @@ class WeightTests(ApiTestCase):
     def test_weeks_are_paged_by_before(self):
         monday = date(2026, 1, 5)
 
-        for week in range(12):
+        for week in range(7):
             self.add(monday + timedelta(weeks=week), 80 + week)
 
         first = self.client.get(reverse("weight_weeks")).data
@@ -99,11 +99,38 @@ class WeightTests(ApiTestCase):
         ).data
         invalid = self.client.get(reverse("weight_weeks"), {"before": "2026-W99"})
 
-        self.assertEqual(len(first["results"]), 10)
+        # W02 to W08, five per page
+        self.assertEqual(len(first["results"]), 5)
         self.assertEqual(first["next_before"], "2026-W04")
+        self.assertEqual(first["total_weeks"], 7)
         self.assertEqual([w["iso_week"] for w in rest["results"]], [3, 2])
         self.assertIsNone(rest["next_before"])
+        self.assertEqual(rest["total_weeks"], 7)
         self.assertEqual(invalid.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_weeks_in_a_range(self):
+        monday = date(2026, 1, 5)
+
+        for week in range(7):
+            self.add(monday + timedelta(weeks=week), 80 + week)
+
+        # From Sunday of W02 to Monday of W04: the weeks that share a day with it
+        weeks = self.client.get(
+            reverse("weight_weeks"), {"from": "2026-01-11", "to": "2026-01-19"}
+        ).data
+        reversed_range = self.client.get(
+            reverse("weight_weeks"), {"from": "2026-01-19", "to": "2026-01-11"}
+        )
+        invalid = self.client.get(reverse("weight_weeks"), {"from": "gestern"})
+
+        self.assertEqual([w["iso_week"] for w in weeks["results"]], [4, 3, 2])
+        self.assertEqual(weeks["total_weeks"], 3)
+        self.assertIsNone(weeks["next_before"])
+        # The comparison still uses the week before the range
+        self.assertEqual(weeks["results"][2]["change_kg"], None)
+        self.assertEqual(weeks["results"][0]["change_kg"], 1)
+        self.assertIn("to", reversed_range.data["errors"])
+        self.assertIn("from", invalid.data["errors"])
 
     def test_week_detail(self):
         self.add(date(2026, 1, 5), 80)

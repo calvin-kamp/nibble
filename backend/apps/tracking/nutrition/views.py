@@ -1,6 +1,8 @@
-from datetime import timedelta
+from collections import defaultdict
+from datetime import date, timedelta
 
 from django.db import transaction
+from django.db.models import Sum
 from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -19,14 +21,18 @@ from apps.tracking.models import (
     TrackingEntry,
 )
 from apps.tracking.nutrition.utils import MACROS, total
+from apps.tracking.utils import round1
+from apps.tracking.weeks import page_of_weeks
 
 from .serializers import (
     EMPTY_GOAL_STATE,
     EntryFromMealSerializer,
     EntryInputSerializer,
     EntryPatchSerializer,
+    FoodWeekSerializer,
     GoalStateSerializer,
     GoalUpdateSerializer,
+    ManualEntrySerializer,
     MealInputSerializer,
     MealSerializer,
     TargetsSerializer,
@@ -86,6 +92,23 @@ class EntryCreateView(TrackingMixin, APIView):
         entry = TrackingEntry.objects.create(
             profile=self.profile,
             source=TrackingEntry.Source.OFF,
+            **serializer.validated_data,
+        )
+
+        return Response(
+            TrackingEntrySerializer(entry).data, status=status.HTTP_201_CREATED
+        )
+
+
+class ManualEntryView(TrackingMixin, APIView):
+    """A food with name and values typed in by the user, tracked as one portion."""
+
+    def post(self, request):
+        serializer = ManualEntrySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        entry = TrackingEntry.objects.create(
+            profile=self.profile,
+            source=TrackingEntry.Source.MANUAL,
             **serializer.validated_data,
         )
 
@@ -212,6 +235,50 @@ class DayRangeView(TrackingMixin, APIView):
             day -= timedelta(days=1)
 
         return Response(days)
+
+
+def summarize_food_weeks(days):
+    """Weeks with entries, newest first, from (day, kcal) pairs of the days with entries."""
+    grouped = defaultdict(list)
+
+    for day, kcal in days:
+        grouped[tuple(day.isocalendar()[:2])].append(kcal)
+
+    weeks = []
+
+    for iso_year, iso_week in sorted(grouped, reverse=True):
+        monday = date.fromisocalendar(iso_year, iso_week, 1)
+        kcal = grouped[iso_year, iso_week]
+
+        weeks.append(
+            {
+                "iso_year": iso_year,
+                "iso_week": iso_week,
+                "week_start": monday,
+                "week_end": monday + timedelta(days=6),
+                "days_count": len(kcal),
+                "average_kcal": round1(sum(kcal) / len(kcal)),
+            }
+        )
+
+    return weeks
+
+
+class DayWeekListView(TrackingMixin, APIView):
+    """Weeks with food entries for the diary list, five per page, see apps.tracking.weeks."""
+
+    def get(self, request):
+        days = (
+            self.profile.tracking_entries.values_list("consumed_on")
+            .annotate(kcal=Sum("kcal"))
+            .order_by()
+        )
+
+        return Response(
+            page_of_weeks(
+                summarize_food_weeks(days), request.query_params, FoodWeekSerializer
+            )
+        )
 
 
 def parse_date(value, field="date"):

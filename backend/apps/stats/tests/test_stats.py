@@ -2,6 +2,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
+from apps.foods.models import FoodProduct
 from apps.recipes.models import Recipe
 from apps.recipes.tests.test_utils import recipe_payload
 from config.testing import ApiTestCase
@@ -28,7 +29,9 @@ class PublicStatsTests(ApiTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data, {"users": 1, "recipes": 1, "foods": 0, "entries": 0}
+            response.data,
+            # The generic foods (banana etc.) come with a migration.
+            {"users": 1, "recipes": 1, "foods": FoodProduct.objects.count(), "entries": 0},
         )
 
     def test_invalid_cookie_does_not_block_the_public_numbers(self):

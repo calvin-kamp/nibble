@@ -4,45 +4,10 @@ Each week is compared with the latest earlier week that has entries; weeks
 without entries are skipped.
 """
 
-import re
 from collections import defaultdict
 from datetime import date, timedelta
 
-from rest_framework import serializers
-
 from apps.tracking.utils import round1
-
-WEEK_PATTERN = re.compile(r"^(?P<year>[0-9]{4})-W(?P<week>0[1-9]|[1-4][0-9]|5[0-3])$")
-PAGE_SIZE = 10
-
-
-def week_label(iso_year, iso_week):
-    return f"{iso_year}-W{iso_week:02d}"
-
-
-def week_start(iso_year, iso_week, field="before"):
-    """Monday of the week; 400 for a week 53 in a year that has only 52."""
-    try:
-        return date.fromisocalendar(iso_year, iso_week, 1)
-    except ValueError as exc:
-        raise serializers.ValidationError(
-            {field: "Diese Kalenderwoche gibt es nicht."}
-        ) from exc
-
-
-def parse_week(value):
-    """'2026-W40' → (2026, 40)."""
-    match = WEEK_PATTERN.match(value)
-
-    if match is None:
-        raise serializers.ValidationError(
-            {"before": "Gib die Woche im Format JJJJ-Www an, z. B. 2026-W40."}
-        )
-
-    week = int(match["year"]), int(match["week"])
-    week_start(*week)
-
-    return week
 
 
 def trend(change):

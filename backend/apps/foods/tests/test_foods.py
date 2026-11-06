@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 
-from apps.foods.models import FoodProduct
+from apps.foods.models import FoodProduct, MissingBarcode
 from config.testing import ApiTestCase
 
 from .test_utils import EXPORT_COLUMNS, export_line
@@ -70,6 +70,41 @@ class FoodSearchTests(ApiTestCase):
         self.assertIn("q", short.data["errors"])
 
 
+class MissingBarcodeTests(ApiTestCase):
+    def setUp(self):
+        super().setUp()
+        self.login(self.create_user())
+
+    def search(self, **params):
+        return self.client.get(reverse("food_search"), params)
+
+    def test_counts_barcode_lookups_without_result(self):
+        self.search(barcode="4065002004209")
+        self.search(barcode="4065 002004209")
+        self.search(q="4065002004209")
+
+        missing = MissingBarcode.objects.get()
+        self.assertEqual(missing.code, "4065002004209")
+        self.assertEqual(missing.lookups, 3)
+
+    def test_ignores_invalid_check_digits_and_found_products(self):
+        FoodProduct.objects.create(
+            code="4000000000001",
+            name="Haferflocken",
+            kcal_per_100=372,
+            protein_per_100=13.5,
+            carbs_per_100=58.7,
+            fat_per_100=7,
+            imported_at=timezone.now(),
+        )
+
+        self.search(barcode="4065002004208")
+        self.search(barcode="4000000000001")
+        self.search(q="hafer")
+
+        self.assertFalse(MissingBarcode.objects.exists())
+
+
 class ImportCommandTests(ApiTestCase):
     def import_lines(self, *lines, **options):
         with tempfile.TemporaryDirectory() as directory:
@@ -83,7 +118,7 @@ class ImportCommandTests(ApiTestCase):
             )
 
     def codes(self):
-        return sorted(FoodProduct.objects.values_list("code", flat=True))
+        return sorted(FoodProduct.objects.filter(generic=False).values_list("code", flat=True))
 
     def test_imports_only_complete_and_plausible_products(self):
         FoodProduct.objects.create(
@@ -104,7 +139,7 @@ class ImportCommandTests(ApiTestCase):
                 quantity="1 l",
                 serving_quantity="",
             ),
-            export_line("4000000000003", countries_tags="en:france"),
+            export_line("3000000000003", countries_tags="en:france"),
             export_line("4000000000004", product_name=""),
             export_line("4000000000005", **{"fat_100g": ""}),
             export_line(
@@ -131,6 +166,16 @@ class ImportCommandTests(ApiTestCase):
         self.assertEqual(drink.base_unit, "ml")
         self.assertIsNone(drink.serving_quantity)
 
+    def test_german_prefix_counts_as_dach(self):
+        self.import_lines(
+            export_line("4255719323476", countries_tags="en:united-states"),
+            export_line("4410000000001", countries_tags="en:france"),
+            export_line("3017620422003", countries_tags="en:france"),
+            export_line("04012345678901", countries_tags=""),
+        )
+
+        self.assertEqual(self.codes(), ["04012345678901", "4255719323476"])
+
     def test_skips_products_without_recent_scans(self):
         year = timezone.now().year
 
@@ -138,12 +183,57 @@ class ImportCommandTests(ApiTestCase):
             export_line(
                 "4000000000011", popularity_tags=f"top-75-percent-scans-{year}"
             ),
-            export_line("4000000000012", popularity_tags=f"top-de-scans-{year - 2}"),
-            export_line("4000000000013", popularity_tags=f"top-de-scans-{year - 3}"),
+            export_line("4000000000012", popularity_tags=f"top-de-scans-{year - 5}"),
+            export_line("4000000000013", popularity_tags=f"top-de-scans-{year - 6}"),
             export_line("4000000000014", popularity_tags=""),
         )
 
         self.assertEqual(self.codes(), ["4000000000011", "4000000000012"])
+
+    def test_keeps_curated_products_as_they_are(self):
+        def curated(code, name):
+            FoodProduct.objects.create(
+                code=code,
+                name=name,
+                kcal_per_100=1,
+                protein_per_100=1,
+                carbs_per_100=1,
+                fat_per_100=1,
+                imported_at=timezone.now(),
+                curated_at=timezone.now(),
+            )
+
+        curated("3000000000101", "Nicht im Export")
+        curated("3000000000102", "Alter Name")
+        MissingBarcode.objects.create(code="3000000000102")
+        MissingBarcode.objects.create(code="4000000000103")
+
+        self.import_lines(
+            # Staff checked it against the packaging, the export doesn't overwrite it.
+            export_line("3000000000102", product_name="Neuer Name"),
+        )
+
+        kept = FoodProduct.objects.get(code="3000000000102")
+        self.assertEqual(self.codes(), ["3000000000101", "3000000000102"])
+        self.assertEqual(kept.name, "Alter Name")
+        self.assertIsNotNone(kept.curated_at)
+        self.assertEqual(
+            list(MissingBarcode.objects.values_list("code", flat=True)), ["4000000000103"]
+        )
+
+    def test_cleans_names(self):
+        self.import_lines(
+            export_line(
+                "4000000000031",
+                product_name="ALDI GÜLDENHOF HUHN Hähnchenbrustfilet 150g 2.29€ 1kg 15.27€",
+                brands="Aldi",
+            ),
+        )
+
+        self.assertEqual(
+            FoodProduct.objects.get(code="4000000000031").name,
+            "Güldenhof Huhn Hähnchenbrustfilet",
+        )
 
     def test_scan_years_zero_imports_all(self):
         self.import_lines(
@@ -170,4 +260,4 @@ class ImportCommandTests(ApiTestCase):
         )
 
         self.assertIn("99999999", self.codes())
-        self.assertEqual(FoodProduct.objects.count(), 2)
+        self.assertEqual(FoodProduct.objects.filter(generic=False).count(), 2)

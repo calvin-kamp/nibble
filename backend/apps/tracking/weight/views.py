@@ -9,13 +9,8 @@ from rest_framework.views import APIView
 
 from apps.tracking.mixins import TrackingMixin
 from apps.tracking.weight.exceptions import WeightEntryExists
-from apps.tracking.weight.utils import (
-    PAGE_SIZE,
-    parse_week,
-    summarize_weeks,
-    week_label,
-    week_start,
-)
+from apps.tracking.weeks import page_of_weeks, week_start
+from apps.tracking.weight.utils import summarize_weeks
 
 from .serializers import (
     WeekDetailSerializer,
@@ -107,25 +102,11 @@ def save_weight(serializer, **kwargs):
 
 class WeekListView(TrackingMixin, APIView):
     def get(self, request):
+        # Comparisons are made over all weeks, the range only picks which ones are listed.
         weeks = summarize_weeks(self.profile.weight_entries.all())
-        before = request.query_params.get("before")
-
-        if before:
-            before_week = parse_week(before)
-            weeks = [w for w in weeks if (w["iso_year"], w["iso_week"]) < before_week]
-
-        page = weeks[:PAGE_SIZE]
-        has_more = len(weeks) > PAGE_SIZE
 
         return Response(
-            {
-                "results": WeekSummarySerializer(page, many=True).data,
-                "next_before": (
-                    week_label(page[-1]["iso_year"], page[-1]["iso_week"])
-                    if has_more
-                    else None
-                ),
-            }
+            page_of_weeks(weeks, request.query_params, WeekSummarySerializer)
         )
 
 

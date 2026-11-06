@@ -2,9 +2,8 @@ import re
 
 from rest_framework import serializers
 
-from apps.foods.models import FoodProduct
-
-BARCODE_PATTERN = r"^[0-9]{8,14}$"
+from apps.foods.models import FoodProduct, FoodReport
+from apps.foods.utils import BARCODE_PATTERN, normalize_barcode
 
 
 class NutritionPer100Serializer(serializers.Serializer):
@@ -33,6 +32,7 @@ class FoodProductSerializer(serializers.ModelSerializer):
             "code",
             "name",
             "brand",
+            "generic",
             "base_unit",
             "nutrition_per_100",
             "serving_quantity",
@@ -40,14 +40,11 @@ class FoodProductSerializer(serializers.ModelSerializer):
         )
 
 
-def normalize_barcode(value):
-    """Barcode without spaces and hyphens, e.g. "4 260556 635439" -> "4260556635439"."""
-    return re.sub(r"[\s-]", "", value)
-
-
 class FoodSearchSerializer(serializers.Serializer):
     q = serializers.CharField(min_length=2, max_length=100, required=False)
     barcode = serializers.CharField(max_length=30, required=False)
+    # Exact code of a product, also of generic foods without barcode, e.g. for recent foods.
+    code = serializers.CharField(max_length=14, required=False)
 
     def validate_barcode(self, value):
         barcode = normalize_barcode(value)
@@ -60,7 +57,7 @@ class FoodSearchSerializer(serializers.Serializer):
     def validate(self, attrs):
         query = attrs.get("q")
 
-        if not query and not attrs.get("barcode"):
+        if not query and not attrs.get("barcode") and not attrs.get("code"):
             raise serializers.ValidationError(
                 {"q": "Gib einen Suchtext oder einen Barcode an."}
             )
@@ -71,3 +68,8 @@ class FoodSearchSerializer(serializers.Serializer):
             del attrs["q"]
 
         return attrs
+
+
+class FoodReportInputSerializer(serializers.Serializer):
+    reason = serializers.ChoiceField(choices=FoodReport.Reason)
+    comment = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")

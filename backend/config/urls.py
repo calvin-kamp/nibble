@@ -19,7 +19,8 @@ urlpatterns = [
     path("", include("apps.accounts.privacy.urls")),
     path("", include("apps.recipes.catalog.urls")),
     path("moderation/", include("apps.recipes.moderation.urls")),
-    path("foods/", include("apps.foods.api.urls")),
+    path("moderation/", include("apps.foods.moderation.urls")),
+    path("foods/", include("apps.foods.search.urls")),
     path("tracking/", include("apps.tracking.nutrition.urls")),
     path("tracking/", include("apps.tracking.weight.urls")),
     # Recipe images. Django serves them, recipes under review only to author and staff.

@@ -32,6 +32,14 @@ class EntryTests(TrackingTestCase):
         self.assertIn("unit", no_portion.data["errors"])
         self.assertIn("off_code", unknown.data["errors"])
 
+    def test_generic_food_without_barcode(self):
+        banana = FoodProduct.objects.get(generic=True, name="Banane")
+
+        response = self.track(code=banana.code, amount=1, unit="portion")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(response.data["off_code"], banana.code)
+
     def test_future_dates_are_rejected(self):
         response = self.track(consumed_on=self.today + timedelta(days=1))
 
@@ -48,6 +56,63 @@ class EntryTests(TrackingTestCase):
         )
 
         self.assertEqual(response.data["kcal"], 744.0)
+
+    def manual(self, **values):
+        payload = {
+            "food_name": "Kuchen vom Bäcker",
+            "protein": 5,
+            "carbs": 40,
+            "fat": 12,
+            "consumed_on": str(self.today),
+            "meal_type": "snack",
+            **values,
+        }
+
+        return self.client.post(reverse("entry_manual"), payload)
+
+    def test_manual_entry_computes_kcal_from_macros(self):
+        computed = self.manual()
+        given = self.manual(kcal=330)
+
+        # 5 × 4 + 40 × 4 + 12 × 9 = 288
+        self.assertEqual(computed.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(computed.data["kcal"], Decimal("288.0"))
+        self.assertEqual(computed.data["source"], "manual")
+        self.assertEqual(computed.data["unit"], "portion")
+        self.assertEqual(computed.data["amount"], 1)
+        self.assertIsNone(computed.data["off_code"])
+        self.assertIsNone(computed.data["nutrition_per_100"])
+        self.assertEqual(given.data["kcal"], Decimal("330.0"))
+
+    def test_manual_entry_is_validated(self):
+        too_few_kcal = self.manual(kcal=100)
+        too_much = self.manual(fat=1001)
+        no_name = self.manual(food_name="  ")
+        future = self.manual(consumed_on=str(self.today + timedelta(days=1)))
+
+        self.assertIn("kcal", too_few_kcal.data["errors"])
+        self.assertIn("fat", too_much.data["errors"])
+        self.assertIn("food_name", no_name.data["errors"])
+        self.assertEqual(future.data["code"], "future_date_not_allowed")
+
+    def test_manual_entry_changes_values_not_amount(self):
+        entry = self.manual().data
+        url = reverse("entry_detail", kwargs={"pk": entry["id"]})
+
+        macros = self.client.patch(url, {"fat": 2})
+        named = self.client.patch(url, {"food_name": "Apfelkuchen", "kcal": 250})
+        amount = self.client.patch(url, {"amount": 2})
+        product = self.track().data
+        values_of_product = self.client.patch(
+            reverse("entry_detail", kwargs={"pk": product["id"]}), {"kcal": 10}
+        )
+
+        # 20 + 160 + 18 = 198, the kcal follow the macros
+        self.assertEqual(macros.data["kcal"], Decimal("198.0"))
+        self.assertEqual(named.data["food_name"], "Apfelkuchen")
+        self.assertEqual(named.data["kcal"], Decimal("250.0"))
+        self.assertIn("amount", amount.data["errors"])
+        self.assertIn("kcal", values_of_product.data["errors"])
 
     def test_entries_of_others_are_not_found(self):
         entry = self.track().data
@@ -122,6 +187,27 @@ class MealTests(TrackingTestCase):
         self.assertEqual(without_consent.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(without_consent.data["code"], "consent_required")
 
+    def test_meal_with_an_own_item(self):
+        meal = self.client.post(
+            reverse("meal-list"),
+            {
+                "name": "Müsli",
+                "items": [
+                    {"off_code": OATS, "amount": 60, "unit": "g"},
+                    {"food_name": "Nüsse", "protein": 4, "carbs": 2, "fat": 10},
+                ],
+            },
+        ).data
+        own = meal["items"][1]
+
+        # 223.2 kcal oats + 16 + 8 + 90 = 337.2
+        self.assertEqual(meal["totals"]["kcal"], Decimal("337.2"))
+        self.assertIsNone(own["off_code"])
+        self.assertIsNone(own["nutrition_per_100"])
+        self.assertEqual(own["kcal"], Decimal("114.0"))
+        self.assertEqual(own["unit"], "portion")
+        self.assertIsNotNone(meal["items"][0]["nutrition_per_100"])
+
     def test_meal_item_errors_point_to_the_item(self):
         response = self.client.post(
             reverse("meal-list"),
@@ -132,6 +218,13 @@ class MealTests(TrackingTestCase):
         )
 
         self.assertIn("items.0.unit", response.data["errors"])
+
+        own = self.client.post(
+            reverse("meal-list"),
+            {"name": "Kaputt", "items": [{"food_name": "Nüsse", "protein": 4}]},
+        )
+
+        self.assertIn("items.0.fat", own.data["errors"])
 
 
 class DaySummaryTests(TrackingTestCase):
@@ -226,3 +319,56 @@ class DaySummaryTests(TrackingTestCase):
         )
 
         self.assertIn("targets.kcal", response.data["errors"])
+
+
+class DayWeekTests(TrackingTestCase):
+    def test_only_weeks_with_entries_five_per_page(self):
+        monday = self.today - timedelta(days=self.today.weekday())
+
+        # Eight weeks with entries, one week without in between
+        for week in (*range(1, 5), *range(6, 10)):
+            self.track(amount=100, consumed_on=monday - timedelta(weeks=week))
+
+        self.track(amount=50, consumed_on=monday - timedelta(weeks=1, days=-1))
+
+        first = self.client.get(reverse("day_weeks")).data
+        rest = self.client.get(
+            reverse("day_weeks"), {"before": first["next_before"]}
+        ).data
+
+        self.assertEqual(first["total_weeks"], 8)
+        self.assertEqual(len(first["results"]), 5)
+        self.assertEqual(
+            first["results"][0]["week_start"], str(monday - timedelta(weeks=1))
+        )
+        # Two days with 372 and 186 kcal
+        self.assertEqual(first["results"][0]["days_count"], 2)
+        self.assertEqual(first["results"][0]["average_kcal"], Decimal("279.0"))
+        self.assertNotIn(
+            str(monday - timedelta(weeks=5)),
+            [w["week_start"] for w in first["results"]],
+        )
+        self.assertEqual(len(rest["results"]), 3)
+        self.assertIsNone(rest["next_before"])
+
+    def test_current_week_alone_has_nothing_older(self):
+        self.track(amount=100)
+
+        weeks = self.client.get(reverse("day_weeks")).data
+        ranged = self.client.get(
+            reverse("day_weeks"),
+            {"from": str(self.today - timedelta(days=60)), "to": str(self.today)},
+        ).data
+
+        self.assertEqual(weeks["total_weeks"], 1)
+        self.assertIsNone(weeks["next_before"])
+        self.assertEqual(ranged["total_weeks"], 1)
+
+    def test_weeks_of_others_are_not_listed(self):
+        self.track(amount=100)
+        self.login(self.create_user("other@example.com", consent=True))
+
+        weeks = self.client.get(reverse("day_weeks")).data
+
+        self.assertEqual(weeks["total_weeks"], 0)
+        self.assertEqual(weeks["results"], [])

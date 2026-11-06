@@ -7,6 +7,7 @@ from apps.tracking.utils import round1
 
 MACROS = ("kcal", "protein", "carbs", "fat")
 MAX_VALUES = {"kcal": 100000, "protein": 10000, "carbs": 10000, "fat": 10000}
+KCAL_PER_GRAM = {"protein": 4, "carbs": 4, "fat": 9}
 
 
 def check_unit(unit, base_unit, serving_quantity):
@@ -56,6 +57,26 @@ def snapshot_of(product, amount, unit):
     }
 
     return {**snapshot, **scaled_values(snapshot)}
+
+
+def kcal_from_macros(values):
+    """Energy of protein, carbs and fat: 4, 4 and 9 kcal per gram."""
+    return round1(sum(values[key] * factor for key, factor in KCAL_PER_GRAM.items()))
+
+
+def manual_snapshot(food_name, values):
+    """A typed-in food as an entry or meal item: one portion, no values per 100."""
+    return {
+        "off_code": None,
+        "food_name": food_name,
+        "brand": None,
+        "base_unit": None,
+        "serving_quantity": None,
+        "amount": 1,
+        "unit": FoodUnit.PORTION,
+        **{f"{key}_per_100": None for key in MACROS},
+        **{key: values[key] for key in MACROS},
+    }
 
 
 def total(items):

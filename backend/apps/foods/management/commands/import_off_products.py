@@ -1,11 +1,19 @@
 """Imports the products sold in Germany, Austria and Switzerland from Open Food Facts.
 
 Reads the CSV export (tab separated, gzip) as a stream, so the file is never
-stored. Only products with a name and all four nutrients pass, values that
-can't be right (e.g. 120 g fat per 100 g) are dropped. Products nobody has
-scanned in the last years are most likely no longer sold and are skipped too.
-Products missing from the export are deleted at the end; tracked entries keep
-their own copy.
+stored. A product counts as DACH product if OFF lists one of the three countries
+or its barcode has a German GS1 prefix (400-440). Only products with a name and
+all four nutrients pass, values that can't be right (e.g. 120 g fat per 100 g)
+are dropped. Products nobody has scanned in the last years are most likely no
+longer sold and are skipped too.
+
+Names lose prices, amounts and a leading brand, see clean_product_name.
+
+Products staff added or corrected in the admin (curated_at set) are left as they
+are: their values were checked against the packaging and win over the export.
+They are never deleted either. All other products missing from the export are
+deleted at the end; tracked entries keep their own copy. Missing barcodes that
+are now in the database are cleared.
 
 Run with ``manage.py import_off_products [--source URL_OR_PATH] [--limit N]
 [--scan-years N]``.
@@ -22,11 +30,17 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from apps.foods.models import FoodProduct
+from apps.foods.models import FoodProduct, MissingBarcode
+from apps.foods.utils import clean_product_name
 
 COUNTRIES = {"en:germany", "en:austria", "en:switzerland"}
 # Cheap check on the raw line before splitting it.
 COUNTRY_MARKERS = tuple(COUNTRIES)
+# GS1 Germany hands out the prefixes 400-440. Says where the maker registered the
+# barcode, which for most of them is also where the product is sold.
+GERMAN_PREFIXES = range(400, 441)
+# Cheap check on the raw line; code is the first column of the export.
+GERMAN_PREFIX_PATTERN = re.compile(r"^0?4[0-4]")
 
 CODE_PATTERN = re.compile(r"^[0-9]{8,14}$")
 LIQUID_QUANTITY_PATTERN = re.compile(r"\d\s*(ml|cl|dl|l)\b", re.IGNORECASE)
@@ -58,7 +72,7 @@ MAX_GRAMS_PER_100 = 100
 MAX_SERVING_QUANTITY = 5000
 MAX_PACKAGE_QUANTITY = 100000
 
-DEFAULT_SCAN_YEARS = 2
+DEFAULT_SCAN_YEARS = 5
 
 BATCH_SIZE = 2000
 UPDATE_FIELDS = (
@@ -118,6 +132,21 @@ def first_brand(row):
     return brand[:255] or None
 
 
+def has_german_prefix(code):
+    """EAN-13 (or GTIN-14 with a leading 0) from 400 to 440."""
+    if len(code) == 14:
+        code = code[1:] if code.startswith("0") else ""
+
+    return len(code) == 13 and int(code[:3]) in GERMAN_PREFIXES
+
+
+def might_be_dach(line):
+    """Cheap check on the raw line, before it is split."""
+    return any(marker in line for marker in COUNTRY_MARKERS) or bool(
+        GERMAN_PREFIX_PATTERN.match(line)
+    )
+
+
 def last_scan_year(popularity_tags):
     """Latest year someone scanned the product, None if never."""
     return max(map(int, SCAN_YEAR_PATTERN.findall(popularity_tags)), default=None)
@@ -130,7 +159,7 @@ def parse_product(row, imported_at, min_scan_year=None):
     if not CODE_PATTERN.match(code):
         return None
 
-    if not COUNTRIES & set(row["countries_tags"].split(",")):
+    if not (COUNTRIES & set(row["countries_tags"].split(",")) or has_german_prefix(code)):
         return None
 
     if min_scan_year is not None:
@@ -149,10 +178,12 @@ def parse_product(row, imported_at, min_scan_year=None):
     if None in values.values() or not is_plausible(values):
         return None
 
+    brand = first_brand(row)
+
     return FoodProduct(
         code=code,
-        name=name[:255],
-        brand=first_brand(row),
+        name=clean_product_name(name, brand)[:255],
+        brand=brand,
         base_unit=base_unit(row),
         serving_quantity=quantity_or_none(row["serving_quantity"], MAX_SERVING_QUANTITY),
         package_quantity=quantity_or_none(row["product_quantity"], MAX_PACKAGE_QUANTITY),
@@ -226,6 +257,11 @@ class Command(BaseCommand):
         min_scan_year = imported_at.year - scan_years if scan_years > 0 else None
         imported = 0
         batch = []
+        curated_codes = frozenset(
+            FoodProduct.objects.filter(curated_at__isnull=False).values_list(
+                "code", flat=True
+            )
+        )
 
         self.stdout.write(f"Reading {source} ...")
 
@@ -233,7 +269,7 @@ class Command(BaseCommand):
             column_count, indexes = column_indexes(next(lines, ""))
 
             for line in lines:
-                if not any(marker in line for marker in COUNTRY_MARKERS):
+                if not might_be_dach(line) or line.split("\t", 1)[0] in curated_codes:
                     continue
 
                 fields = line.rstrip("\n").split("\t")
@@ -263,7 +299,11 @@ class Command(BaseCommand):
 
         # A partial run must not throw away the products it didn't reach.
         if not limit:
-            removed, _ = FoodProduct.objects.filter(imported_at__lt=imported_at).delete()
+            removed, _ = FoodProduct.objects.filter(
+                imported_at__lt=imported_at, curated_at__isnull=True
+            ).delete()
+
+        MissingBarcode.objects.filter(code__in=FoodProduct.objects.values("code")).delete()
 
         self.stdout.write(
             self.style.SUCCESS(f"{imported} products imported, {removed} removed.")

@@ -215,20 +215,41 @@ docker compose exec api python manage.py import_off_products
 ```
 
 The command streams the CSV export of Open Food Facts (about 1.5 GB) and stores
-nothing on disk. Only products from Germany, Austria and Switzerland pass, with a
-name, all four nutrients and a scan within the last two years. Stored are
-barcode, name, brand, unit (g or ml), package and serving size, and kcal,
-protein, carbs and fat per 100.
+nothing on disk. A product passes if OFF lists Germany, Austria or Switzerland or
+its barcode has a German GS1 prefix (400-440), with a name, all four nutrients
+and a scan within the last five years. That is about 240,000 products (as of
+November 2026). Stored are barcode, name, brand, unit (g or ml), package and
+serving size, and kcal, protein, carbs and fat per 100.
 
 | Option              | Effect                                                                     |
 | ------------------- | -------------------------------------------------------------------------- |
 | `--limit N`         | Stops after `N` products and keeps all others.                             |
-| `--scan-years N`    | Only products scanned in the last `N` years. `0` imports all. Default `2`. |
+| `--scan-years N`    | Only products scanned in the last `N` years. `0` imports all. Default `5`. |
 | `--source PATH_URL` | Another URL or path of the export (`.csv` or `.csv.gz`).                   |
 
 Without `--limit`, products that are no longer in the export are deleted at the
 end. Tracked entries keep their own copy of the values. The full import also runs
 every Sunday at 04:00, see [Background jobs](#background-jobs).
+
+### Missing products
+
+When a barcode lookup in `/foods/search` finds nothing and the check digit is
+valid, the barcode is counted in `MissingBarcode`: only the barcode, how often
+and when, nothing about who searched. Staff see the list in the frontend under
+`/admin/lebensmittel`, most searched first, and enter the product from the
+packaging (`POST /moderation/missing-barcodes/{code}/product`). The backend
+sends it to Open Food Facts first and saves it here only if OFF accepted it, so
+every user can track it right away and the data is shared with everyone on OFF.
+
+Products added this way have `curated_at` set. The import keeps them even
+without scans or a DACH country, takes over later corrections from OFF and never
+deletes them. Barcodes that are in the database after an import leave the list.
+
+Writing to OFF needs an app account (`OFF_USER_ID`, `OFF_PASSWORD`). Without one
+the product is only saved here and the response says `off_synced: false`. For
+development, use the staging server with its own account:
+`OFF_API_URL=https://world.openfoodfacts.net` and `OFF_API_BASIC_AUTH=off:off`,
+as in `.env.template`.
 
 ---
 
@@ -307,6 +328,10 @@ Docker.
 | `REDIS_URL`                      | yes      | `redis://localhost:6379/0`                   | Cache outside Docker.                                                                     |
 | `CELERY_BROKER_URL`              | no       | `redis://localhost:6379/1`                   | Queue of the background jobs outside Docker. Falls back to `REDIS_URL`.                   |
 | `OFF_DUMP_URL`                   | no       | `https://static.openfoodfacts.org/...`       | Source of the food import. Defaults to the official export.                               |
+| `OFF_API_URL`                    | no       | `https://world.openfoodfacts.net`            | OFF API for missing products. Defaults to production, `.env.template` sets staging.       |
+| `OFF_API_BASIC_AUTH`             | no       | `off:off`                                    | HTTP basic auth of the OFF staging server. Empty for production.                          |
+| `OFF_USER_ID`                    | no       | `nibble-app`                                 | OFF app account (user name, not e-mail). Empty: missing products are only saved here.     |
+| `OFF_PASSWORD`                   | no       | `...`                                        | Password of that account.                                                                 |
 
 **Local development over HTTP** needs these values, which `.env.template`
 already contains: `AUTH_COOKIE_SECURE=False`, `SECURE_SSL_REDIRECT=False`,
@@ -422,7 +447,7 @@ config/            Project configuration: settings, root URLs, Celery, error for
 apps/accounts/     Users and profiles: registration, login, onboarding, consent,
                    body data, account deletion and data export
 apps/recipes/      Recipes, saved recipes and moderation
-apps/foods/        Open Food Facts products, food search and import command
+apps/foods/        Open Food Facts products, food search, import command and missing products
 apps/tracking/     Nutrition (goals, food entries, meals, daily summary) and weight
 apps/stats/        Public numbers for the landing page
 ```
@@ -436,7 +461,7 @@ has one package per area instead. Each package holds its `serializers.py`,
 apps/accounts/     auth/  account/  onboarding/  profile/  privacy/
 apps/recipes/      catalog/  moderation/
 apps/tracking/     nutrition/  weight/
-apps/foods/        api/
+apps/foods/        search/  moderation/
 apps/stats/        api/
 ```
 
@@ -447,6 +472,13 @@ the app's `tests/` package; helpers shared by several test files are in
 `tests/test_utils.py`. The app labels stay `accounts`, `recipes` and so on, so
 table names and migrations are the same as without the `apps/` folder.
 
+Staff endpoints of an app live in `<app>/moderation/` and are mounted under
+`/moderation/<resource>`, e.g. `/moderation/submissions` and
+`/moderation/missing-barcodes`. Models, services and rules stay with the app they
+belong to; every staff view uses `IsStaff` from `config/permissions.py`. An own
+`apps/staff` app only pays off once something spans all areas (roles, an audit
+log, a staff dashboard). Django's `/admin/` stays the tool for raw data.
+
 | File                               | Content                                                            |
 | ---------------------------------- | ------------------------------------------------------------------ |
 | `apps/accounts/services.py`        | Onboarding step rules, e-mails, account deletion, data export      |
@@ -456,10 +488,14 @@ table names and migrations are the same as without the `apps/` folder.
 | `apps/accounts/profile/`           | Username and body data (birth date, height, sex; `/tracking/body`) |
 | `apps/recipes/services.py`         | Moderation workflow and notifications                              |
 | `apps/recipes/utils.py`            | Removes metadata (location, camera) from uploaded images           |
+| `apps/foods/services.py`           | Counts missing barcodes, adds products staff entered               |
+| `apps/foods/off.py`                | Reads from and writes to the Open Food Facts API                   |
+| `apps/foods/utils.py`              | Barcode normalization and check digit                              |
 | `apps/tracking/mixins.py`          | Login and consent for every tracking endpoint                      |
 | `apps/tracking/services.py`        | Deletes all health data when the consent is revoked                |
 | `apps/tracking/nutrition/utils.py` | Values from amount and unit, daily totals                          |
 | `apps/tracking/weight/utils.py`    | Weekly averages and trend                                          |
+| `apps/tracking/weeks.py`           | Pages of calendar weeks for the food and weight diary lists        |
 | `apps/stats/services.py`           | Counts users, recipes, foods and entries                           |
 | `apps/*/tasks.py`                  | Background jobs, see [Background jobs](#background-jobs)           |
 
@@ -644,7 +680,7 @@ account.
 | GET    | `/privacy/consent`               | login  | Current consent                                        |
 | PUT    | `/privacy/consent`               | login  | `{ accepted, policy_version }`; gives or revokes it    |
 
-### Recipes and moderation
+### Recipes, moderation and missing products
 
 | Method     | Path                                   | Access | Purpose                                                                          |
 | ---------- | -------------------------------------- | ------ | -------------------------------------------------------------------------------- |
@@ -659,6 +695,9 @@ account.
 | GET        | `/moderation/submissions/{id}`         | staff  | One submission                                                                   |
 | POST       | `/moderation/submissions/{id}/approve` | staff  | Approves the submission                                                          |
 | POST       | `/moderation/submissions/{id}/reject`  | staff  | `{ reason }`; rejects the submission                                             |
+| GET        | `/moderation/missing-barcodes`         | staff  | Barcodes nobody found, most searched first, paginated                            |
+| GET/DELETE | `/moderation/missing-barcodes/{code}`  | staff  | One barcode with what OFF already knows, or dismisses it                         |
+| POST       | `/moderation/missing-barcodes/{code}/product` | staff | Adds the product on Open Food Facts and here                         |
 
 ### Foods and tracking
 
@@ -669,13 +708,16 @@ account.
 | GET/PATCH      | `/tracking/body`                                | consent | Birth date, height and sex                             |
 | POST           | `/tracking/entries`                             | consent | Tracks a food: barcode, amount, unit, date, meal type  |
 | POST           | `/tracking/entries/from-meal`                   | consent | Tracks a saved meal                                    |
+| POST           | `/tracking/entries/manual`                      | consent | Tracks a food with name and values typed in            |
 | PATCH/DELETE   | `/tracking/entries/{id}`                        | consent | Changes or deletes an entry                            |
+| GET            | `/tracking/days`                                | consent | `?from=&to=`, up to 92 daily summaries                 |
+| GET            | `/tracking/days/weeks`                          | consent | Calendar weeks with food entries, five per page        |
 | GET            | `/tracking/days/{date}`                         | consent | Daily summary compared with the targets                |
 | GET/POST       | `/tracking/meals`                               | consent | Saved meals made of several foods                      |
 | GET/PUT/DELETE | `/tracking/meals/{id}`                          | consent | One saved meal                                         |
 | GET/POST       | `/tracking/weights`                             | consent | Weight history for the chart, one entry per day        |
 | PATCH/DELETE   | `/tracking/weights/{id}`                        | consent | Changes or deletes a weight entry                      |
-| GET            | `/tracking/weights/weeks`                       | consent | Calendar weeks with average and trend                  |
+| GET            | `/tracking/weights/weeks`                       | consent | Calendar weeks with average and trend, five per page   |
 | GET            | `/tracking/weights/weeks/{iso_year}/{iso_week}` | consent | One calendar week                                      |
 
 ### Stats
@@ -726,7 +768,8 @@ docker compose exec api python manage.py test apps.accounts.tests.test_auth.Cook
 | `apps/accounts/tests/test_body.py`         | Body data: single fields, limits, minimum age, consent, deletion with the account                               |
 | `apps/recipes/tests/test_recipes.py`       | Creating, filtering and editing recipes, author check, images and their metadata, saved recipes                 |
 | `apps/recipes/tests/test_moderation.py`    | Staff-only access, approving and rejecting new recipes and revisions, staff notification                        |
-| `apps/foods/tests/test_foods.py`           | Food search by text and barcode, import filters, `--scan-years` and `--limit`                                   |
+| `apps/foods/tests/test_foods.py`           | Food search by text and barcode, counting missing barcodes, import filters, curated products, `--scan-years` and `--limit` |
+| `apps/foods/tests/test_moderation.py`      | Missing barcodes: staff-only access, prefill from OFF, saving on OFF and here, OFF failures, dismissing           |
 | `apps/tracking/tests/test_nutrition.py`    | Entries computed from amount and unit, future dates, meals, daily summary and targets                           |
 | `apps/tracking/tests/test_weights.py`      | One entry per day, ranges for the chart, weekly averages, paging and week detail                                |
 | `apps/stats/tests/test_stats.py`           | Public numbers count only approved recipes and active users; an invalid cookie does not block them              |

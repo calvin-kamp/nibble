@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.models import BodyProfile, Profile
+from apps.accounts.models import BodyProfile
 from apps.accounts.permissions import HasPrivacyConsent
 from apps.accounts.services import Step, advance
 

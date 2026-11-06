@@ -255,6 +255,7 @@ REST_FRAMEWORK = {
         "email_change": "3/hour",
         "account_deletion": "3/hour",
         "account_export": "3/hour",
+        "food_report": "20/day",
     },
     "NUM_PROXIES": env.int("NUM_PROXIES", default=0),
     "EXCEPTION_HANDLER": "config.exceptions.exception_handler",
@@ -278,10 +279,14 @@ SIMPLE_JWT = {
 # AUTH_COOKIE
 # ------------------------------------------------------------------------------
 
+# Prefix for all cookie names. A second environment on a subdomain (preview) needs its
+# own, otherwise the browser sends it the production cookies for .nibble-tracking.de too.
+AUTH_COOKIE_PREFIX = env("AUTH_COOKIE_PREFIX", default="")
+
 AUTH_COOKIE = {
-    "ACCESS_NAME": "access_token",
+    "ACCESS_NAME": f"{AUTH_COOKIE_PREFIX}access_token",
     "ACCESS_PATH": "/",
-    "REFRESH_NAME": "refresh_token",
+    "REFRESH_NAME": f"{AUTH_COOKIE_PREFIX}refresh_token",
     "REFRESH_PATH": env("AUTH_COOKIE_REFRESH_PATH", default="/auth/"),
     # Compose passes an unset variable as an empty string, which means no domain too
     "DOMAIN": env("AUTH_COOKIE_DOMAIN", default="") or None,
@@ -289,6 +294,8 @@ AUTH_COOKIE = {
     "SECURE": env.bool("AUTH_COOKIE_SECURE", default=True),
 }
 
+CSRF_COOKIE_NAME = f"{AUTH_COOKIE_PREFIX}csrftoken"
+SESSION_COOKIE_NAME = f"{AUTH_COOKIE_PREFIX}sessionid"
 CSRF_COOKIE_DOMAIN = AUTH_COOKIE["DOMAIN"]
 CSRF_COOKIE_SECURE = AUTH_COOKIE["SECURE"]
 CSRF_COOKIE_SAMESITE = AUTH_COOKIE["SAMESITE"]
@@ -347,9 +354,20 @@ DELETION_LOG_RECIPIENTS = [
 # Stored on every new profile. Change together with the texts and legal.constants.ts
 # in the frontend.
 TERMS_VERSION = "2026-11-05"
-PRIVACY_POLICY_VERSION = "2026-11-05"
+PRIVACY_POLICY_VERSION = "2026-11-06"
 
 OFF_DUMP_URL = env(
     "OFF_DUMP_URL",
     default="https://static.openfoodfacts.org/data/en.openfoodfacts.org.products.csv.gz",
 )
+
+# Open Food Facts API, for the products staff add in the admin. Staging is
+# https://world.openfoodfacts.net with OFF_API_BASIC_AUTH=off:off and its own accounts.
+OFF_API_URL = env("OFF_API_URL", default="https://world.openfoodfacts.org").rstrip("/")
+OFF_API_BASIC_AUTH = env("OFF_API_BASIC_AUTH", default="")
+# App account on Open Food Facts (user name, not e-mail). Empty: products are only
+# saved in the own database.
+OFF_USER_ID = env("OFF_USER_ID", default="")
+OFF_PASSWORD = env("OFF_PASSWORD", default="")
+OFF_USER_AGENT = f"nibble/1.0 ({SUPPORT_EMAIL})"
+OFF_API_TIMEOUT = 15

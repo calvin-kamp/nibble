@@ -1,11 +1,11 @@
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
 from apps.recipes import services
 from apps.recipes.models import Recipe, RecipeSubmission
 from config.pagination import PagePagination
+from config.permissions import IsStaff
 
 from .serializers import (
     RejectSerializer,
@@ -17,7 +17,7 @@ from .serializers import (
 class SubmissionViewSet(viewsets.ReadOnlyModelViewSet):
     """Staff only; oldest submissions first."""
 
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsStaff]
     pagination_class = PagePagination
     lookup_value_regex = r"\d+"
 

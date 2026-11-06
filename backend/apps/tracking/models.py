@@ -80,7 +80,8 @@ class GoalSetting(models.Model):
 class FoodSnapshot(models.Model):
     """Product data copied at tracking time, so later OFF updates change nothing.
 
-    kcal and macros are the values for amount and unit, rounded to one place.
+    kcal and macros are the values for amount and unit, rounded to one place. Foods the user
+    typed in have no off_code and no values per 100: they are one portion with their totals.
     """
 
     off_code = models.CharField(
@@ -133,6 +134,8 @@ class TrackingEntry(FoodSnapshot):
     class Source(models.TextChoices):
         OFF = "off", "Open Food Facts"
         MEAL = "meal", "Eigene Mahlzeit"
+        # Name and values typed in by the user, e.g. for a product the search lacks.
+        MANUAL = "manual", "Selbst eingetragen"
 
     profile = models.ForeignKey(
         "accounts.Profile",
@@ -142,7 +145,7 @@ class TrackingEntry(FoodSnapshot):
     source = models.CharField(
         choices=Source,
         default=Source.OFF,
-        max_length=4,
+        max_length=6,
     )
 
     consumed_on = models.DateField()
