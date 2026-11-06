@@ -16,7 +16,7 @@ from apps.recipes.services import delete_recipe, delete_submission
 from apps.tracking.nutrition.serializers import (
     GoalStateSerializer,
     MealSerializer,
-    TrackingEntrySerializer,
+    NutritionEntrySerializer,
 )
 from apps.tracking.weight.serializers import WeightEntrySerializer
 from config.emails import send_template_email
@@ -257,7 +257,7 @@ def build_export(request):
         document["weights"] = WeightEntrySerializer(
             profile.weight_entries.order_by("measured_on"), many=True
         ).data
-        document["entries"] = TrackingEntrySerializer(
+        document["entries"] = NutritionEntrySerializer(
             profile.tracking_entries.order_by("consumed_on", "tracked_at"), many=True
         ).data
         document["meals"] = MealSerializer(

@@ -1,7 +1,7 @@
 from apps.accounts.models import User
 from apps.foods.models import FoodProduct
 from apps.recipes.models import Recipe
-from apps.tracking.models import TrackingEntry
+from apps.tracking.models import NutritionEntry, WeightEntry
 
 CACHE_KEY = "public_stats"
 # Counting the entry table on every landing page visit would be wasteful; a few minutes old is fine.
@@ -16,5 +16,5 @@ def collect_stats():
         ).count(),
         "recipes": Recipe.objects.filter(status=Recipe.Status.APPROVED).count(),
         "foods": FoodProduct.objects.count(),
-        "entries": TrackingEntry.objects.count(),
+        "entries": NutritionEntry.objects.count() + WeightEntry.objects.count(),
     }

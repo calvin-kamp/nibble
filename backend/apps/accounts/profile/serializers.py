@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import BodyProfile, Profile
 
-USERNAME_PATTERN = r"^[A-Za-z0-9_]+$"
+USERNAME_PATTERN = r"^[A-Za-z0-9_äöüÄÖÜß]+$"
 
 
 class UsernameField(serializers.RegexField):
@@ -13,7 +13,7 @@ class UsernameField(serializers.RegexField):
             min_length=3,
             max_length=20,
             error_messages={
-                "invalid": "Nur Buchstaben, Ziffern und Unterstrich sind erlaubt.",
+                "invalid": "Nur Buchstaben (auch Umlaute und ß), Ziffern und Unterstrich sind erlaubt.",
             },
             **kwargs,
         )

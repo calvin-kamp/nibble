@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import GoalSetting, Meal, MealItem, TrackingEntry, WeightEntry
+from .models import GoalSetting, Meal, MealItem, NutritionEntry, WeightEntry
 
 
 class MealItemInline(admin.TabularInline):
@@ -14,8 +14,8 @@ class MealAdmin(admin.ModelAdmin):
     inlines = (MealItemInline,)
 
 
-@admin.register(TrackingEntry)
-class TrackingEntryAdmin(admin.ModelAdmin):
+@admin.register(NutritionEntry)
+class NutritionEntryAdmin(admin.ModelAdmin):
     list_display = ("food_name", "profile", "consumed_on", "meal_type", "kcal")
     list_filter = ("source", "meal_type")
 

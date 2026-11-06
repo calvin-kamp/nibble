@@ -18,7 +18,7 @@ from apps.tracking.models import (
     Meal,
     MealItem,
     MealType,
-    TrackingEntry,
+    NutritionEntry,
 )
 from apps.tracking.nutrition.utils import MACROS, total
 from apps.tracking.utils import round1
@@ -35,8 +35,8 @@ from .serializers import (
     ManualEntrySerializer,
     MealInputSerializer,
     MealSerializer,
+    NutritionEntrySerializer,
     TargetsSerializer,
-    TrackingEntrySerializer,
 )
 
 
@@ -89,14 +89,14 @@ class EntryCreateView(TrackingMixin, APIView):
     def post(self, request):
         serializer = EntryInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        entry = TrackingEntry.objects.create(
+        entry = NutritionEntry.objects.create(
             profile=self.profile,
-            source=TrackingEntry.Source.OFF,
+            source=NutritionEntry.Source.OFF,
             **serializer.validated_data,
         )
 
         return Response(
-            TrackingEntrySerializer(entry).data, status=status.HTTP_201_CREATED
+            NutritionEntrySerializer(entry).data, status=status.HTTP_201_CREATED
         )
 
 
@@ -106,14 +106,14 @@ class ManualEntryView(TrackingMixin, APIView):
     def post(self, request):
         serializer = ManualEntrySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        entry = TrackingEntry.objects.create(
+        entry = NutritionEntry.objects.create(
             profile=self.profile,
-            source=TrackingEntry.Source.MANUAL,
+            source=NutritionEntry.Source.MANUAL,
             **serializer.validated_data,
         )
 
         return Response(
-            TrackingEntrySerializer(entry).data, status=status.HTTP_201_CREATED
+            NutritionEntrySerializer(entry).data, status=status.HTTP_201_CREATED
         )
 
 
@@ -126,9 +126,9 @@ class EntryFromMealView(TrackingMixin, APIView):
         data = serializer.validated_data
         meal = get_object_or_404(Meal, pk=data["meal_id"], profile=self.profile)
 
-        entry = TrackingEntry.objects.create(
+        entry = NutritionEntry.objects.create(
             profile=self.profile,
-            source=TrackingEntry.Source.MEAL,
+            source=NutritionEntry.Source.MEAL,
             food_name=meal.name,
             amount=1,
             unit=FoodUnit.PORTION,
@@ -138,7 +138,7 @@ class EntryFromMealView(TrackingMixin, APIView):
         )
 
         return Response(
-            TrackingEntrySerializer(entry).data, status=status.HTTP_201_CREATED
+            NutritionEntrySerializer(entry).data, status=status.HTTP_201_CREATED
         )
 
 
@@ -152,7 +152,7 @@ class EntryDetailView(TrackingMixin, generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return Response(TrackingEntrySerializer(entry).data)
+        return Response(NutritionEntrySerializer(entry).data)
 
     def delete(self, request, pk):
         self.get_object().delete()
@@ -191,7 +191,7 @@ def day_summary(profile, day, entries):
         "intake": intake,
         "difference": difference,
         "by_meal_type": by_meal_type,
-        "entries": TrackingEntrySerializer(entries, many=True).data,
+        "entries": NutritionEntrySerializer(entries, many=True).data,
     }
 
 

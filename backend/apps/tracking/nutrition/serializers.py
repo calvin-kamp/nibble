@@ -12,7 +12,7 @@ from apps.tracking.models import (
     Meal,
     MealItem,
     MealType,
-    TrackingEntry,
+    NutritionEntry,
 )
 from apps.tracking.nutrition.utils import (
     MACROS,
@@ -87,11 +87,11 @@ class GoalUpdateSerializer(serializers.Serializer):
         return attrs
 
 
-class TrackingEntrySerializer(serializers.ModelSerializer):
+class NutritionEntrySerializer(serializers.ModelSerializer):
     nutrition_per_100 = serializers.SerializerMethodField()
 
     class Meta:
-        model = TrackingEntry
+        model = NutritionEntry
         fields = (
             "id",
             *MACROS,
@@ -229,7 +229,7 @@ class EntryPatchSerializer(serializers.Serializer):
         changes_amount = "amount" in attrs or "unit" in attrs
         changes_values = any(field in attrs for field in MANUAL_FIELDS)
 
-        if entry.source == TrackingEntry.Source.MANUAL:
+        if entry.source == NutritionEntry.Source.MANUAL:
             return self.validate_manual(entry, attrs, changes_amount)
 
         if changes_values:
@@ -241,7 +241,7 @@ class EntryPatchSerializer(serializers.Serializer):
                 }
             )
 
-        if entry.source == TrackingEntry.Source.MEAL and changes_amount:
+        if entry.source == NutritionEntry.Source.MEAL and changes_amount:
             raise serializers.ValidationError(
                 {
                     field: "Bei Mahlzeiten lassen sich nur Datum und Mahlzeit ändern."

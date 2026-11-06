@@ -130,7 +130,7 @@ class FoodSnapshot(models.Model):
         abstract = True
 
 
-class TrackingEntry(FoodSnapshot):
+class NutritionEntry(FoodSnapshot):
     class Source(models.TextChoices):
         OFF = "off", "Open Food Facts"
         MEAL = "meal", "Eigene Mahlzeit"
