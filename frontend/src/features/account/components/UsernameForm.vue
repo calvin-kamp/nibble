@@ -46,7 +46,7 @@ const onSubmit = handleSubmit(
 		<TextField
 			name="username"
 			label="Benutzername"
-			hint="3 bis 20 Zeichen: Buchstaben, Zahlen und Unterstrich. Andere Nutzer sehen ihn nicht, nur die Moderation bei eingereichten Rezepten."
+			hint="3 bis 20 Zeichen: Buchstaben (auch Umlaute und ß), Zahlen und Unterstrich. Andere Nutzer sehen ihn nicht, nur die Moderation bei eingereichten Rezepten."
 			autocomplete="username"
 		/>
 

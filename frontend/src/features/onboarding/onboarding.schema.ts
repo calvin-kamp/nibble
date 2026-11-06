@@ -12,7 +12,7 @@ export const usernameSchema = toTypedSchema(
 			.min(1, { message: 'Benutzername fehlt noch.' })
 			.regex(USERNAME_PATTERN, {
 				message:
-					'Der Benutzername darf 3 bis 20 Zeichen haben: Buchstaben, Zahlen und Unterstrich.',
+					'Der Benutzername darf 3 bis 20 Zeichen haben: Buchstaben (auch Umlaute und ß), Zahlen und Unterstrich.',
 			}),
 	}),
 )

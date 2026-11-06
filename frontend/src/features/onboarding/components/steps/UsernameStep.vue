@@ -37,7 +37,7 @@ const onSubmit = handleSubmit(
 		<TextField
 			name="username"
 			label="Benutzername"
-			hint="3 bis 20 Zeichen: Buchstaben, Zahlen und Unterstrich."
+			hint="3 bis 20 Zeichen: Buchstaben (auch Umlaute und ß), Zahlen und Unterstrich."
 			autocomplete="username"
 		/>
 
