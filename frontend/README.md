@@ -214,11 +214,13 @@ Paths are German, as is the whole interface.
 | `/konto/...`                                    | Settings                 | login           |
 | `/tagebuch/ernaehrung`, `/tagebuch/gewicht`     | Food and weight diary    | login + consent |
 | `/mahlzeiten/...`                               | Saved meals              | login + consent |
-| `/verwaltung/...`                               | Recipe moderation        | staff           |
+| `/admin/rezepte/...`                            | Recipe moderation        | staff           |
+| `/admin/lebensmittel/...`                       | Missing foods            | staff           |
 
 The router guard sends guests to `/anmeldung` and back to the requested page
 after the login (`?weiter=`). Pages that need the privacy consent redirect to
-the dashboard without it; staff pages do the same for other users.
+the dashboard without it; staff pages do the same for other users. `/verwaltung`
+redirects to `/admin/rezepte`.
 
 The e-mails of the backend link to `/verify-email` and `/reset-password`. Both
 are aliases of the German paths.

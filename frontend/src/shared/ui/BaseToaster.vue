@@ -17,21 +17,27 @@ const ICONS: Record<ToastVariant, Component> = {
 	danger: CircleAlertIcon,
 }
 
+// Confirmations are short, errors stay a little longer. Both pause while the pointer is on a
+// toast, a toast has focus or the window is in the background.
+const DURATIONS: Record<ToastVariant, number> = {
+	success: 4000,
+	info: 4000,
+	danger: 7000,
+}
+
 function onOpenChange(id: number, open: boolean): void {
 	if (!open) dismiss(id)
 }
 </script>
 
 <template>
-	<ToastProvider
-		label="Meldung"
-		:duration="5000"
-	>
+	<ToastProvider label="Meldung">
 		<ToastRoot
 			v-for="toast in toasts"
 			:key="toast.id"
 			class="toast"
 			:class="`toast--${toast.variant}`"
+			:duration="DURATIONS[toast.variant]"
 			:type="toast.variant === 'danger' ? 'foreground' : 'background'"
 			default-open
 			@update:open="onOpenChange(toast.id, $event)"

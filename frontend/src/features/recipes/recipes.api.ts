@@ -188,10 +188,6 @@ export async function updateRecipe(id: string, values: RecipeFormValues): Promis
 	return toRecipe(await syncImage(updated, values.image))
 }
 
-export async function deleteRecipe(id: string): Promise<void> {
-	await apiRequest(`/recipes/${id}`, { method: 'DELETE' })
-}
-
 /** Any approved recipe can be saved, including the user's own */
 export async function setRecipeSaved(id: string, saved: boolean): Promise<void> {
 	await apiRequest(`/recipes/${id}/saved`, { method: saved ? 'PUT' : 'DELETE' })

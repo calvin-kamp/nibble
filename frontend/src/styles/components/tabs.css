@@ -10,7 +10,7 @@
 	}
 
 	.tabs__item {
-		@apply relative inline-flex items-center shrink-0 min-h-11 px-4;
+		@apply relative inline-flex items-center shrink-0 min-h-11 px-3;
 		@apply font-semibold text-muted-foreground;
 		@apply transition-interactive;
 		@apply hover:text-foreground;

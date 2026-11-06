@@ -2,65 +2,87 @@
 import type {
 	DiaryDay,
 	DiaryDayWeek,
+	FoodWeekSummary,
 	NutritionGoals,
 	TrackedDay,
 } from '@features/tracking/tracking.types'
 
-import { ArrowRightIcon, ChevronRightIcon, PlusIcon } from '@lucide/vue'
-import { computed, ref, watch } from 'vue'
+import { ArrowRightIcon, ChevronDownIcon, ChevronRightIcon, PlusIcon } from '@lucide/vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 
 import DaySummaryCard from '@features/tracking/components/DaySummaryCard.vue'
+import WeekRangeSection from '@features/tracking/components/WeekRangeSection.vue'
 import { BaseButton, BaseIcon, BaseLink } from '@shared/ui'
 
 import { useTrackingChanges } from '@features/tracking/composables/tracking-changes'
 import { useTrackingDialogs } from '@features/tracking/composables/tracking-dialogs'
+import { useWeekHistory, WEEKS_PER_PAGE } from '@features/tracking/composables/week-history'
 
-import { fetchCurrentGoals, fetchDayRange } from '@features/tracking/tracking.api'
+import {
+	fetchCurrentGoals,
+	fetchFoodWeeks,
+	fetchWeekDays,
+} from '@features/tracking/tracking.api'
 import { averageKcal, formatCalendarWeekTitle, weekStart } from '@features/tracking/tracking.utils'
-import { addDays, formatRelativeDay, toIsoDate } from '@shared/utils/date'
+import { formatRelativeDay, toIsoDate } from '@shared/utils/date'
 import { formatNumber } from '@shared/utils/number'
-
-// Five weeks at once and five more per click, each load one request for the whole range
-const WEEKS_PER_LOAD = 5
 
 const { openEntry } = useTrackingDialogs()
 
 const today = toIsoDate()
 const thisWeek = weekStart(today)
 
-const goals = ref<NutritionGoals | null>(null)
-const days = ref<TrackedDay[]>([])
-const weekCount = ref<number>(WEEKS_PER_LOAD)
-const loading = ref<boolean>(true)
-const loadError = ref<boolean>(false)
+// Weeks with entries come from the backend, five at once; their days are loaded afterwards
+const history = useWeekHistory<FoodWeekSummary>(fetchFoodWeeks)
 
-function oldestDay(count: number): string {
-	return addDays(thisWeek, -7 * (count - 1))
-}
+const goals = ref<NutritionGoals | null>(null)
+const days = shallowRef<TrackedDay[]>([])
+const daysLoading = ref<boolean>(false)
+const daysError = ref<boolean>(false)
 
 watch(
-	[weekCount, useTrackingChanges()],
+	useTrackingChanges(),
 	async () => {
-		loading.value = true
-
-		try {
-			const [current, loaded] = await Promise.all([
-				fetchCurrentGoals(),
-				fetchDayRange(oldestDay(weekCount.value), today),
-			])
-
-			goals.value = current
-			days.value = loaded
-			loadError.value = false
-		} catch {
-			loadError.value = true
-		} finally {
-			loading.value = false
-		}
+		goals.value = await fetchCurrentGoals().catch(() => goals.value)
 	},
 	{ immediate: true },
 )
+
+// The current week always shows, with today, unless a range leaves it out
+const showsThisWeek = computed<boolean>(
+	() => !history.range.value || history.range.value.to >= thisWeek,
+)
+
+const weekStarts = computed<string[]>(() => {
+	const starts = history.weeks.value.map((week) => week.start)
+
+	return showsThisWeek.value && !starts.includes(thisWeek) ? [thisWeek, ...starts] : starts
+})
+
+// A range or a reload can start a new load while the last one runs; only the newest counts
+let daysLoadId = 0
+
+watch(weekStarts, async (starts) => {
+	const id = ++daysLoadId
+	daysLoading.value = true
+
+	try {
+		const loaded = await fetchWeekDays(starts)
+
+		if (id !== daysLoadId) return
+
+		days.value = loaded
+		daysError.value = false
+	} catch {
+		if (id === daysLoadId) daysError.value = true
+	} finally {
+		if (id === daysLoadId) daysLoading.value = false
+	}
+})
+
+const loading = computed<boolean>(() => history.loading.value || daysLoading.value)
+const loadError = computed<boolean>(() => history.loadError.value || daysError.value)
 
 const todayDay = computed<TrackedDay | null>(
 	() => days.value.find((day) => day.date === today) ?? null,
@@ -114,20 +136,11 @@ function goalNote(day: DiaryDay): string | null {
 	return null
 }
 
-function loadMore(): void {
-	weekCount.value += WEEKS_PER_LOAD
+function dayCountLabel(week: DiaryDayWeek): string {
+	const count = week.days.filter((day) => day.entryCount).length
+
+	return count === 1 ? '1 Tag' : `${count} Tage`
 }
-
-// The API knows no oldest entry, and entries may be dated before registration. So more weeks
-// are only offered while the last loaded batch had entries before today: a new account, or
-// five empty weeks in a row, ends the list. Single days stay reachable via the day view.
-const hasOlderEntries = computed<boolean>(() => {
-	const from = oldestDay(weekCount.value)
-	const until =
-		weekCount.value === WEEKS_PER_LOAD ? today : oldestDay(weekCount.value - WEEKS_PER_LOAD)
-
-	return days.value.some((day) => day.date >= from && day.date < until && day.entries.length)
-})
 </script>
 
 <template>
@@ -165,11 +178,13 @@ const hasOlderEntries = computed<boolean>(() => {
 			Dein Tagebuch konnte nicht geladen werden. Lad die Seite bitte neu.
 		</p>
 
+		<!-- Already there while loading, so nothing below jumps when today arrives -->
 		<DaySummaryCard
-			v-if="todayDay"
-			:entries="todayDay.entries"
-			:goals="todayDay.goals"
+			v-if="!history.range.value"
+			:entries="todayDay?.entries ?? []"
+			:goals="todayDay?.goals ?? null"
 			:date="today"
+			:loading="!todayDay"
 			title="Heute"
 		>
 			<template #actions>
@@ -189,39 +204,47 @@ const hasOlderEntries = computed<boolean>(() => {
 			</template>
 		</DaySummaryCard>
 
-		<div class="content-column gap-12">
+		<div class="content-column gap-6">
+			<WeekRangeSection
+				v-if="history.showsRange.value"
+				:range="history.range.value"
+				:total="history.total.value"
+				@change="history.setRange"
+			/>
+
+			<!-- Same as the weight list: one week per block, the newest open -->
 			<div
 				class="week-list"
 				:aria-busy="loading"
 			>
-				<section
-					v-for="week in weeks"
+				<details
+					v-for="(week, index) in weeks"
 					:key="week.start"
-					class="week-list__week"
-					:aria-labelledby="`week-${week.start}-title`"
+					class="week-list__week week-list__week--collapsible"
+					:open="index === 0"
 				>
-					<div class="week-list__header">
-						<h2
-							:id="`week-${week.start}-title`"
-							class="week-list__title"
-							tabindex="-1"
-						>
-							{{ formatCalendarWeekTitle(week.start) }}
-						</h2>
+					<summary class="week-list__toggle">
+						<span class="flex flex-col flex-1 min-w-0 py-1">
+							<span class="week-list__title">
+								{{ formatCalendarWeekTitle(week.start) }}
+							</span>
 
-						<p
-							v-if="week.averageKcal !== null"
-							class="week-list__meta"
-						>
-							Schnitt
+							<span class="week-list__meta">
+								<template v-if="week.averageKcal !== null">
+									Schnitt {{ formatNumber(Math.round(week.averageKcal)) }} kcal,
+								</template>
 
-							<strong class="whitespace-nowrap text-foreground tabular-nums">
-								{{ formatNumber(Math.round(week.averageKcal)) }} kcal
-							</strong>
-						</p>
-					</div>
+								{{ dayCountLabel(week) }}
+							</span>
+						</span>
 
-					<ol class="data-list">
+						<BaseIcon
+							class="week-list__chevron"
+							:icon="ChevronDownIcon"
+						/>
+					</summary>
+
+					<ol class="data-list mt-2">
 						<li
 							v-for="day in week.days"
 							:key="day.date"
@@ -273,24 +296,17 @@ const hasOlderEntries = computed<boolean>(() => {
 							</RouterLink>
 						</li>
 					</ol>
-				</section>
+				</details>
 			</div>
 
 			<BaseButton
-				v-if="hasOlderEntries || (loading && weekCount > WEEKS_PER_LOAD)"
+				v-if="history.canLoadMore.value"
 				class="self-center"
 				:disabled="loading"
-				@click="loadMore"
+				@click="history.loadMore"
 			>
-				{{ WEEKS_PER_LOAD }} weitere Wochen laden
+				{{ WEEKS_PER_PAGE }} weitere Wochen laden
 			</BaseButton>
-
-			<p
-				v-else-if="!loading && !loadError"
-				class="self-center text-muted-foreground"
-			>
-				Keine älteren Einträge.
-			</p>
 		</div>
 	</main>
 </template>

@@ -3,16 +3,18 @@ import type { FoodEntry, FoodProduct, FoodUnit, Nutrition } from '@features/trac
 import type { FieldOption } from '@shared/forms/types'
 
 import { useFieldError, useFieldValue, useSetFieldValue, useSubmitCount } from 'vee-validate'
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
+import FoodReportPanel from '@features/tracking/components/FoodReportPanel.vue'
 import FoodSearchField from '@features/tracking/components/FoodSearchField.vue'
+import ManualFoodFields from '@features/tracking/components/ManualFoodFields.vue'
 import NutritionFacts from '@features/tracking/components/NutritionFacts.vue'
 import { BaseButton } from '@shared/ui'
 
 import { useBreakpoint } from '@shared/composables/breakpoint'
 import { useToast } from '@shared/composables/toast'
 
-import { fetchRecentFoods, findByBarcode } from '@features/tracking/tracking.api'
+import { fetchRecentFoods, findByCode } from '@features/tracking/tracking.api'
 import {
 	formatUnitOption,
 	nutritionFor,
@@ -24,7 +26,7 @@ import { formatNumber } from '@shared/utils/number'
 
 const product = defineModel<FoodProduct | null>('product', { required: true })
 
-const RECENT_FOODS_SHOWN = 6
+const RECENT_FOODS_SHOWN = 3
 const toast = useToast()
 
 const setProductCode = useSetFieldValue<string | undefined>('productCode')
@@ -32,6 +34,9 @@ const setAmount = useSetFieldValue<number | undefined>('amount')
 const setUnit = useSetFieldValue<FoodUnit | undefined>('unit')
 const amount = useFieldValue<number | undefined>('amount')
 const unit = useFieldValue<FoodUnit | undefined>('unit')
+const isManual = useFieldValue<boolean | undefined>('isManual')
+const setIsManual = useSetFieldValue<boolean | undefined>('isManual')
+const setManual = useSetFieldValue<object | undefined>('manual')
 // The form checks itself as soon as the date field reports its first value. "Nothing chosen"
 // is only an error once the user tried to save.
 const productFieldError = useFieldError('productCode')
@@ -40,12 +45,7 @@ const productError = computed<string | undefined>(() =>
 	submitCount.value > 0 ? productFieldError.value : undefined,
 )
 
-const root = ref<HTMLElement | null>(null)
-
-async function focusFirstInput(): Promise<void> {
-	await nextTick()
-	root.value?.querySelector<HTMLElement>('input')?.focus()
-}
+// Choosing, changing or typing in a food leaves focus alone; Tab leads on to the fields
 
 function defaultAmount(target: FoodUnit): number {
 	return target === 'serving' || target === 'package' ? 1 : 100
@@ -58,7 +58,6 @@ function choose(selected: FoodProduct): void {
 	setProductCode(selected.code, false)
 	setUnit(firstUnit, false)
 	setAmount(defaultAmount(firstUnit), false)
-	focusFirstInput()
 }
 
 const { isTablet } = useBreakpoint()
@@ -73,7 +72,7 @@ async function chooseRecent(entry: FoodEntry): Promise<void> {
 	loadingCode.value = entry.productCode ?? null
 
 	try {
-		const found = entry.productCode ? await findByBarcode(entry.productCode) : null
+		const found = entry.productCode ? await findByCode(entry.productCode) : null
 
 		if (found) choose(found)
 		else toast.show(`${entry.name} ist nicht mehr in der Lebensmittelsuche.`, 'danger')
@@ -89,7 +88,17 @@ function clear(): void {
 	setProductCode(undefined, false)
 	setAmount(undefined, false)
 	setUnit(undefined, false)
-	focusFirstInput()
+}
+
+/** The search found nothing: name and values by hand, saved only in the own diary */
+function enterManually(name: string): void {
+	setManual({ name }, false)
+	setIsManual(true, false)
+}
+
+function backToSearch(): void {
+	setIsManual(false, false)
+	setManual(undefined, false)
 }
 
 const unitOptions = computed<FieldOption[]>(() =>
@@ -115,16 +124,34 @@ const nutrition = computed<Nutrition | null>(() => {
 </script>
 
 <template>
-	<div
-		ref="root"
-		class="flex flex-col gap-5"
-	>
-		<template v-if="!product">
+	<div class="flex flex-col gap-5">
+		<template v-if="isManual">
+			<div class="flex flex-col items-start gap-3 px-4 py-3 rounded-md bg-muted sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+				<p class="text-md">
+					Du trägst die Werte der Menge ein, die du gegessen hast. Sie landen nur in
+					deinem Tagebuch.
+				</p>
+
+				<BaseButton
+					class="shrink-0"
+					variant="outline"
+					size="sm"
+					@click="backToSearch"
+				>
+					Zur Suche
+				</BaseButton>
+			</div>
+
+			<ManualFoodFields path="manual" />
+		</template>
+
+		<template v-else-if="!product">
 			<!-- eslint-disable vuejs-accessibility/no-autofocus -->
 			<FoodSearchField
 				autofocus
 				:error="productError"
 				@select="choose"
+				@manual="enterManually"
 			/>
 			<!-- eslint-enable vuejs-accessibility/no-autofocus -->
 
@@ -194,6 +221,7 @@ const nutrition = computed<Nutrition | null>(() => {
 					label="Menge"
 					:min="0"
 					:step="0.1"
+					enter-key-hint="done"
 				/>
 
 				<SelectField
@@ -209,6 +237,8 @@ const nutrition = computed<Nutrition | null>(() => {
 				:nutrition="nutrition"
 				aria-live="polite"
 			/>
+
+			<FoodReportPanel :product="product" />
 		</template>
 	</div>
 </template>

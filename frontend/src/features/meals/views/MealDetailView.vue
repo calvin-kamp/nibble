@@ -47,7 +47,9 @@ watch(
 )
 
 function itemDetail(item: MealItem): string {
-	return [item.product.brand, formatQuantity(item.quantity)].filter(Boolean).join(' – ')
+	if (!item.quantity) return 'Eigener Posten'
+
+	return [item.product?.brand, formatQuantity(item.quantity)].filter(Boolean).join(' – ')
 }
 
 const deleteOpen = ref<boolean>(false)
@@ -150,7 +152,7 @@ async function confirmDelete(): Promise<void> {
 							<span class="data-list__label">
 								<span class="font-semibold text-foreground">
 									{{
-										item.product.name
+										item.name
 									}}
 								</span>
 

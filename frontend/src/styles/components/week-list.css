@@ -8,10 +8,6 @@
 		@apply flex flex-col gap-2 py-5 border-b border-divider last:border-b-0;
 	}
 
-	.week-list__header {
-		@apply flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1;
-	}
-
 	.week-list__title {
 		@apply font-sans text-lg font-bold tracking-normal outline-none;
 	}

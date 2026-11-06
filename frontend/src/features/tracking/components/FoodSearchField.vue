@@ -14,12 +14,13 @@ import {
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import BarcodeScanner from '@features/tracking/components/BarcodeScanner.vue'
-import { BaseIcon } from '@shared/ui'
+import { BaseButton, BaseIcon } from '@shared/ui'
 
 import { useToast } from '@shared/composables/toast'
 
 import { findByBarcode, searchFoods } from '@features/tracking/tracking.api'
 import { canUseCamera } from '@features/tracking/tracking.barcode'
+import { isBarcode } from '@features/tracking/tracking.utils'
 import { FormField, useFieldIds } from '@shared/forms'
 import { formatNumber } from '@shared/utils/number'
 
@@ -37,6 +38,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
 	select: [product: FoodProduct]
+	/** "Selbst eintragen": the search term, unless it is a barcode, becomes the name */
+	manual: [name: string]
 }>()
 
 const MIN_LENGTH = 2
@@ -134,6 +137,17 @@ async function onScan(barcode: string): Promise<void> {
 
 const hasQuery = computed<boolean>(() => term.value.trim().length >= MIN_LENGTH)
 
+// Offered once a search or a scanned barcode found nothing
+const canEnterManually = computed<boolean>(
+	() => hasQuery.value && !loading.value && !failed.value && !results.value.length,
+)
+
+function enterManually(): void {
+	const query = term.value.trim()
+
+	emit('manual', isBarcode(query) ? '' : query)
+}
+
 const status = computed<string>(() => {
 	if (lookingUp.value) return 'Barcode wird gesucht'
 	if (!hasQuery.value) return ''
@@ -192,8 +206,9 @@ const status = computed<string>(() => {
 				</ComboboxAnchor>
 
 				<ComboboxPortal>
+					<!-- Without matches the note stays below the field, next to "Selbst eintragen" -->
 					<ComboboxContent
-						v-if="hasQuery && !loading"
+						v-if="hasQuery && !loading && (failed || results.length)"
 						class="select__content w-(--reka-combobox-trigger-width) max-h-72"
 						position="popper"
 						:side-offset="4"
@@ -204,14 +219,6 @@ const status = computed<string>(() => {
 								class="px-3 py-2 text-md text-destructive"
 							>
 								Die Suche hat nicht geklappt. Versuch es bitte noch einmal.
-							</p>
-
-							<p
-								v-else-if="!results.length"
-								class="px-3 py-2 text-md text-muted-foreground"
-							>
-								Nichts gefunden. Probier ein anderes Wort, die Marke oder den
-								Barcode.
 							</p>
 
 							<ComboboxItem
@@ -241,6 +248,24 @@ const status = computed<string>(() => {
 					</ComboboxContent>
 				</ComboboxPortal>
 			</ComboboxRoot>
+		</div>
+
+		<div
+			v-if="canEnterManually"
+			class="flex flex-col items-start gap-2 mt-1"
+		>
+			<p class="text-md text-muted-foreground">
+				Nichts gefunden. Probier ein anderes Wort, die Marke oder den Barcode, oder trag
+				das Lebensmittel selbst ein.
+			</p>
+
+			<BaseButton
+				variant="outline"
+				size="sm"
+				@click="enterManually"
+			>
+				Selbst eintragen
+			</BaseButton>
 		</div>
 
 		<span

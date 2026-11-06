@@ -94,6 +94,13 @@
 		@apply text-pretty;
 	}
 
+	/* Tailwind 4 resets buttons to the default cursor; here everything clickable shows the hand */
+	button:not(:disabled),
+	[role='button']:not([aria-disabled='true']),
+	summary {
+		@apply cursor-pointer;
+	}
+
 	:focus-visible {
 		@apply outline-2 outline-offset-2 outline-ring;
 	}

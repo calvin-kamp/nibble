@@ -245,10 +245,11 @@ watch(
 
 				<BaseLink
 					variant="no-decoration"
-					route-name="diary-food"
+					route-name="diary-food-day"
+					:params="{ date: day }"
 					class="self-start mt-auto text-highlight"
 				>
-					Zum Tagebuch
+					Zum Ernährungstagebuch
 
 					<BaseIcon
 						:icon="ArrowRightIcon"

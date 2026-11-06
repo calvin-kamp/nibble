@@ -54,7 +54,7 @@ const { openChooser } = useTrackingDialogs()
 			/>
 
 			<AppNavGroup
-				label="Verwaltung"
+				label="Admin"
 				:items="ADMIN_NAV"
 			/>
 		</nav>

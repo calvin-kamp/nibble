@@ -2,12 +2,12 @@ import type { ComputedRef, Ref } from 'vue'
 
 import { computed, ref } from 'vue'
 
-export const BREAKPOINTS = {
+const BREAKPOINTS = {
 	tablet: 768,
 	desktop: 1280,
 } as const
 
-export type BreakpointName = 'mobile' | 'tablet' | 'desktop'
+type BreakpointName = 'mobile' | 'tablet' | 'desktop'
 
 const queries = {
 	tablet: window.matchMedia(`(min-width: ${BREAKPOINTS.tablet}px)`),

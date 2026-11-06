@@ -1,4 +1,9 @@
-import type { SubmissionKind, SubmissionStatus } from '@features/admin/admin.types'
+import type {
+	FoodBaseUnit,
+	FoodCountry,
+	SubmissionKind,
+	SubmissionStatus,
+} from '@features/admin/admin.types'
 import type { RecipeContent } from '@features/recipes/recipes.types'
 
 import { PAGE_SIZE } from '@shared/constants'
@@ -41,3 +46,26 @@ export const CONTENT_LABELS: Record<keyof RecipeContent, string> = {
 
 /** Same limit as in the backend */
 export const MAX_REJECTION_REASON_LENGTH = 1000
+
+export const MISSING_BARCODES_PAGE_SIZE = PAGE_SIZE
+
+export const FOOD_COUNTRY_OPTIONS: { value: FoodCountry; label: string }[] = [
+	{ value: 'en:germany', label: 'Deutschland' },
+	{ value: 'en:austria', label: 'Österreich' },
+	{ value: 'en:switzerland', label: 'Schweiz' },
+]
+
+export const FOOD_UNIT_OPTIONS: { value: FoodBaseUnit; label: string; description: string }[] = [
+	{ value: 'g', label: 'Gramm', description: 'Feste Lebensmittel' },
+	{ value: 'ml', label: 'Milliliter', description: 'Getränke' },
+]
+
+export const REPORTED_FOODS_PAGE_SIZE = PAGE_SIZE
+
+export { FOOD_REPORT_REASON_LABELS } from '@features/tracking/tracking.constants'
+
+/** Same limits as in the backend and the food import */
+export const MAX_KCAL_PER_100 = 900
+export const MAX_GRAMS_PER_100 = 100
+export const MAX_SERVING_QUANTITY = 5000
+export const MAX_PACKAGE_QUANTITY = 100000

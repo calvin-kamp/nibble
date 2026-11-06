@@ -10,7 +10,7 @@
 
 	.nav-item--active {
 		@apply font-semibold text-primary;
-		@apply before:absolute before:-top-2.5 before:inset-x-2;
+		@apply before:absolute before:-top-2 before:inset-x-2;
 		@apply before:max-w-10 before:h-0.5 before:mx-auto;
 		@apply before:rounded-full before:bg-primary;
 	}

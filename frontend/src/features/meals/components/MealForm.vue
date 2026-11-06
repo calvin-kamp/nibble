@@ -2,17 +2,19 @@
 import type { MealFormValues, MealItemDraft } from '@features/meals/meals.types'
 import type { FoodProduct, Nutrition } from '@features/tracking/tracking.types'
 
+import { PlusIcon } from '@lucide/vue'
 import { useFieldArray, useForm } from 'vee-validate'
 import { computed, nextTick, ref } from 'vue'
 
 import MealItemRow from '@features/meals/components/MealItemRow.vue'
 import FoodSearchField from '@features/tracking/components/FoodSearchField.vue'
 import NutritionCard from '@features/tracking/components/NutritionCard.vue'
-import { BaseActions, BaseButton, BaseCard } from '@shared/ui'
+import { BaseActions, BaseButton, BaseCard, BaseIcon } from '@shared/ui'
 
 import { mealSchema } from '@features/meals/meals.schema'
 import { draftNutrition, sumNutrition } from '@features/meals/meals.utils'
 import { focusFirstError, TextField } from '@shared/forms'
+import { focusCentered } from '@shared/utils/scroll'
 
 interface Props {
 	initialValues?: MealFormValues
@@ -37,26 +39,30 @@ const { handleSubmit, meta, errors, values, submitCount } = useForm({
 
 const items = useFieldArray<MealItemDraft>('items')
 
-const list = ref<HTMLElement | null>(null)
 const addSection = ref<HTMLElement | null>(null)
 
-async function focusLastItem(): Promise<void> {
-	await nextTick()
-	list.value?.lastElementChild?.querySelector<HTMLElement>('input')?.focus()
-}
+// Adding an item leaves focus where it is; Tab leads on to the new fields
 
 function addProduct(product: FoodProduct): void {
 	const unit = product.serving ? 'serving' : product.unit
 
 	items.push({ product, unit, amount: unit === 'serving' ? 1 : 100 })
-	focusLastItem()
+}
+
+/** "Eigener Posten": name and values by hand, e.g. for a product the search does not know */
+function addOwnItem(name = ''): void {
+	items.push({ own: { name } })
+}
+
+function focusSearch(): void {
+	focusCentered(addSection.value?.querySelector<HTMLElement>('input'))
 }
 
 async function removeItem(index: number): Promise<void> {
 	items.remove(index)
 
 	await nextTick()
-	addSection.value?.querySelector<HTMLElement>('input')?.focus()
+	focusSearch()
 }
 
 const total = computed<Nutrition>(() =>
@@ -123,7 +129,6 @@ defineExpose({ isDirty: computed<boolean>(() => meta.value.dirty) })
 
 				<ul
 					v-if="items.fields.value.length"
-					ref="list"
 					class="flex flex-col gap-6"
 				>
 					<MealItemRow
@@ -134,12 +139,30 @@ defineExpose({ isDirty: computed<boolean>(() => meta.value.dirty) })
 					/>
 				</ul>
 
-				<div ref="addSection">
+				<div
+					ref="addSection"
+					class="flex flex-col gap-3"
+				>
 					<FoodSearchField
 						label="Lebensmittel hinzufügen"
 						:error="itemsError"
 						@select="addProduct"
+						@manual="addOwnItem"
 					/>
+
+					<BaseButton
+						class="self-start"
+						variant="outline"
+						size="sm"
+						@click="addOwnItem()"
+					>
+						<BaseIcon
+							:icon="PlusIcon"
+							:size="18"
+						/>
+
+						Eigener Posten
+					</BaseButton>
 				</div>
 			</section>
 

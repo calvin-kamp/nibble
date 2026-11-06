@@ -18,18 +18,24 @@ import { apiRequest } from '@shared/api/client'
 function toMealItem(item: MealItemResponse, index: number): MealItem {
 	// The backend does not return the base unit, so servings fall back to g
 	const baseUnit: BaseUnit = item.unit === 'ml' ? 'ml' : 'g'
+	const isProduct = item.off_code !== null && item.nutrition_per_100 !== null
 
 	return {
 		id: String(index),
-		product: {
-			code: item.off_code,
-			name: item.food_name,
-			brand: item.brand ?? undefined,
-			unit: baseUnit,
-			per100: item.nutrition_per_100,
-			serving: item.serving_quantity ?? undefined,
-		},
-		quantity: fromApiAmount(item.amount, item.unit, item.serving_quantity, baseUnit),
+		name: item.food_name,
+		product: isProduct
+			? {
+					code: item.off_code!,
+					name: item.food_name,
+					brand: item.brand ?? undefined,
+					unit: baseUnit,
+					per100: item.nutrition_per_100!,
+					serving: item.serving_quantity ?? undefined,
+				}
+			: undefined,
+		quantity: isProduct
+			? fromApiAmount(item.amount, item.unit, item.serving_quantity, baseUnit)
+			: undefined,
 		kcal: Math.round(item.kcal),
 		protein: item.protein,
 		carbs: item.carbs,
@@ -52,10 +58,20 @@ function toSavedMeal(meal: MealResponse): SavedMeal {
 function toInput(values: MealFormValues) {
 	return {
 		name: values.name.trim(),
-		items: values.items.map((item) => ({
-			off_code: item.product.code,
-			...toApiAmount(item.product, item.amount!, item.unit!),
-		})),
+		items: values.items.map((item) =>
+			item.product
+				? {
+						off_code: item.product.code,
+						...toApiAmount(item.product, item.amount!, item.unit!),
+					}
+				: {
+						food_name: item.own!.name!.trim(),
+						kcal: item.own!.kcal,
+						protein: item.own!.protein,
+						carbs: item.own!.carbs,
+						fat: item.own!.fat,
+					},
+		),
 	}
 }
 

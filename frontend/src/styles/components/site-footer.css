@@ -44,4 +44,9 @@
 		@apply flex w-full max-w-7xl px-4 mx-auto md:px-8 flex-wrap items-center justify-between gap-x-6 gap-y-2 py-5;
 		@apply border-t border-forest-border text-md text-forest-muted-foreground;
 	}
+
+	.site-footer__credit a {
+		@apply underline underline-offset-2 hover:text-forest-foreground;
+		@apply focus-visible:outline-highlight;
+	}
 }

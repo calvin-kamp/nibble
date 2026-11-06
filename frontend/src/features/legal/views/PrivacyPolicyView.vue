@@ -395,6 +395,12 @@ const DELETION_LOG_DAYS = 30
 				</p>
 
 				<p>
+					Fehlt ein Lebensmittel in der Suche, kannst du es selbst eintragen, mit Name und
+					Nährwerten (nur Kalorien oder zusätzlich Makronährstoffe). Diese Angaben werden
+					wie jeder andere Tagebucheintrag deinem Konto zugeordnet und mit ihm gelöscht.
+				</p>
+
+				<p>
 					Du kannst deine Einträge jederzeit bearbeiten oder löschen. Rechtsgrundlage ist
 					deine Einwilligung (siehe Abschnitt 5).
 				</p>
@@ -508,7 +514,35 @@ const DELETION_LOG_DAYS = 30
 				<p>
 					Dein Browser stellt keine Anfragen an Open Food Facts, und es werden keine Daten
 					über dich an Open Food Facts übermittelt. Deine Suchanfragen werden
-					ausschließlich auf unserem Server verarbeitet und nicht gespeichert.
+					ausschließlich auf unserem Server verarbeitet. Suchbegriffe speichern wir nicht.
+				</p>
+
+				<p>
+					Einzige Ausnahme ist der Barcode: Findet die Suche zu einem gescannten oder
+					eingegebenen Barcode kein Produkt, merken wir uns den Barcode, wie oft danach
+					gesucht wurde und wann zuletzt, damit wir das Produkt ergänzen können. Diese
+					Angaben enthalten keinen Bezug zu dir oder deinem Konto. Sobald das Produkt
+					ergänzt oder der Barcode verworfen wurde, löschen wir den Eintrag.
+				</p>
+
+				<p>
+					Fehlende oder fehlerhafte Produkte ergänzen oder korrigieren wir nach Prüfung
+					anhand der Verpackung. Diese Produktdaten (Barcode, Name, Marke, Mengen und
+					Nährwerte) übermitteln wir über ein Nibble-Konto an Open Food Facts, wo sie
+					öffentlich einsehbar sind und unter der Open Database License (ODbL) stehen.
+					Daten über dich oder andere Nutzer sind dabei nicht enthalten.
+				</p>
+
+				<p>
+					Bei einem Produkt kannst du melden, dass etwas nicht stimmt (zum Beispiel falsche
+					Nährwerte), und optional einen kurzen Text dazu schreiben. Wir speichern den
+					Grund, deinen Text, das Produkt und den Zeitpunkt, aber keinen Bezug zu deinem
+					Konto. Bitte schreibe keine persönlichen Angaben in den Text. Zum Schutz vor
+					Missbrauch ist die Zahl der Meldungen pro Tag begrenzt. Rechtsgrundlage ist unser
+					berechtigtes Interesse an richtigen Produktdaten (Art. 6 Abs. 1 lit. f DSGVO). Da
+					die Meldungen keinem Konto zugeordnet sind, werden sie nicht mit dem Konto
+					gelöscht und nicht in den Datenexport aufgenommen; wir löschen sie, sobald wir
+					das Produkt geprüft haben oder es nicht mehr angeboten wird.
 				</p>
 			</PolicySection>
 
@@ -869,6 +903,16 @@ const DELETION_LOG_DAYS = 30
 								<td>
 									Serversicherung: zwei wöchentliche Stände, also bis zu zwei
 									Wochen; Datenbanksicherung: {{ DATABASE_BACKUP_DAYS }} Tage
+								</td>
+							</tr>
+
+							<tr>
+								<th scope="row">
+									Barcodes ohne Treffer, Produktmeldungen (ohne Kontobezug)
+								</th>
+
+								<td>
+									bis das Produkt ergänzt, geprüft oder verworfen ist
 								</td>
 							</tr>
 

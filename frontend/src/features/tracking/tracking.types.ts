@@ -2,8 +2,12 @@ import type { BarcodeDetector as BarcodeDetectorPonyfill } from 'barcode-detecto
 
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 
+/** off: food from the search, meal: a saved meal, manual: name and values typed in */
+type FoodEntrySource = 'off' | 'meal' | 'manual'
+
 export interface FoodEntry {
 	id: string
+	source: FoodEntrySource
 	/** Calendar day in the format YYYY-MM-DD */
 	date: string
 	meal: MealType
@@ -46,7 +50,7 @@ export interface NutritionGoals {
 	fat: number
 }
 
-export interface MealSummary {
+interface MealSummary {
 	meal: MealType
 	label: string
 	kcal: number
@@ -72,7 +76,7 @@ export interface DaySummary {
 	meals: MealSummary[]
 }
 
-export interface DiaryWeek {
+interface DiaryWeek {
 	/** Monday of the week, YYYY-MM-DD */
 	start: string
 	days: DayOverview[]
@@ -83,6 +87,9 @@ export interface DiaryWeek {
 export type Nutrition = Pick<FoodEntry, 'kcal' | 'protein' | 'carbs' | 'fat'>
 
 /** Food from the database (Open Food Facts snapshot), as returned by the search */
+/** What a user can report as wrong about a product */
+export type FoodReportReason = 'nutrition' | 'unit' | 'quantity' | 'name' | 'other'
+
 export interface FoodProduct {
 	code: string
 	name: string
@@ -181,8 +188,7 @@ export interface MacrosResponse {
 
 export interface TrackingEntryResponse extends MacrosResponse {
 	id: number
-	/** off: food from the search, meal: from a saved meal */
-	source: 'off' | 'meal'
+	source: FoodEntrySource
 	food_name: string
 	brand: string | null
 	off_code: string | null
@@ -222,3 +228,57 @@ export interface DiaryDay extends DayOverview {
 export interface DiaryDayWeek extends DiaryWeek {
 	days: DiaryDay[]
 }
+
+/** Name and values of a food the user types in, for the portion eaten */
+export interface ManualFood extends Nutrition {
+	name: string
+}
+
+/** A page of calendar weeks with entries, newest first */
+export interface WeekPage<T> {
+	weeks: T[]
+	/** Cursor for the next older page, null when there is none */
+	nextBefore: string | null
+	/** All weeks with entries in the range, regardless of the cursor */
+	total: number
+}
+
+export interface WeekQuery {
+	/** ISO week like 2026-W40: only weeks before it */
+	before?: string
+	/** YYYY-MM-DD: weeks that share a day with the range */
+	from?: string
+	to?: string
+}
+
+export interface FoodWeekSummary {
+	/** Monday, YYYY-MM-DD */
+	start: string
+	daysCount: number
+	averageKcal: number
+}
+
+export interface WeightWeekSummary {
+	/** Monday, YYYY-MM-DD */
+	start: string
+	average: number
+	count: number
+}
+
+interface WeekPageResponse<T> {
+	results: T[]
+	next_before: string | null
+	total_weeks: number
+}
+
+export type FoodWeeksResponse = WeekPageResponse<{
+	week_start: string
+	days_count: number
+	average_kcal: number
+}>
+
+export type WeightWeeksResponse = WeekPageResponse<{
+	week_start: string
+	average_kg: number
+	entries_count: number
+}>

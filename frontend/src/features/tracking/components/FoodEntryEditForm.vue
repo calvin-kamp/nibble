@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import type { ManualFoodValues } from '@features/tracking/tracking.schema'
 import type { FoodEntry, FoodUnit, Nutrition } from '@features/tracking/tracking.types'
 import type { FieldOption } from '@shared/forms/types'
 
 import { useForm } from 'vee-validate'
 import { computed, ref, watch } from 'vue'
 
+import ManualFoodFields from '@features/tracking/components/ManualFoodFields.vue'
 import NutritionFacts from '@features/tracking/components/NutritionFacts.vue'
 import { BaseActions, BaseButton } from '@shared/ui'
 
@@ -39,7 +41,9 @@ const MEAL_OPTIONS: FieldOption[] = MEAL_ORDER.map((meal) => ({
 const today = toIsoDate()
 
 // Saved meals are stored as one portion with fixed totals: only day and meal can change.
+// Foods typed in change their name and values instead of an amount.
 const product = props.entry.product
+const isManual = props.entry.source === 'manual'
 
 const { handleSubmit, isSubmitting, values, setFieldValue } = useForm({
 	validationSchema: foodEntryEditSchema,
@@ -49,6 +53,16 @@ const { handleSubmit, isSubmitting, values, setFieldValue } = useForm({
 		hasAmount: Boolean(product && props.entry.quantity),
 		amount: props.entry.quantity?.value,
 		unit: props.entry.quantity?.unit,
+		isManual,
+		manual: isManual
+			? {
+					name: props.entry.name,
+					protein: props.entry.protein,
+					carbs: props.entry.carbs,
+					fat: props.entry.fat,
+					kcal: props.entry.kcal,
+				}
+			: undefined,
 	},
 })
 
@@ -87,6 +101,9 @@ const onSubmit = handleSubmit(
 					meal: formValues.meal,
 					...(formValues.hasAmount
 						? { amount: formValues.amount, unit: formValues.unit }
+						: {}),
+					...(formValues.isManual
+						? { food: formValues.manual as ManualFoodValues }
 						: {}),
 				}),
 			)
@@ -154,6 +171,11 @@ const onSubmit = handleSubmit(
 					aria-live="polite"
 				/>
 			</template>
+
+			<ManualFoodFields
+				v-else-if="isManual"
+				path="manual"
+			/>
 
 			<p
 				v-else

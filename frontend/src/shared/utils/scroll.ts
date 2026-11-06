@@ -12,6 +12,15 @@ function prefersReducedMotion(): boolean {
 	return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+/** Moves focus to the element and scrolls it into the middle of the screen */
+export function focusCentered(target: HTMLElement | null | undefined): void {
+	target?.focus({ preventScroll: true })
+	target?.scrollIntoView({
+		block: 'center',
+		behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+	})
+}
+
 /**
  * Scrolls to the element with this id and moves focus there, so keyboard and screen reader
  * users continue reading at the section. Smooth unless reduced motion is asked for.

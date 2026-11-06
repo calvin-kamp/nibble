@@ -22,7 +22,7 @@ interface FormStepsOptions {
 	indexOf?: (key: string) => number
 }
 
-export interface FormSteps {
+interface FormSteps {
 	index: ComputedRef<number>
 	key: ComputedRef<string>
 	count: ComputedRef<number>

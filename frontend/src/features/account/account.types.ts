@@ -10,7 +10,7 @@ export interface NutritionSettings {
 
 export type GoalResponse = 'lose' | 'maintain' | 'gain'
 
-export interface Targets {
+interface Targets {
 	kcal: number
 	protein: number
 	carbs: number

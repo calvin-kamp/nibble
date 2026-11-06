@@ -5,7 +5,7 @@ import { readonly, ref, toValue, watchEffect } from 'vue'
 const APP_NAME = 'nibble'
 
 /** Public address, for canonical links and social previews. index.html has the same values. */
-export const SITE_URL = 'https://www.nibble-tracking.de'
+const SITE_URL = 'https://www.nibble-tracking.de'
 
 const DEFAULT_TITLE = `${APP_NAME} – Ernährungstagebuch und Rezepte`
 

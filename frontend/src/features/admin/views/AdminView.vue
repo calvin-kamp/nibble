@@ -109,7 +109,7 @@ const statItems = computed(() =>
 	<main class="page">
 		<div class="flex flex-col gap-3">
 			<h1>
-				Verwaltung
+				Rezepte prüfen
 			</h1>
 
 			<p class="page__lead">

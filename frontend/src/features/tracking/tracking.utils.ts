@@ -163,6 +163,19 @@ export function nutritionFor(product: FoodProduct, base: number): Nutrition {
 	}
 }
 
+/** Energy of the macros: 4 kcal per gram of protein and carbs, 9 per gram of fat */
+export function kcalFromMacros(macros: Pick<Nutrition, 'protein' | 'carbs' | 'fat'>): number {
+	return Math.round(macros.protein * 4 + macros.carbs * 4 + macros.fat * 9)
+}
+
+/**
+ * Lowest kcal that still fit the macros, as in the backend. Labels round and fiber adds energy,
+ * so only clearly too few kcal count as a typo.
+ */
+export function minimumKcal(macros: Pick<Nutrition, 'protein' | 'carbs' | 'fat'>): number {
+	return kcalFromMacros(macros) * 0.8 - 10
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000
 const WEEK_MS = 7 * DAY_MS
 
@@ -174,11 +187,34 @@ function average(values: number[]): number {
 	return values.reduce((total, value) => total + value, 0) / values.length
 }
 
-function inWeekEndingAt<T extends { time: number }>(points: T[], endTime: number): T[] {
-	return points.filter((point) => point.time > endTime - WEEK_MS && point.time <= endTime)
+function inWeekEndingAt<T extends { time: number }>(
+	points: T[],
+	endTime: number,
+	rangeStart = -Infinity,
+): T[] {
+	return points.filter(
+		(point) =>
+			point.time > endTime - WEEK_MS && point.time >= rangeStart && point.time <= endTime,
+	)
 }
 
-export function buildWeightPoints(entries: WeightEntry[]): WeightPoint[] {
+/**
+ * First day of a range of that many days, counted back from the newest entry. -Infinity for the
+ * whole history or without entries.
+ */
+export function rangeStartOf(entries: WeightEntry[], days: number): number {
+	const newest = Math.max(...entries.map((entry) => toTime(entry.date)))
+
+	if (!Number.isFinite(days) || !Number.isFinite(newest)) return -Infinity
+
+	return newest - (days - 1) * DAY_MS
+}
+
+/**
+ * Entries with their 7-day average. From rangeStart on only: the average uses the days that are
+ * visible, so at the start of a range it is not pulled by a weight that cannot be seen.
+ */
+export function buildWeightPoints(entries: WeightEntry[], rangeStart = -Infinity): WeightPoint[] {
 	const sorted = entries
 		.map((entry) => ({
 			id: entry.id,
@@ -186,16 +222,19 @@ export function buildWeightPoints(entries: WeightEntry[]): WeightPoint[] {
 			kg: entry.kg,
 			time: toTime(entry.date),
 		}))
+		.filter((point) => point.time >= rangeStart)
 		.toSorted((a, b) => a.time - b.time)
 
 	return sorted.map((point) =>
 		Object.assign(point, {
-			weeklyAverage: average(inWeekEndingAt(sorted, point.time).map((entry) => entry.kg)),
+			weeklyAverage: average(
+				inWeekEndingAt(sorted, point.time, rangeStart).map((entry) => entry.kg),
+			),
 		}),
 	)
 }
 
-export function limitToDays(points: WeightPoint[], days: number): WeightPoint[] {
+function limitToDays(points: WeightPoint[], days: number): WeightPoint[] {
 	const last = points[points.length - 1]
 
 	if (!last) return []

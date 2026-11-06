@@ -92,7 +92,7 @@ const latestEntries = computed<WeightEntry[]>(() =>
 					route-name="diary-weight"
 					class="self-start mt-auto"
 				>
-					Alle Einträge
+					Zum Gewichtstagebuch
 
 					<BaseIcon
 						:icon="ArrowRightIcon"

@@ -14,17 +14,28 @@ import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 import AccountDrawer from '@features/account/components/AccountDrawer.vue'
+import DiaryDrawer from '@features/tracking/components/DiaryDrawer.vue'
+import AppNavDrawer from '@layouts/AppNavDrawer.vue'
 import { BaseButton, BaseIcon } from '@shared/ui'
 
 import { useTrackingDialogs } from '@features/tracking/composables/tracking-dialogs'
+import { useKeyboardFocus } from '@shared/composables/keyboard-focus'
 
 import { useAuthStore } from '@features/auth/auth.store'
-import { isNavItemActive, navItemLocation, useNavVisibility } from '@layouts/navigation'
+import {
+	isNavItemActive,
+	navItemLocation,
+	RECIPES_NAV,
+	useNavVisibility,
+} from '@layouts/navigation'
 
 const auth = useAuthStore()
 const route = useRoute()
 const isVisible = useNavVisibility()
 const { openChooser } = useTrackingDialogs()
+
+// On phones the open keyboard pushes the bar over the content, so it steps aside while typing
+const typing = useKeyboardFocus()
 
 // With tracking, the diary takes the calculator's place: the calculator is a one-off tool and
 // stays in the menu. Without tracking there is no diary, so the calculator stays here.
@@ -38,7 +49,7 @@ const mainNavigation: NavItem[] = [
 		activeOn: ['diary-food-day', 'diary-weight', 'diary-weight-week'],
 		visibility: 'consent',
 	},
-	{ routeName: 'recipe-list', label: 'Rezepte', icon: ChefHatIcon, visibility: 'always' },
+	{ routeName: 'recipe-list', label: 'Kochbuch', icon: ChefHatIcon, visibility: 'always' },
 	{ routeName: 'calorie-calculator', label: 'Rechner', icon: CalculatorIcon, visibility: 'always' },
 	{ routeName: 'auth-login', label: 'Anmelden', icon: UserRoundIcon, visibility: 'guest' },
 ]
@@ -59,6 +70,7 @@ const splitIndex = computed<number>(() => Math.ceil(filteredNavigation.value.len
 	<nav
 		aria-label="Hauptnavigation"
 		class="fixed inset-x-0 bottom-0 z-30 pb-[env(safe-area-inset-bottom)] border-t border-border bg-surface xl:hidden"
+		:class="{ 'max-md:hidden': typing }"
 	>
 		<ul class="flex max-w-xl py-2 mx-auto">
 			<template
@@ -83,7 +95,20 @@ const splitIndex = computed<number>(() => Math.ceil(filteredNavigation.value.len
 				</li>
 
 				<li class="flex-1">
+					<!-- The diary opens a choice between food and weight -->
+					<DiaryDrawer v-if="navItem.routeName === 'diary-food'" />
+
+					<!-- Cookbook, logged in: all recipes, own recipes and own meals. Guests only have the list. -->
+					<AppNavDrawer
+						v-else-if="navItem.routeName === 'recipe-list' && auth.isLoggedIn"
+						id="recipes-drawer"
+						label="Kochbuch"
+						:icon="ChefHatIcon"
+						:items="RECIPES_NAV"
+					/>
+
 					<RouterLink
+						v-else
 						:to="navItemLocation(navItem)"
 						class="nav-item"
 						:class="{ 'nav-item--active': isNavItemActive(navItem, route) }"

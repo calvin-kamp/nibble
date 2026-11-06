@@ -34,6 +34,8 @@ const { openEntry } = useTrackingDialogs()
 const entries = ref<FoodEntry[]>([])
 const goals = ref<NutritionGoals | null>(null)
 const loadError = ref<boolean>(false)
+// The summary keeps its layout until the shown day has loaded
+const loadedDate = ref<string | null>(null)
 
 watch(
 	[() => props.date, useTrackingChanges()],
@@ -45,6 +47,7 @@ watch(
 
 			entries.value = day.entries
 			goals.value = day.goals
+			loadedDate.value = day.date
 			loadError.value = false
 		} catch {
 			loadError.value = true
@@ -179,6 +182,7 @@ async function confirmDelete(): Promise<void> {
 				:entries="entries"
 				:goals="goals"
 				:date="props.date"
+				:loading="loadedDate !== props.date"
 				title-hidden
 			/>
 
@@ -234,45 +238,45 @@ async function confirmDelete(): Promise<void> {
 						<li
 							v-for="entry in meal.entries"
 							:key="entry.id"
-							class="data-list__row items-start"
+							class="data-list__row grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 gap-y-2 md:grid-cols-[minmax(0,1fr)_auto_auto]"
 						>
-							<div class="flex flex-col flex-1 gap-2 min-w-0">
-								<div class="flex items-start justify-between gap-4">
-									<div class="data-list__label gap-0.5">
-										<span class="font-semibold text-foreground">
-											{{
-												entry.name
-											}}
-										</span>
+							<!-- Phones: name and actions, then kcal and macros below in the full
+								width. From tablet on the kcal sit next to the name. -->
+							<div class="data-list__label gap-0.5 col-start-1 row-start-1">
+								<span class="font-semibold text-foreground">
+									{{
+										entry.name
+									}}
+								</span>
 
-										<span
-											v-if="entry.brand || entry.quantity"
-											class="data-list__meta"
-										>
-											{{
-												[
-													entry.brand,
-													entry.quantity &&
-														formatQuantity(entry.quantity),
-												]
-													.filter(Boolean)
-													.join(' – ')
-											}}
-										</span>
-									</div>
-
-									<span class="data-list__value">
-										{{ formatNumber(entry.kcal) }} kcal
-									</span>
-								</div>
-
-								<MacroList
-									inline
-									:macros="entry"
-								/>
+								<span
+									v-if="entry.brand || entry.quantity || entry.source === 'manual'"
+									class="data-list__meta"
+								>
+									{{
+										[
+											entry.brand,
+											entry.quantity &&
+												formatQuantity(entry.quantity),
+											entry.source === 'manual' && 'Selbst eingetragen',
+										]
+											.filter(Boolean)
+											.join(' – ')
+									}}
+								</span>
 							</div>
 
-							<div class="flex shrink-0 gap-1 -my-1">
+							<span class="data-list__value col-span-2 row-start-2 md:col-span-1 md:col-start-2 md:row-start-1">
+								{{ formatNumber(entry.kcal) }} kcal
+							</span>
+
+							<MacroList
+								class="col-span-2 row-start-3 md:row-start-2"
+								inline
+								:macros="entry"
+							/>
+
+							<div class="flex gap-1 -my-1 col-start-2 row-start-1 md:col-start-3 md:row-span-2">
 								<BaseButton
 									variant="ghost"
 									size="icon-sm"

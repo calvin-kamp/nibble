@@ -5,15 +5,23 @@ import type {
 	FoodEntry,
 	FoodProduct,
 	FoodProductResponse,
+	FoodReportReason,
 	FoodQuantity,
 	FoodUnit,
 	FoodUnitResponse,
+	FoodWeekSummary,
+	FoodWeeksResponse,
 	MacrosResponse,
+	ManualFood,
 	NutritionGoals,
 	TrackedDay,
 	TrackingEntryResponse,
+	WeekPage,
+	WeekQuery,
 	WeightEntry,
 	WeightEntryResponse,
+	WeightWeekSummary,
+	WeightWeeksResponse,
 } from '@features/tracking/tracking.types'
 
 import { notifyTrackingChanged } from '@features/tracking/composables/tracking-changes'
@@ -26,7 +34,7 @@ import { addDays, toIsoDate } from '@shared/utils/date'
 // without it the API responds with 403 consent_required. The functions throw ApiError.
 // After every change, pages are notified via notifyTrackingChanged().
 
-export function toFoodProduct(product: FoodProductResponse): FoodProduct {
+function toFoodProduct(product: FoodProductResponse): FoodProduct {
 	return {
 		code: product.code,
 		name: product.name,
@@ -78,6 +86,7 @@ function toFoodEntry(entry: TrackingEntryResponse): FoodEntry {
 
 	return {
 		id: String(entry.id),
+		source: entry.source,
 		date: entry.consumed_on,
 		meal: entry.meal_type,
 		name: entry.food_name,
@@ -124,7 +133,7 @@ const MAX_DAYS_PER_REQUEST = 92
  * Every day from first to last, newest first, e.g. five weeks of the diary. One request per
  * 92 days instead of one per day, which would soon reach the API's rate limit.
  */
-export async function fetchDayRange(first: string, last: string): Promise<TrackedDay[]> {
+async function fetchDayRange(first: string, last: string): Promise<TrackedDay[]> {
 	const chunks: [string, string][] = []
 
 	for (let end = last; end >= first; end = addDays(end, -MAX_DAYS_PER_REQUEST)) {
@@ -140,6 +149,63 @@ export async function fetchDayRange(first: string, last: string): Promise<Tracke
 	)
 
 	return pages.flat().map(toTrackedDay)
+}
+
+/**
+ * The days of these weeks, newest first. Weeks that follow each other share a request, so
+ * twenty weeks in a row cost two requests, not twenty.
+ */
+export async function fetchWeekDays(starts: string[]): Promise<TrackedDay[]> {
+	const today = toIsoDate()
+	const runs: [string, string][] = []
+
+	for (const start of [...new Set(starts)].toSorted().toReversed()) {
+		const end = addDays(start, 6) > today ? today : addDays(start, 6)
+		const run = runs[runs.length - 1]
+
+		if (run && run[0] === addDays(start, 7)) run[0] = start
+		else runs.push([start, end])
+	}
+
+	const pages = await Promise.all(runs.map(([from, to]) => fetchDayRange(from, to)))
+
+	return pages.flat()
+}
+
+function weekQuery(query: WeekQuery): string {
+	return toQuery({ before: query.before, from: query.from, to: query.to })
+}
+
+/** Weeks with food entries, five per page */
+export async function fetchFoodWeeks(query: WeekQuery = {}): Promise<WeekPage<FoodWeekSummary>> {
+	const page = await apiRequest<FoodWeeksResponse>(`/tracking/days/weeks${weekQuery(query)}`)
+
+	return {
+		weeks: page.results.map((week) => ({
+			start: week.week_start,
+			daysCount: week.days_count,
+			averageKcal: week.average_kcal,
+		})),
+		nextBefore: page.next_before,
+		total: page.total_weeks,
+	}
+}
+
+/** Weeks with weight entries, five per page */
+export async function fetchWeightWeeks(
+	query: WeekQuery = {},
+): Promise<WeekPage<WeightWeekSummary>> {
+	const page = await apiRequest<WeightWeeksResponse>(`/tracking/weights/weeks${weekQuery(query)}`)
+
+	return {
+		weeks: page.results.map((week) => ({
+			start: week.week_start,
+			average: week.average_kg,
+			count: week.entries_count,
+		})),
+		nextBefore: page.next_before,
+		total: page.total_weeks,
+	}
 }
 
 const RECENT_DAYS = 14
@@ -188,6 +254,28 @@ export async function addProductEntry(
 	return toFoodEntry(entry)
 }
 
+/** A food the search does not know: name and values of the portion, typed in */
+export async function addManualEntry(
+	target: EntryTarget & { food: ManualFood },
+): Promise<FoodEntry> {
+	const entry = await apiRequest<TrackingEntryResponse>('/tracking/entries/manual', {
+		method: 'POST',
+		body: {
+			food_name: target.food.name,
+			kcal: target.food.kcal,
+			protein: target.food.protein,
+			carbs: target.food.carbs,
+			fat: target.food.fat,
+			consumed_on: target.date,
+			meal_type: target.meal,
+		},
+	})
+
+	notifyTrackingChanged()
+
+	return toFoodEntry(entry)
+}
+
 export async function addSavedMealEntry(
 	target: EntryTarget & { mealId: string },
 ): Promise<FoodEntry> {
@@ -203,20 +291,32 @@ export async function addSavedMealEntry(
 
 /**
  * Changes day, meal and, for foods from the search, the amount. The backend recalculates the
- * nutrition values from the values per 100 stored in the entry.
+ * nutrition values from the values per 100 stored in the entry. Foods typed in change their
+ * name and values instead.
  */
 export async function updateFoodEntry(
 	entry: FoodEntry,
-	changes: EntryTarget & { amount?: number; unit?: FoodUnit },
+	changes: EntryTarget & { amount?: number; unit?: FoodUnit; food?: ManualFood },
 ): Promise<FoodEntry> {
 	const amount =
 		entry.product && changes.amount !== undefined && changes.unit
 			? toApiAmount(entry.product, changes.amount, changes.unit)
 			: {}
 
+	const values =
+		entry.source === 'manual' && changes.food
+			? {
+					food_name: changes.food.name,
+					kcal: changes.food.kcal,
+					protein: changes.food.protein,
+					carbs: changes.food.carbs,
+					fat: changes.food.fat,
+				}
+			: {}
+
 	const updated = await apiRequest<TrackingEntryResponse>(`/tracking/entries/${entry.id}`, {
 		method: 'PATCH',
-		body: { consumed_on: changes.date, meal_type: changes.meal, ...amount },
+		body: { consumed_on: changes.date, meal_type: changes.meal, ...amount, ...values },
 	})
 
 	notifyTrackingChanged()
@@ -296,4 +396,27 @@ export async function findByBarcode(barcode: string): Promise<FoodProduct | null
 	const [padded] = await searchFoods(`0${barcode}`)
 
 	return padded ?? null
+}
+
+/** A product by its code, also generic foods without barcode (e.g. a banana); null if gone */
+export async function findByCode(code: string): Promise<FoodProduct | null> {
+	if (isBarcode(code)) return findByBarcode(code)
+
+	const { results } = await apiRequest<Paginated<FoodProductResponse>>(
+		`/foods/search${toQuery({ code })}`,
+	)
+
+	return results[0] ? toFoodProduct(results[0]) : null
+}
+
+/** Tells staff that something about a product is wrong. Nothing about the sender is stored. */
+export async function reportFood(
+	code: string,
+	reason: FoodReportReason,
+	comment: string,
+): Promise<void> {
+	await apiRequest(`/foods/${code}/report`, {
+		method: 'POST',
+		body: { reason, comment: comment.trim() },
+	})
 }

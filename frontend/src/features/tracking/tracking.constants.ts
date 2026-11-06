@@ -1,4 +1,13 @@
-import type { MealType, WeightPeriod } from '@features/tracking/tracking.types'
+import type { FoodReportReason, MealType, WeightPeriod } from '@features/tracking/tracking.types'
+
+/** Same order as in the report form; staff see the same labels */
+export const FOOD_REPORT_REASON_LABELS: Record<FoodReportReason, string> = {
+	nutrition: 'Nährwerte falsch',
+	unit: 'Gramm und Milliliter vertauscht',
+	quantity: 'Portion oder Packung falsch',
+	name: 'Name oder Marke falsch',
+	other: 'Etwas anderes',
+}
 
 export const MEAL_LABELS: Record<MealType, string> = {
 	breakfast: 'Frühstück',

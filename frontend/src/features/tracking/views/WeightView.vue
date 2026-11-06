@@ -1,26 +1,29 @@
 <script setup lang="ts">
-import type { WeightEntry, WeightPoint } from '@features/tracking/tracking.types'
+import type {
+	WeightEntry,
+	WeightPoint,
+	WeightWeekSummary,
+} from '@features/tracking/tracking.types'
 import type { SelectOption } from '@shared/ui/types'
 
 import { ArrowRightIcon, ChevronDownIcon, PlusIcon, TrashIcon } from '@lucide/vue'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import WeekRangeSection from '@features/tracking/components/WeekRangeSection.vue'
 import WeightChart from '@features/tracking/components/WeightChart.vue'
-import {
-	BaseAlertDialog,
-	BaseButton,
-	BaseIcon,
-	BaseLink,
-	BasePagination,
-	BaseSelect,
-} from '@shared/ui'
+import { BaseAlertDialog, BaseButton, BaseIcon, BaseLink, BaseSelect } from '@shared/ui'
 
 import { useTrackingChanges } from '@features/tracking/composables/tracking-changes'
 import { useTrackingDialogs } from '@features/tracking/composables/tracking-dialogs'
+import { useWeekHistory, WEEKS_PER_PAGE } from '@features/tracking/composables/week-history'
 import { useToast } from '@shared/composables/toast'
 
-import { deleteWeightEntry, fetchWeightEntries } from '@features/tracking/tracking.api'
+import {
+	deleteWeightEntry,
+	fetchWeightEntries,
+	fetchWeightWeeks,
+} from '@features/tracking/tracking.api'
 import { WEIGHT_PERIODS } from '@features/tracking/tracking.constants'
 import {
 	buildWeightPoints,
@@ -28,12 +31,9 @@ import {
 	formatPeriodChange,
 	formatCalendarWeekTitle,
 	getPeriodChange,
-	limitToDays,
 	weekSlug,
-	weekStart,
 } from '@features/tracking/tracking.utils'
-import { PAGE_SIZE } from '@shared/constants'
-import { formatRelativeDay, formatWeekdayDate } from '@shared/utils/date'
+import { addDays, formatRelativeDay, formatWeekdayDate } from '@shared/utils/date'
 import { formatKg, formatNumber } from '@shared/utils/number'
 
 const DEFAULT_PERIOD = '30'
@@ -57,18 +57,9 @@ const period = computed(
 const periodValue = computed<string | undefined>({
 	get: () => period.value.value,
 	set: (value) => {
-		router.replace({ query: { zeitraum: value === DEFAULT_PERIOD ? undefined : value } })
-	},
-})
-
-const page = computed<number>({
-	get: () => {
-		const value = Number(route.query.seite)
-
-		return Number.isInteger(value) && value > 1 ? value : 1
-	},
-	set: (target) => {
-		router.push({ query: { ...route.query, seite: target > 1 ? target : undefined } })
+		router.replace({
+			query: { ...route.query, zeitraum: value === DEFAULT_PERIOD ? undefined : value },
+		})
 	},
 })
 
@@ -92,52 +83,38 @@ const points = computed<WeightPoint[]>(() => buildWeightPoints(entries.value))
 const latest = computed<WeightPoint | undefined>(() => points.value[points.value.length - 1])
 const change = computed<number | null>(() => getPeriodChange(points.value, period.value.days))
 
-const periodEntries = computed(() => {
-	const visible = limitToDays(points.value, period.value.days)
+// The list does not depend on the chart's range: it shows weeks with entries, five at once
+const history = useWeekHistory<WeightWeekSummary>(fetchWeightWeeks)
 
-	return visible
-		.map((point, index) => ({
-			id: point.id,
-			date: point.date,
-			kg: point.kg,
-			difference: index > 0 ? point.kg - visible[index - 1]!.kg : null,
-		}))
-		.toReversed()
-})
+const sortedEntries = computed<WeightEntry[]>(() =>
+	entries.value.toSorted((a, b) => a.date.localeCompare(b.date)),
+)
 
-type PeriodEntry = (typeof periodEntries.value)[number]
+const weeks = computed(() =>
+	history.weeks.value.map((week) => {
+		const end = addDays(week.start, 6)
+		const weekEntries = sortedEntries.value
+			.map((entry, index) => ({
+				id: entry.id,
+				date: entry.date,
+				kg: entry.kg,
+				difference: index > 0 ? entry.kg - sortedEntries.value[index - 1]!.kg : null,
+			}))
+			.filter((entry) => entry.date >= week.start && entry.date <= end)
+			.toReversed()
 
-const weeks = computed(() => {
-	const result: { start: string; entries: PeriodEntry[]; average: number }[] = []
-
-	for (const entry of periodEntries.value) {
-		const start = weekStart(entry.date)
-		const week = result[result.length - 1]
-
-		if (week?.start === start) week.entries.push(entry)
-		else result.push({ start, entries: [entry], average: 0 })
-	}
-
-	for (const week of result) {
-		week.average = week.entries.reduce((sum, entry) => sum + entry.kg, 0) / week.entries.length
-	}
-
-	return result
-})
-
-const visibleWeeks = computed(() =>
-	weeks.value.slice((page.value - 1) * PAGE_SIZE, page.value * PAGE_SIZE),
+		return { start: week.start, average: week.average, count: week.count, entries: weekEntries }
+	}),
 )
 
 function entryCountLabel(count: number): string {
 	return count === 1 ? '1 Eintrag' : `${count} Einträge`
 }
 
-const entriesHeading = ref<HTMLElement | null>(null)
+const rangeLabel = computed<string | null>(() => {
+	const range = history.range.value
 
-watch(page, async () => {
-	await nextTick()
-	entriesHeading.value?.focus()
+	return range ? `${formatWeekdayDate(range.from)} bis ${formatWeekdayDate(range.to)}` : null
 })
 
 const pendingDelete = ref<WeightEntry | null>(null)
@@ -251,19 +228,26 @@ async function confirmDelete(): Promise<void> {
 			<div class="flex flex-col gap-4">
 				<h2
 					id="weight-entries-title"
-					ref="entriesHeading"
 					class="outline-none"
 					tabindex="-1"
 				>
 					Einträge
 				</h2>
 
+				<WeekRangeSection
+					v-if="history.showsRange.value"
+					:range="history.range.value"
+					:total="history.total.value"
+					@change="history.setRange"
+				/>
+
 				<div
-					v-if="visibleWeeks.length"
+					v-if="weeks.length"
 					class="week-list"
+					:aria-busy="history.loading.value"
 				>
 					<details
-						v-for="(week, index) in visibleWeeks"
+						v-for="(week, index) in weeks"
 						:key="week.start"
 						class="week-list__week week-list__week--collapsible"
 						:open="index === 0"
@@ -279,7 +263,7 @@ async function confirmDelete(): Promise<void> {
 								<span class="week-list__meta">
 									Schnitt {{ formatKg(week.average) }},
 
-									{{ entryCountLabel(week.entries.length) }}
+									{{ entryCountLabel(week.count) }}
 								</span>
 							</span>
 
@@ -342,20 +326,21 @@ async function confirmDelete(): Promise<void> {
 				</div>
 
 				<p
-					v-else
+					v-else-if="!history.loading.value"
 					class="py-3 text-muted-foreground"
 				>
-					Keine Einträge {{ period.phrase }}.
+					{{ history.range.value ? `Keine Einträge vom ${rangeLabel}.` : 'Noch keine Einträge.' }}
 				</p>
 			</div>
 
-			<BasePagination
-				v-if="weeks.length > PAGE_SIZE"
-				v-model:page="page"
-				label="Seiten der Gewichtseinträge"
-				:total="weeks.length"
-				:items-per-page="PAGE_SIZE"
-			/>
+			<BaseButton
+				v-if="history.canLoadMore.value"
+				class="self-center"
+				:disabled="history.loading.value"
+				@click="history.loadMore"
+			>
+				{{ WEEKS_PER_PAGE }} weitere Wochen laden
+			</BaseButton>
 		</section>
 
 		<BaseAlertDialog

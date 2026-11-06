@@ -2,7 +2,8 @@
 // API paths have no trailing slash, e.g. /auth/me.
 const BASE_URL = import.meta.env.VITE_API_BASE_URL
 
-const CSRF_COOKIE = 'csrftoken'
+// Same prefix as AUTH_COOKIE_PREFIX in the backend, e.g. preview_ on the preview environment
+const CSRF_COOKIE = `${import.meta.env.VITE_COOKIE_PREFIX ?? ''}csrftoken`
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
 interface ErrorBody {
@@ -41,7 +42,7 @@ export interface Paginated<T> {
 	results: T[]
 }
 
-export interface ApiRequestOptions {
+interface ApiRequestOptions {
 	method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 	body?: unknown
 	/** Do not refresh on 401, e.g. for the sign-in request itself */
@@ -117,7 +118,7 @@ async function send(path: string, options: ApiRequestOptions): Promise<Response>
  * Fetches a new access token. When several requests hit a 401 at the same time, they share one
  * refresh; otherwise the rotated refresh token would already be blocked the second time.
  */
-export function refreshSession(): Promise<boolean> {
+function refreshSession(): Promise<boolean> {
 	pendingRefresh ??= send('/auth/refresh', { method: 'POST' })
 		.then((response) => response.ok)
 		.catch(() => false)

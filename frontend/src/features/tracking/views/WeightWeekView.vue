@@ -118,11 +118,9 @@ const changeLabel = computed<string>(() => {
 	return formatKgChange(weekAverage.value - previousAverage.value)
 })
 
-// The curve up to the end of the week, showing the days from Monday to the last entry. The
-// entries before Monday stay in, so the weekly average line starts with the right value.
-const chartEntries = computed<WeightEntry[]>(() =>
-	entries.value.filter((entry) => entry.date <= end.value),
-)
+// The curve of this week, from Monday to the last entry. The weekly average uses only the
+// days of the week as well, like every chart shows only the average of what it shows.
+const chartEntries = computed<WeightEntry[]>(() => entriesBetween(props.start, end.value))
 const chartDays = computed<number>(() => {
 	const newest = weekEntries.value[0]
 

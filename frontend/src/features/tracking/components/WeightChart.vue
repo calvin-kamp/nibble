@@ -13,7 +13,7 @@ import {
 } from '@unovis/vue'
 import { computed } from 'vue'
 
-import { buildWeightPoints, getNiceTicks, limitToDays } from '@features/tracking/tracking.utils'
+import { buildWeightPoints, getNiceTicks, rangeStartOf } from '@features/tracking/tracking.utils'
 import { formatDayMonth } from '@shared/utils/date'
 import { formatKg, formatNumber } from '@shared/utils/number'
 
@@ -43,9 +43,11 @@ const x = (point: WeightPoint): number => point.time
 const weight = (point: WeightPoint): number => point.kg
 const weeklyAverage = (point: WeightPoint): number => point.weeklyAverage
 
-// The weekly average is calculated over all entries, so that at the start of the visible
-// range it already takes the preceding days into account.
-const allPoints = computed<WeightPoint[]>(() => buildWeightPoints(props.entries))
+// The range is cut first, then the weekly average is calculated: it only uses entries that
+// can be seen, otherwise its first value would include a weight from before the range.
+const visiblePoints = computed<WeightPoint[]>(() =>
+	buildWeightPoints(props.entries, rangeStartOf(props.entries, props.days)),
+)
 
 const MAX_VISIBLE_POINTS = 31
 
@@ -53,7 +55,7 @@ const MAX_VISIBLE_POINTS = 31
 // Unovis does not reliably call the accessors with the data index or after
 // a Vue update, so they depend on the data point alone.
 const points = computed<WeightChartPoint[]>(() => {
-	const visible = limitToDays(allPoints.value, props.days)
+	const visible = visiblePoints.value
 	const showEntryPoints = visible.length <= MAX_VISIBLE_POINTS
 
 	return visible.map((point, index) => {

@@ -13,18 +13,6 @@
 		@apply bg-highlight text-highlight-foreground;
 	}
 
-	.tag--warning {
-		@apply bg-warning text-warning-foreground;
-	}
-
-	.tag--danger {
-		@apply bg-destructive-soft text-destructive-soft-foreground;
-	}
-
-	.tag--info {
-		@apply bg-info text-info-foreground;
-	}
-
 	.tag--inverse {
 		@apply bg-forest-border text-forest-foreground;
 	}

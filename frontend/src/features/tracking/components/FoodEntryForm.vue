@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SavedMeal } from '@features/meals/meals.types'
-import type { FoodEntrySource } from '@features/tracking/tracking.schema'
+import type { FoodEntrySource, ManualFoodValues } from '@features/tracking/tracking.schema'
 import type { FoodEntry, FoodProduct, MealType } from '@features/tracking/tracking.types'
 import type { FieldOption } from '@shared/forms/types'
 
@@ -13,7 +13,11 @@ import SavedMealTab from '@features/tracking/components/SavedMealTab.vue'
 import { BaseActions, BaseButton } from '@shared/ui'
 
 import { listMeals } from '@features/meals/meals.api'
-import { addProductEntry, addSavedMealEntry } from '@features/tracking/tracking.api'
+import {
+	addManualEntry,
+	addProductEntry,
+	addSavedMealEntry,
+} from '@features/tracking/tracking.api'
 import { MEAL_LABELS, MEAL_ORDER } from '@features/tracking/tracking.constants'
 import { foodEntrySchema } from '@features/tracking/tracking.schema'
 import { DateField, focusFirstError, SelectField } from '@shared/forms'
@@ -89,6 +93,12 @@ type FormValues = Parameters<Parameters<typeof handleSubmit>[0]>[0]
 
 function saveEntry(formValues: FormValues): Promise<FoodEntry> {
 	const target = { date: formValues.date, meal: formValues.meal }
+
+	if (formValues.source === 'product' && formValues.isManual) {
+		const food = formValues.manual as ManualFoodValues
+
+		return addManualEntry({ ...target, food: { ...food, name: food.name.trim() } })
+	}
 
 	if (formValues.source === 'product') {
 		return addProductEntry({

@@ -1,11 +1,11 @@
-export interface HelpLink {
+interface HelpLink {
 	label: string
 	routeName?: string
 	hash?: string
 	href?: string
 }
 
-export interface HelpQuestion {
+interface HelpQuestion {
 	id: string
 	question: string
 	answer: string[]

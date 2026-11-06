@@ -87,7 +87,7 @@ const meta = computed<string>(() => {
 const isPending = computed<boolean>(() => submission.value?.status === 'pending')
 
 const backLocation = computed(() => ({
-	label: 'Verwaltung',
+	label: 'Rezepte prüfen',
 	routeName: 'admin',
 	query: submission.value ? { status: STATUS_QUERY[submission.value.status] } : undefined,
 }))
@@ -397,7 +397,7 @@ watch(rejectOpen, (open) => {
 			class="self-start"
 			route-name="admin"
 		>
-			Zur Verwaltung
+			Zu den Einreichungen
 		</BaseButton>
 	</main>
 

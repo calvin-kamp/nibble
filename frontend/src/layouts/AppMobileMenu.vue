@@ -78,7 +78,7 @@ watch(
 				/>
 
 				<AppNavGroup
-					label="Verwaltung"
+					label="Admin"
 					:items="ADMIN_NAV"
 				/>
 

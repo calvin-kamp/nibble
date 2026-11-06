@@ -7,6 +7,7 @@ import { TrashIcon } from '@lucide/vue'
 import { useFieldValue, useSetFieldValue } from 'vee-validate'
 import { computed, useId, watch } from 'vue'
 
+import ManualFoodFields from '@features/tracking/components/ManualFoodFields.vue'
 import NutritionFacts from '@features/tracking/components/NutritionFacts.vue'
 import { BaseButton, BaseIcon } from '@shared/ui'
 
@@ -46,6 +47,13 @@ const unitOptions = computed<FieldOption[]>(() => {
 
 const nutrition = computed(() => (item.value ? draftNutrition(item.value) : null))
 
+// An own item with kcal only: its macros are 0 anyway and the kcal stand in the field above
+const showsNutrition = computed<boolean>(
+	() => !!item.value?.product || !!item.value?.own?.withMacros,
+)
+
+const title = computed<string>(() => item.value?.product?.name ?? 'Eigener Posten')
+
 const titleId = useId()
 </script>
 
@@ -62,10 +70,13 @@ const titleId = useId()
 					:id="titleId"
 					class="text-md font-bold"
 				>
-					{{ item.product.name }}
+					{{ title }}
 				</span>
 
-				<span class="text-md text-muted-foreground tabular-nums">
+				<span
+					v-if="item.product"
+					class="text-md text-muted-foreground tabular-nums"
+				>
 					<template v-if="item.product.brand">
 						{{ item.product.brand }} –
 					</template>
@@ -74,20 +85,35 @@ const titleId = useId()
 
 					{{ item.product.unit }}
 				</span>
+
+				<span
+					v-else
+					class="text-md text-muted-foreground"
+				>
+					Name und Werte der Menge in der Mahlzeit
+				</span>
 			</p>
 
 			<BaseButton
 				class="shrink-0"
 				variant="danger-soft"
 				size="icon"
-				:aria-label="`${item.product.name} entfernen`"
+				:aria-label="`${item.product?.name ?? item.own?.name ?? 'Eigenen Posten'} entfernen`"
 				@click="emit('remove')"
 			>
 				<BaseIcon :icon="TrashIcon" />
 			</BaseButton>
 		</div>
 
-		<div class="grid grid-cols-12 gap-3 md:flex md:items-start">
+		<ManualFoodFields
+			v-if="!item.product"
+			:path="`items[${props.index}].own`"
+		/>
+
+		<div
+			v-else
+			class="grid grid-cols-12 gap-3 md:flex md:items-start"
+		>
 			<NumberField
 				class="col-span-12 md:w-36"
 				:name="path('amount')"
@@ -105,6 +131,7 @@ const titleId = useId()
 		</div>
 
 		<NutritionFacts
+			v-if="showsNutrition"
 			:nutrition="nutrition"
 			aria-live="polite"
 		/>

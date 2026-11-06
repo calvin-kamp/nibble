@@ -1,7 +1,7 @@
 import type { MealFormValues, MealItemDraft, SavedMeal } from '@features/meals/meals.types'
 import type { Nutrition } from '@features/tracking/tracking.types'
 
-import { nutritionFor, toQuantity } from '@features/tracking/tracking.utils'
+import { kcalFromMacros, nutritionFor, toQuantity } from '@features/tracking/tracking.utils'
 
 const round1 = (value: number) => Math.round(value * 10) / 10
 
@@ -18,8 +18,16 @@ export function sumNutrition(items: Nutrition[]): Nutrition {
 	)
 }
 
-/** Nutrition values of a form item, null while the amount is missing */
+/** Nutrition values of a form item, null while the amount or a value is missing */
 export function draftNutrition(draft: MealItemDraft): Nutrition | null {
+	if (!draft.product) {
+		const { protein, carbs, fat, kcal } = draft.own ?? {}
+
+		if (protein === undefined || carbs === undefined || fat === undefined) return null
+
+		return { kcal: kcal ?? kcalFromMacros({ protein, carbs, fat }), protein, carbs, fat }
+	}
+
 	if (!draft.amount || !draft.unit) return null
 
 	return nutritionFor(draft.product, toQuantity(draft.product, draft.amount, draft.unit).base)
@@ -28,10 +36,18 @@ export function draftNutrition(draft: MealItemDraft): Nutrition | null {
 export function toFormValues(meal: SavedMeal): MealFormValues {
 	return {
 		name: meal.name,
-		items: meal.items.map((item) => ({
-			product: item.product,
-			amount: item.quantity.value,
-			unit: item.quantity.unit,
-		})),
+		items: meal.items.map((item) =>
+			item.product && item.quantity
+				? { product: item.product, amount: item.quantity.value, unit: item.quantity.unit }
+				: {
+						own: {
+							name: item.name,
+							kcal: item.kcal,
+							protein: item.protein,
+							carbs: item.carbs,
+							fat: item.fat,
+						},
+					},
+		),
 	}
 }

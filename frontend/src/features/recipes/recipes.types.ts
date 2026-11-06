@@ -31,7 +31,7 @@ export type IngredientUnit =
 /** Approval by moderation. New and changed recipes start out as pending. */
 export type RecipeStatus = 'pending' | 'approved' | 'rejected'
 
-export interface Ingredient {
+interface Ingredient {
 	name: string
 	/** Amount for recipe.servings servings */
 	amount: number
@@ -77,7 +77,7 @@ export interface RecipeContent {
 	steps: string[]
 }
 
-export interface RecipeRevision {
+interface RecipeRevision {
 	status: 'pending' | 'rejected'
 	rejectionReason: string | null
 	imageUrl?: string
@@ -154,7 +154,7 @@ export interface RecipePage {
 	total: number
 }
 
-export interface MacrosResponse {
+interface MacrosResponse {
 	kcal: number
 	protein: number
 	carbs: number

@@ -12,12 +12,4 @@
 		@apply has-disabled:opacity-50 has-disabled:cursor-not-allowed;
 		@apply has-[[data-disabled]]:opacity-50 has-[[data-disabled]]:cursor-not-allowed;
 	}
-
-	.chip__check {
-		@apply hidden;
-	}
-
-	.chip:has(:checked) .chip__check {
-		@apply block;
-	}
 }

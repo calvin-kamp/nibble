@@ -157,7 +157,7 @@ export function calculateCalories(values: CalorieCalculatorValues): CalorieResul
  * The carbohydrate remainder cannot turn negative: the fat and protein ceilings together
  * stay below the target.
  */
-export function calculateMacros(data: MacroInput): Macro[] {
+function calculateMacros(data: MacroInput): Macro[] {
 	const referenceWeight: number = (data.height / 100) ** 2 * REFERENCE_BMI
 
 	const nutrientWeight: number =

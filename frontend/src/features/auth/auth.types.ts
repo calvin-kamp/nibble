@@ -32,7 +32,7 @@ export interface PersonalProfile {
 	sex: Sex | null
 }
 
-export type OnboardingStepResponse = 'username' | 'consent' | 'goal' | 'targets' | 'summary'
+type OnboardingStepResponse = 'username' | 'consent' | 'goal' | 'targets' | 'summary'
 
 export interface AccountStateResponse {
 	id: number

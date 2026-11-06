@@ -1,67 +1,41 @@
 <script setup lang="ts">
-import { LogOutIcon, SettingsIcon, UserRoundIcon } from '@lucide/vue'
-import { ref } from 'vue'
+import { LogOutIcon, UserRoundIcon } from '@lucide/vue'
 
-import { BaseButton, BaseDrawer, BaseIcon } from '@shared/ui'
+import AppNavDrawer from '@layouts/AppNavDrawer.vue'
+import { BaseButton, BaseIcon } from '@shared/ui'
 
 import { useLogout } from '@features/auth/composables/logout'
 
-const open = ref<boolean>(false)
+import { ACCOUNT_NAV } from '@layouts/navigation'
 
 const logout = useLogout()
 
-async function onLogout(): Promise<void> {
-	open.value = false
+async function onLogout(close: () => void): Promise<void> {
+	close()
 	await logout()
 }
 </script>
 
 <template>
-	<button
-		type="button"
-		class="nav-item"
-		aria-label="Konto Menü öffnen"
-		aria-haspopup="dialog"
-		aria-controls="account-drawer"
-		:aria-expanded="open"
-		@click="open = true"
-	>
-		<BaseIcon
-			:icon="UserRoundIcon"
-			:size="24"
-		/>
-
-		<span class="text-md leading-none max-[359px]:sr-only">
-			Konto
-		</span>
-	</button>
-
-	<BaseDrawer
+	<AppNavDrawer
 		id="account-drawer"
-		v-model:open="open"
-		title="Konto"
+		label="Konto"
+		:icon="UserRoundIcon"
+		:items="ACCOUNT_NAV"
+		:item-variants="[]"
+		item-variant="muted"
 	>
-		<BaseButton
-			variant="muted"
-			size="lg"
-			class="justify-start"
-			route-name="account"
-			@click="open = false"
-		>
-			<BaseIcon :icon="SettingsIcon" />
+		<template #default="{ close }">
+			<BaseButton
+				variant="danger-soft"
+				size="lg"
+				class="justify-start"
+				@click="onLogout(close)"
+			>
+				<BaseIcon :icon="LogOutIcon" />
 
-			Einstellungen
-		</BaseButton>
-
-		<BaseButton
-			variant="danger"
-			size="lg"
-			class="justify-start"
-			@click="onLogout"
-		>
-			<BaseIcon :icon="LogOutIcon" />
-
-			Abmelden
-		</BaseButton>
-	</BaseDrawer>
+				Abmelden
+			</BaseButton>
+		</template>
+	</AppNavDrawer>
 </template>

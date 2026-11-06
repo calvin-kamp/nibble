@@ -15,11 +15,14 @@ interface Props {
 	date: string
 	title?: string
 	titleHidden?: boolean
+	/** Before the day has loaded: empty rings and no numbers, but already the final layout */
+	loading?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
 	title: 'Summe des Tags',
 	titleHidden: false,
+	loading: false,
 })
 
 defineSlots<{
@@ -32,23 +35,30 @@ const summary = computed(() => summarizeDay(props.entries, props.date))
 
 const remaining = computed<number>(() => (props.goals?.kcal ?? 0) - summary.value.kcal)
 
+/** While loading, an empty ring: nothing eaten of an unknown target */
+const kcalMax = computed<number | undefined>(() => (props.loading ? 1 : props.goals?.kcal))
+
+function figure(value: number): string {
+	return props.loading ? '–' : formatNumber(Math.round(value))
+}
+
 const macros = computed(() => [
 	{
 		label: 'Protein',
 		value: summary.value.protein,
-		goal: props.goals?.protein,
+		goal: props.loading ? 1 : props.goals?.protein,
 		color: 'var(--macro-protein)',
 	},
 	{
 		label: 'Kohlenhydrate',
 		value: summary.value.carbs,
-		goal: props.goals?.carbs,
+		goal: props.loading ? 1 : props.goals?.carbs,
 		color: 'var(--macro-carbs)',
 	},
 	{
 		label: 'Fett',
 		value: summary.value.fat,
-		goal: props.goals?.fat,
+		goal: props.loading ? 1 : props.goals?.fat,
 		color: 'var(--macro-fat)',
 	},
 ])
@@ -84,20 +94,25 @@ const macros = computed(() => [
 			{{ props.title }}
 		</h2>
 
-		<div class="flex flex-col items-center gap-10 lg:flex-row lg:justify-around lg:gap-12">
-			<div class="flex flex-col items-center gap-4 shrink-0">
+		<!-- Fixed widths and lines that are always there: the card keeps its layout while the
+			day loads and on days with and without a target -->
+		<div
+			class="flex flex-col items-center gap-10 lg:flex-row lg:justify-around lg:gap-12"
+			:aria-busy="props.loading"
+		>
+			<div class="flex flex-col items-center gap-4 shrink-0 lg:w-72">
 				<BaseDonutChart
 					class="w-56"
 					variant="inverse"
 					:height="224"
-					:segments="[{ value: summary.kcal }]"
-					:max="props.goals?.kcal"
+					:segments="[{ value: props.loading ? 0 : summary.kcal }]"
+					:max="kcalMax"
 					:label="
 						props.goals
 							? `${formatNumber(summary.kcal)} von ${formatNumber(props.goals.kcal)} Kilokalorien gegessen`
 							: `${formatNumber(summary.kcal)} Kilokalorien gegessen`
 					"
-					:central-label="formatNumber(props.goals ? Math.abs(remaining) : summary.kcal)"
+					:central-label="figure(props.goals ? Math.abs(remaining) : summary.kcal)"
 					:central-sub-label="
 						props.goals ? (remaining >= 0 ? 'kcal übrig' : 'kcal drüber') : 'kcal'
 					"
@@ -105,10 +120,10 @@ const macros = computed(() => [
 
 				<p class="text-lg text-center text-balance">
 					<strong class="text-forest-foreground">
-						{{ formatNumber(summary.kcal) }}
+						{{ figure(summary.kcal) }}
 					</strong>
 
-					<template v-if="props.goals">
+					<template v-if="props.goals && !props.loading">
 						von {{ formatNumber(props.goals.kcal) }}
 					</template>
 
@@ -130,10 +145,10 @@ const macros = computed(() => [
 
 						<span class="tabular-nums whitespace-nowrap">
 							<strong class="text-forest-foreground">
-								{{ formatNumber(Math.round(macro.value)) }}
+								{{ figure(macro.value) }}
 							</strong>
 
-							<template v-if="macro.goal !== undefined">
+							<template v-if="macro.goal !== undefined && !props.loading">
 								/ {{ formatNumber(macro.goal) }}
 							</template>
 
@@ -143,7 +158,7 @@ const macros = computed(() => [
 						<BaseProgressBar
 							class="col-span-2"
 							variant="inverse"
-							:value="macro.value"
+							:value="props.loading ? 0 : macro.value"
 							:max="macro.goal ?? 0"
 							:label="macro.label"
 							:color="macro.color"
@@ -163,14 +178,14 @@ const macros = computed(() => [
 							size="sm"
 							:height="112"
 							:arc-width="12"
-							:segments="[{ value: macro.value, color: macro.color }]"
+							:segments="[{ value: props.loading ? 0 : macro.value, color: macro.color }]"
 							:max="macro.goal"
 							:label="
 								macro.goal === undefined
 									? `${macro.label}: ${formatNumber(Math.round(macro.value))} Gramm`
 									: `${macro.label}: ${formatNumber(Math.round(macro.value))} von ${formatNumber(macro.goal)} Gramm`
 							"
-							:central-label="formatNumber(Math.round(macro.value))"
+							:central-label="figure(macro.value)"
 							central-sub-label="g"
 						/>
 
@@ -179,8 +194,9 @@ const macros = computed(() => [
 								{{ macro.label }}
 							</span>
 
-							<span v-if="macro.goal !== undefined">
-								von {{ formatNumber(macro.goal) }} g
+							<!-- Always there, so the rings don't jump when the target arrives -->
+							<span :class="{ invisible: macro.goal === undefined || props.loading }">
+								von {{ formatNumber(macro.goal ?? 0) }} g
 							</span>
 						</div>
 					</li>

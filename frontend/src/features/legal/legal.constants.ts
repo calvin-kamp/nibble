@@ -35,7 +35,7 @@ export const TERMS_VERSION = '2026-11-05'
  * version: change the text in PrivacyPolicyView and this date together, and
  * PRIVACY_POLICY_VERSION in the backend settings, which is recorded with every new profile.
  */
-export const PRIVACY_POLICY_VERSION = '2026-11-05'
+export const PRIVACY_POLICY_VERSION = '2026-11-06'
 
 /** Nibble is for people aged 16 and up, see sections 5 and 21 of the privacy policy */
 export const MIN_AGE = 16

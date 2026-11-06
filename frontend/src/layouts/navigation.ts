@@ -10,13 +10,15 @@ import {
 	HouseIcon,
 	LifeBuoyIcon,
 	LayoutDashboardIcon,
+	ScanBarcodeIcon,
+	SettingsIcon,
 	UtensilsIcon,
 	WeightIcon,
 } from '@lucide/vue'
 
 import { useAuthStore } from '@features/auth/auth.store'
 
-export type NavVisibility = 'always' | 'guest' | 'user' | 'consent' | 'staff'
+type NavVisibility = 'always' | 'guest' | 'user' | 'consent' | 'staff'
 
 export interface NavItem {
 	routeName: string
@@ -66,6 +68,41 @@ export const TRACKING_NAV: NavItem[] = [
 	},
 ]
 
+/** Drawer behind "Rezepte" in the bottom bar: own meals are recipes for the diary */
+export const RECIPES_NAV: NavItem[] = [
+	{ routeName: 'recipe-list', label: 'Alle Rezepte', icon: BookOpenIcon, visibility: 'always' },
+	{
+		routeName: 'recipe-list',
+		query: { ansicht: 'eigene' },
+		label: 'Meine Rezepte',
+		icon: ChefHatIcon,
+		visibility: 'user',
+	},
+	{
+		routeName: 'own-meals',
+		label: 'Meine Mahlzeiten',
+		icon: UtensilsIcon,
+		activeOn: ['meal-detail', 'meal-create', 'meal-edit'],
+		visibility: 'consent',
+	},
+]
+
+export const ACCOUNT_NAV: NavItem[] = [
+	{
+		routeName: 'account',
+		label: 'Einstellungen',
+		icon: SettingsIcon,
+		activeOn: [
+			'account-profile',
+			'account-personal',
+			'account-nutrition',
+			'account-privacy',
+			'account-delete',
+		],
+		visibility: 'user',
+	},
+]
+
 export const DISCOVER_NAV: NavItem[] = [
 	{ routeName: 'recipe-list', label: 'Rezepte', icon: BookOpenIcon, visibility: 'always' },
 	{
@@ -79,9 +116,16 @@ export const DISCOVER_NAV: NavItem[] = [
 export const ADMIN_NAV: NavItem[] = [
 	{
 		routeName: 'admin',
-		label: 'Verwaltung',
+		label: 'Rezepte',
 		icon: ClipboardCheckIcon,
 		activeOn: ['admin-submission'],
+		visibility: 'staff',
+	},
+	{
+		routeName: 'admin-foods',
+		label: 'Lebensmittel',
+		icon: ScanBarcodeIcon,
+		activeOn: ['admin-food', 'admin-food-correct', 'admin-food-generic'],
 		visibility: 'staff',
 	},
 ]

@@ -3,8 +3,7 @@ import type { HTMLAttributes } from 'vue'
 import type { LocationQueryRaw, RouteParamsRawGeneric } from 'vue-router'
 
 import { computed } from 'vue'
-
-import BaseLink from './BaseLink.vue'
+import { RouterLink } from 'vue-router'
 
 import { buildModifierClasses } from '@shared/utils/classes'
 
@@ -43,21 +42,39 @@ const props = withDefaults(defineProps<Props>(), {
 const modifierClasses = computed<string[]>(() => {
 	return buildModifierClasses('button', [props.variant, props.size])
 })
+
+const isExternal = computed<boolean>(() => props.href?.startsWith('http') ?? false)
 </script>
 
 <template>
-	<BaseLink
-		v-if="props.href || props.routeName"
-		variant="no-decoration"
-		:href="props.href"
-		:route-name="props.routeName"
-		:params="props.params"
-		:query="props.query"
+	<!-- A link that looks like a button gets no link classes: link.css loads after button.css
+		and would override sizes such as button--lg -->
+	<RouterLink
+		v-if="props.routeName"
+		:to="{ name: props.routeName, params: props.params, query: props.query }"
 		class="button"
 		:class="[modifierClasses, props.class]"
 	>
 		<slot />
-	</BaseLink>
+	</RouterLink>
+
+	<a
+		v-else-if="props.href"
+		:href="props.href"
+		class="button"
+		:class="[modifierClasses, props.class]"
+		:target="isExternal ? '_blank' : undefined"
+		:rel="isExternal ? 'noopener noreferrer' : undefined"
+	>
+		<slot />
+
+		<span
+			v-if="isExternal"
+			class="sr-only"
+		>
+			(öffnet in neuem Tab)
+		</span>
+	</a>
 
 	<button
 		v-else

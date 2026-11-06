@@ -12,6 +12,3 @@ export { default as TextField } from './TextField.vue'
 
 export { useFieldIds } from './field-ids'
 export { focusFirstError } from './focus-first-error'
-
-export type { FieldIds } from './field-ids'
-export type { BaseFieldProps, FieldOption, FieldOptionGroup } from './types'

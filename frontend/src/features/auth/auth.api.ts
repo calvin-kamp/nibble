@@ -16,7 +16,7 @@ export function toPersonalProfile(body: BodyProfileResponse): PersonalProfile {
 	return { birthDate: body.birth_date, heightCm: body.height_cm, sex: body.sex }
 }
 
-export function toAuthUser(
+function toAuthUser(
 	state: AccountStateResponse,
 	consent: ConsentStateResponse | null,
 	profile: PersonalProfile = EMPTY_PROFILE,
@@ -40,7 +40,7 @@ export function toAuthUser(
  * neither. Body data is health data and only exists with consent; without it the profile stays
  * empty.
  */
-export async function withConsent(state: AccountStateResponse): Promise<AuthUser> {
+async function withConsent(state: AccountStateResponse): Promise<AuthUser> {
 	const [consent, body] = await Promise.all([
 		apiRequest<ConsentStateResponse>('/privacy/consent').catch(() => null),
 		state.privacy_consent === true

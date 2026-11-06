@@ -1,15 +1,10 @@
 @layer components {
+	/* Links that look like buttons (BaseButton with route-name or href) get no .link class */
 	.link {
 		@apply inline-flex justify-center items-center gap-2 min-h-11;
-		@apply font-semibold;
+		@apply rounded-sm font-semibold;
 		@apply transition-interactive;
 		@apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
-	}
-
-	/* Not on links that look like buttons (BaseButton with route-name): this file loads after
-     button.css and would otherwise override their shape, e.g. turn round icon buttons square */
-	.link:not(.button) {
-		@apply rounded-sm;
 	}
 
 	.link--underlined {

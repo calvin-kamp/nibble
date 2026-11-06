@@ -91,8 +91,23 @@ const year = new Date().getFullYear()
 				© {{ year }} {{ OPERATOR.name }}
 			</p>
 
-			<p>
-				Lebensmitteldaten von Open Food Facts
+			<p class="site-footer__credit">
+				Lebensmitteldaten von
+
+				<BaseLink
+					href="https://world.openfoodfacts.org"
+					class="text-highlight"
+				>
+					Open Food Facts
+				</BaseLink>, verfügbar unter der
+
+				<BaseLink
+					href="https://opendatacommons.org/licenses/odbl/1-0/"
+					class="text-highlight"
+					lang="en"
+				>
+					Open Database License
+				</BaseLink>
 			</p>
 		</div>
 	</footer>

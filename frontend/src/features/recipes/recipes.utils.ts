@@ -201,7 +201,7 @@ export function withGroupValue(
 	return { ...filters, equipment: value as Equipment[] }
 }
 
-export function withoutGroup(filters: RecipeFilterValues, id: FilterGroupId): RecipeFilterValues {
+function withoutGroup(filters: RecipeFilterValues, id: FilterGroupId): RecipeFilterValues {
 	return withGroupValue(filters, id, groupValue(EMPTY_FILTERS, id))
 }
 

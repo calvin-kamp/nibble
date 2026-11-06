@@ -29,6 +29,8 @@ interface Props extends BaseFieldProps<number | undefined> {
 	incrementLabel?: string
 	decrementLabel?: string
 	formatOptions?: Intl.NumberFormatOptions
+	/** Label of the Enter key on phone keyboards, e.g. "next" or "done" */
+	enterKeyHint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -43,6 +45,7 @@ const props = withDefaults(defineProps<Props>(), {
 	incrementLabel: 'Mehr',
 	decrementLabel: 'Weniger',
 	formatOptions: () => ({ maximumFractionDigits: 1 }),
+	enterKeyHint: undefined,
 })
 
 const ids = useFieldIds(() => props.hint)
@@ -108,6 +111,7 @@ const describedBy = computed<string | undefined>(() => {
 				:name="props.name"
 				:aria-invalid="!!errorMessage || undefined"
 				:aria-describedby="describedBy"
+				:enterkeyhint="props.enterKeyHint"
 				@blur="handleBlur($event, true)"
 			/>
 

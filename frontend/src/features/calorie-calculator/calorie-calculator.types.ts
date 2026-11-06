@@ -46,12 +46,6 @@ export interface CalorieResult {
 	macros: Macro[]
 }
 
-export interface MacroChartEntry {
-	key: string
-	label: string
-	color: string
-}
-
 export type CalculatorSection = 'basal' | 'steps' | 'training' | 'goal'
 
 export interface MacroGrams {
@@ -65,7 +59,7 @@ export interface CalculatorPrefill {
 	labels: string[]
 }
 
-export interface TrainingActivity {
+interface TrainingActivity {
 	label: string
 	/** Compendium of Physical Activities (Ainsworth et al., 2011) */
 	met: number

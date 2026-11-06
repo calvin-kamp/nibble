@@ -1,7 +1,11 @@
 @layer components {
+	/* Spans the width to center the toasts, but lets clicks through to the page underneath.
+	   The toasts take them again, also over an open dialog, which sets pointer-events: none on
+	   the body. */
 	.toast-viewport {
 		@apply fixed inset-x-4 bottom-22 z-60;
 		@apply flex flex-col items-center gap-2;
+		@apply pointer-events-none!;
 		@apply xl:bottom-6;
 	}
 
@@ -13,6 +17,7 @@
 	   44px target without adding a row of its own. */
 	.toast {
 		@apply grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 w-full max-w-md;
+		@apply pointer-events-auto;
 		@apply py-1.5 pr-1.5 pl-4;
 		@apply rounded-md bg-forest text-forest-foreground shadow-overlay;
 		@apply ring-1 ring-forest-border;

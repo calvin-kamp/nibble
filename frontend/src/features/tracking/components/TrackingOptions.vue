@@ -3,56 +3,40 @@ import type { TrackingEntryKind } from '@features/tracking/tracking.types'
 
 import { UtensilsIcon, WeightIcon } from '@lucide/vue'
 
-import { BaseIcon } from '@shared/ui'
+import { BaseButton, BaseIcon } from '@shared/ui'
 
 const emit = defineEmits<{
 	select: [kind: TrackingEntryKind]
 }>()
 
+// Food is the main action and gets the primary button, weight the lime one
 const OPTIONS = [
-	{
-		kind: 'food' as const,
-		label: 'Essen eintragen',
-		hint: 'Suchen, scannen oder eine Mahlzeit wählen',
-		icon: UtensilsIcon,
-	},
+	{ kind: 'food' as const, label: 'Essen eintragen', icon: UtensilsIcon, variant: 'primary' as const },
 	{
 		kind: 'weight' as const,
 		label: 'Gewicht eintragen',
-		hint: 'Ein Wert pro Tag, am besten morgens',
 		icon: WeightIcon,
+		variant: 'secondary' as const,
 	},
 ]
 </script>
 
 <template>
-	<ul class="entry-choice">
+	<ul class="flex flex-col gap-3">
 		<li
 			v-for="option in OPTIONS"
 			:key="option.kind"
 		>
-			<button
-				type="button"
-				class="entry-choice__option"
-				:class="`entry-choice__option--${option.kind}`"
+			<BaseButton
+				:variant="option.variant"
+				size="lg"
+				class="w-full"
 				@click="emit('select', option.kind)"
 			>
-				<BaseIcon
-					class="entry-choice__icon"
-					:icon="option.icon"
-					:size="32"
-				/>
+				<BaseIcon :icon="option.icon" />
 
-				<span class="entry-choice__text">
-					<span class="entry-choice__label">
-						{{ option.label }}
-					</span>
-
-					<span class="entry-choice__hint">
-						{{ option.hint }}
-					</span>
-				</span>
-			</button>
+				{{ option.label }}
+			</BaseButton>
 		</li>
 	</ul>
 </template>
