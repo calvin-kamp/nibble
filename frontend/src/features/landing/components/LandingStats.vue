@@ -21,7 +21,7 @@ onMounted(async () => {
 
 // Small numbers work against the page ("11 members"), so each figure only shows from a
 // minimum on, and the block only with at least two figures.
-const MINIMUM = { users: 100, recipes: 20, foods: 1000, entries: 1000 } as const
+const MINIMUM = { users: 5, recipes: 10, foods: 1000, entries: 100 } as const
 const MIN_ITEMS = 2
 
 const items = computed(() =>

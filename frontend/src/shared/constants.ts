@@ -2,7 +2,7 @@
  * Entries per page across the app: recipes, submissions, weight entries. The backend's page
  * size is the same, so lists from the API and lists paged here behave alike.
  */
-export const PAGE_SIZE = 20
+export const PAGE_SIZE = 12
 
 export const SUPPORT_EMAIL = 'support@nibble-tracking.de'
 

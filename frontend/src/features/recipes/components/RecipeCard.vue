@@ -33,6 +33,7 @@ const dietLabel = computed<string | null>(() => DIET_LABELS[props.recipe.diet])
 	<BaseCard
 		as="article"
 		class="recipe-card"
+		stretch
 	>
 		<template #media>
 			<RecipeMedia
@@ -42,7 +43,7 @@ const dietLabel = computed<string | null>(() => DIET_LABELS[props.recipe.diet])
 			/>
 		</template>
 
-		<div class="flex flex-col gap-2.5">
+		<div class="flex flex-1 flex-col gap-3">
 			<ul class="flex flex-wrap gap-2">
 				<li
 					v-if="dietLabel"
@@ -56,7 +57,7 @@ const dietLabel = computed<string | null>(() => DIET_LABELS[props.recipe.diet])
 				</li>
 			</ul>
 
-			<div class="flex flex-col gap-1.5">
+			<div class="flex flex-1 flex-col gap-2">
 				<component
 					:is="`h${props.headingLevel}`"
 					class="recipe-card__title"
@@ -64,12 +65,13 @@ const dietLabel = computed<string | null>(() => DIET_LABELS[props.recipe.diet])
 					<RouterLink
 						:to="{ name: 'recipe-detail', params: recipeParams(props.recipe) }"
 						class="after:absolute after:inset-0 focus-visible:outline-none"
+						:title="props.recipe.title"
 					>
 						{{ props.recipe.title }}
 					</RouterLink>
 				</component>
 
-				<p class="text-md text-foreground/80">
+				<p class="mt-auto text-md text-foreground/80">
 					<strong class="figure text-lg text-foreground">
 						{{ formatNumber(props.recipe.kcalPerServing) }}
 					</strong>

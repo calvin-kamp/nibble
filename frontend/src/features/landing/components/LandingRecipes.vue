@@ -66,7 +66,7 @@ onMounted(async () => {
 			<li
 				v-for="index in COUNT"
 				:key="index"
-				class="col-span-12 overflow-hidden rounded-lg border border-divider bg-card sm:col-span-6 lg:col-span-4"
+				class="col-span-12 overflow-hidden rounded-lg border border-divider bg-card md:col-span-6 lg:col-span-4"
 			>
 				<span class="block aspect-4/3 bg-muted animate-pulse" />
 
@@ -81,7 +81,7 @@ onMounted(async () => {
 			<li
 				v-for="(recipe, index) in recipes"
 				:key="recipe.id"
-				class="col-span-12 sm:col-span-6 lg:col-span-4"
+				class="col-span-12 md:col-span-6 lg:col-span-4"
 			>
 				<RecipeCard
 					:recipe="recipe"

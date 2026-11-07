@@ -14,7 +14,7 @@
 	}
 
 	.recipe-card__title {
-		@apply text-xl;
+		@apply text-xl line-clamp-2 min-h-[2lh] wrap-break-word;
 	}
 
 	.recipe-media {

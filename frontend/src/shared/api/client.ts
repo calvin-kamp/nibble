@@ -34,7 +34,7 @@ export class ApiError extends Error {
 	}
 }
 
-/** Response of paginated lists (recipes, food search), 20 items each */
+/** Response of paginated lists (recipes, food search), 12 items each */
 export interface Paginated<T> {
 	count: number
 	next: string | null

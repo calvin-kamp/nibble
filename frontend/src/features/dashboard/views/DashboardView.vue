@@ -132,7 +132,7 @@ const todayLabel = new Date().toLocaleDateString('de-DE', {
 				<li
 					v-for="(recipe, index) in savedRecipes"
 					:key="recipe.id"
-					class="col-span-12 md:col-span-6 xl:col-span-4"
+					class="col-span-12 md:col-span-6 lg:col-span-4"
 				>
 					<RecipeCard
 						:recipe="recipe"
