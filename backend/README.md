@@ -726,7 +726,7 @@ account.
 | ------ | -------- | ------ | ----------------------------------------------------------------- |
 | GET    | `/stats` | public | `{ users, recipes, foods, entries }`; cached for up to 10 minutes |
 
-Paginated lists use `?page=1` with 20 results per page and answer
+Paginated lists use `?page=1` with 12 results per page and answer
 `{ count, next, previous, results }`.
 
 ---

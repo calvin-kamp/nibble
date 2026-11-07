@@ -4,6 +4,10 @@
 x-local-backend: &local-backend
   environment:
     DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  # Mount the source so code and new migrations are picked up without a rebuild.
+  # Restart api/worker/beat after changes (gunicorn and celery do not reload).
+  volumes:
+    - .:/app
   depends_on:
     db:
       condition: service_healthy
