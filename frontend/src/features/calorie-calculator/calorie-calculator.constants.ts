@@ -5,7 +5,7 @@ import type {
 	TrainingGroup,
 	Workout,
 } from '@features/calorie-calculator/calorie-calculator.types'
-import type { FieldOption, FieldOptionGroup } from '@shared/forms/types'
+import type { FieldOption } from '@shared/forms/types'
 
 /** Walking MET, Compendium of Physical Activities code 17190 */
 export const WALKING_MET = 3.5
@@ -174,20 +174,5 @@ export const TRAINING_GROUPS: TrainingGroup[] = [
 		],
 	},
 ]
-
-/** Option value in the format groupIndex-optionIndex-MET, as read by calculateCalories */
-function optionValue(groupIndex: number, activityIndex: number, met: number): string {
-	return `${groupIndex}-${activityIndex}-${met}`
-}
-
-export const TRAINING_SELECT_GROUPS: FieldOptionGroup[] = TRAINING_GROUPS.map(
-	(group, groupIndex) => ({
-		label: group.label,
-		options: group.activities.map((activity, activityIndex) => ({
-			value: optionValue(groupIndex, activityIndex, activity.met),
-			label: activity.label,
-		})),
-	}),
-)
 
 export const EMPTY_WORKOUT: Workout = { met: '', duration: 0, frequency: 0 }

@@ -7,6 +7,7 @@ import type {
 	Workout,
 } from '@features/calorie-calculator/calorie-calculator.types'
 import type { DailyNeeds } from '@features/onboarding/onboarding.types'
+import type { FieldOptionGroup } from '@shared/forms/types'
 
 import {
 	EXCESS_WEIGHT_SHARE,
@@ -269,6 +270,21 @@ export function resultToNeeds(result: CalorieResult): DailyNeeds {
 		source: 'calculated',
 	}
 }
+
+/** Option value in the format groupIndex-optionIndex-MET, as read by calculateCalories */
+function optionValue(groupIndex: number, activityIndex: number, met: number): string {
+	return `${groupIndex}-${activityIndex}-${met}`
+}
+
+export const TRAINING_SELECT_GROUPS: FieldOptionGroup[] = TRAINING_GROUPS.map(
+	(group, groupIndex) => ({
+		label: group.label,
+		options: group.activities.map((activity, activityIndex) => ({
+			value: optionValue(groupIndex, activityIndex, activity.met),
+			label: activity.label,
+		})),
+	}),
+)
 
 export function trainingLabel(value: string): string | undefined {
 	const [groupIndex, activityIndex] = value.split('-').map(Number)

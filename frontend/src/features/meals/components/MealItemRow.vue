@@ -7,6 +7,7 @@ import { TrashIcon } from '@lucide/vue'
 import { useFieldValue, useSetFieldValue } from 'vee-validate'
 import { computed, useId, watch } from 'vue'
 
+import FoodReportPanel from '@features/tracking/components/FoodReportPanel.vue'
 import ManualFoodFields from '@features/tracking/components/ManualFoodFields.vue'
 import NutritionFacts from '@features/tracking/components/NutritionFacts.vue'
 import { BaseButton, BaseIcon } from '@shared/ui'
@@ -134,6 +135,11 @@ const titleId = useId()
 			v-if="showsNutrition"
 			:nutrition="nutrition"
 			aria-live="polite"
+		/>
+
+		<FoodReportPanel
+			v-if="item.product"
+			:product="item.product"
 		/>
 	</li>
 </template>

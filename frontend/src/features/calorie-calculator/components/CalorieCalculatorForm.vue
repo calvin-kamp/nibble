@@ -16,9 +16,9 @@ import {
 	EMPTY_WORKOUT,
 	GOAL_OPTIONS,
 	SEX_OPTIONS,
-	TRAINING_SELECT_GROUPS,
 } from '@features/calorie-calculator/calorie-calculator.constants'
 import { calorieCalculatorSchema } from '@features/calorie-calculator/calorie-calculator.schema'
+import { TRAINING_SELECT_GROUPS } from '@features/calorie-calculator/calorie-calculator.utils'
 import { focusFirstError, NumberField, RadioField, SelectField } from '@shared/forms'
 
 interface Props {

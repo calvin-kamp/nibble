@@ -62,68 +62,70 @@ const workoutSchema = z
  *   target to several thousand calories.
  *
  * These checks run once all fields are individually valid.
+ *
+ * Exported unwrapped for the tests, the form uses `calorieCalculatorSchema`.
  */
-export const calorieCalculatorSchema = toTypedSchema(
-	z
-		.object({
-			sex: z.enum(['male', 'female'], { message: 'Bitte wähl dein Geschlecht aus.' }),
+export const calorieCalculatorZodSchema = z
+	.object({
+		sex: z.enum(['male', 'female'], { message: 'Bitte wähl dein Geschlecht aus.' }),
 
-			age: z
-				.number({ message: 'Bitte gib dein Alter an.' })
-				.min(MIN_AGE, { message: `Der Rechner gilt ab ${MIN_AGE} Jahren.` })
-				.max(120, { message: 'Prüf dein Alter noch mal.' }),
+		age: z
+			.number({ message: 'Bitte gib dein Alter an.' })
+			.min(MIN_AGE, { message: `Der Rechner gilt ab ${MIN_AGE} Jahren.` })
+			.max(120, { message: 'Prüf dein Alter noch mal.' }),
 
-			height: z
-				.number({ message: 'Bitte gib deine Größe an.' })
-				.min(120, { message: 'Prüf deine Größe noch mal.' })
-				.max(250, { message: 'Prüf deine Größe noch mal.' }),
+		height: z
+			.number({ message: 'Bitte gib deine Größe an.' })
+			.min(120, { message: 'Prüf deine Größe noch mal.' })
+			.max(250, { message: 'Prüf deine Größe noch mal.' }),
 
-			weight: z
-				.number({ message: 'Bitte gib dein Gewicht an.' })
-				.min(25, { message: 'Prüf dein Gewicht noch mal.' })
-				.max(400, { message: 'Prüf dein Gewicht noch mal.' }),
+		weight: z
+			.number({ message: 'Bitte gib dein Gewicht an.' })
+			.min(25, { message: 'Prüf dein Gewicht noch mal.' })
+			.max(400, { message: 'Prüf dein Gewicht noch mal.' }),
 
-			steps: z
-				.number({ message: 'Bitte gib deine Schritte an.' })
-				.min(0)
-				.max(50000, { message: 'Höchstens 50.000 Schritte pro Tag.' }),
+		steps: z
+			.number({ message: 'Bitte gib deine Schritte an.' })
+			.min(0)
+			.max(50000, { message: 'Höchstens 50.000 Schritte pro Tag.' }),
 
-			exercises: z.array(workoutSchema),
+		exercises: z.array(workoutSchema),
 
-			goal: z.enum(['diet', 'maintain', 'gain'], { message: 'Bitte wähl dein Ziel aus.' }),
-		})
-		.superRefine((values, context) => {
-			const bmi: number = values.weight / (values.height / 100) ** 2
+		goal: z.enum(['diet', 'maintain', 'gain'], { message: 'Bitte wähl dein Ziel aus.' }),
+	})
+	.superRefine((values, context) => {
+		const bmi: number = values.weight / (values.height / 100) ** 2
 
-			if (values.goal === 'diet' && values.age < ADULT_AGE) {
-				context.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ['goal'],
-					message:
-						'Unter 18 rechnen wir kein Defizit aus, weil dein Körper noch wächst. ' +
-						'Wenn du abnehmen möchtest, sprich bitte mit deiner Kinder- oder Hausarztpraxis.',
-				})
-			} else if (values.goal === 'diet' && bmi < UNDERWEIGHT_BMI) {
-				context.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ['goal'],
-					message:
-						'Bei deiner Größe und deinem Gewicht raten wir vom Abnehmen ab. ' +
-						'Wenn du trotzdem abnehmen möchtest, sprich bitte vorher mit einer Ärztin oder einem Arzt.',
-				})
-			}
+		if (values.goal === 'diet' && values.age < ADULT_AGE) {
+			context.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ['goal'],
+				message:
+					'Unter 18 rechnen wir kein Defizit aus, weil dein Körper noch wächst. ' +
+					'Wenn du abnehmen möchtest, sprich bitte mit deiner Kinder- oder Hausarztpraxis.',
+			})
+		} else if (values.goal === 'diet' && bmi < UNDERWEIGHT_BMI) {
+			context.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ['goal'],
+				message:
+					'Bei deiner Größe und deinem Gewicht raten wir vom Abnehmen ab. ' +
+					'Wenn du trotzdem abnehmen möchtest, sprich bitte vorher mit einer Ärztin oder einem Arzt.',
+			})
+		}
 
-			const weeklyMinutes: number = values.exercises.reduce(
-				(total, workout) => total + workout.duration * workout.frequency,
-				0,
-			)
+		const weeklyMinutes: number = values.exercises.reduce(
+			(total, workout) => total + workout.duration * workout.frequency,
+			0,
+		)
 
-			if (weeklyMinutes > MAX_WEEKLY_TRAINING_MINUTES) {
-				context.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ['exercises'],
-					message: 'Mehr als 20 Stunden Training pro Woche? Prüf deine Angaben noch mal.',
-				})
-			}
-		}),
-)
+		if (weeklyMinutes > MAX_WEEKLY_TRAINING_MINUTES) {
+			context.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ['exercises'],
+				message: 'Mehr als 20 Stunden Training pro Woche? Prüf deine Angaben noch mal.',
+			})
+		}
+	})
+
+export const calorieCalculatorSchema = toTypedSchema(calorieCalculatorZodSchema)

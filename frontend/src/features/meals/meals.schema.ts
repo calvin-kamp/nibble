@@ -21,13 +21,14 @@ const itemSchema = z
 		)
 	})
 
-export const mealSchema = toTypedSchema(
-	z.object({
-		name: z
-			.string({ message: 'Wie soll die Mahlzeit heißen?' })
-			.trim()
-			.min(1, { message: 'Wie soll die Mahlzeit heißen?' })
-			.max(60, { message: 'Höchstens 60 Zeichen.' }),
-		items: z.array(itemSchema).min(1, { message: 'Such mindestens ein Lebensmittel aus.' }),
-	}),
-)
+// Exported unwrapped for the tests, the form uses mealSchema
+export const mealZodSchema = z.object({
+	name: z
+		.string({ message: 'Wie soll die Mahlzeit heißen?' })
+		.trim()
+		.min(1, { message: 'Wie soll die Mahlzeit heißen?' })
+		.max(60, { message: 'Höchstens 60 Zeichen.' }),
+	items: z.array(itemSchema).min(1, { message: 'Such mindestens ein Lebensmittel aus.' }),
+})
+
+export const mealSchema = toTypedSchema(mealZodSchema)

@@ -14,7 +14,9 @@
     "lint:eslint": "eslint . --fix --cache",
     "format": "run-s \"format:*\"",
     "format:prettier": "prettier --write --experimental-cli src/",
-    "format:vue": "eslint --fix --cache \"src/**/*.vue\""
+    "format:vue": "eslint --fix --cache \"src/**/*.vue\"",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@internationalized/date": "^3.12.4",
@@ -56,6 +58,7 @@
     "typescript": "~6.0.0",
     "vite": "^8.2.2",
     "vite-plugin-vue-devtools": "^8.2.1",
+    "vitest": "^5.1.0",
     "vue-eslint-parser": "^10.4.1",
     "vue-tsc": "^3.3.11"
   },
